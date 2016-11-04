@@ -13,7 +13,7 @@ SET(files_shader_manager
 SOURCE_GROUP("shader_manager" FILES ${files_shader_manager})
 
 ADD_LIBRARY(shader_manager STATIC ${files_shader_manager})
-TARGET_LINK_LIBRARIES(shader_manager glew)
+TARGET_LINK_LIBRARIES(shader_manager gl_core)
 SET_TARGET_PROPERTIES(shader_manager PROPERTIES LINKER_LANGUAGE CXX)
 SET_TARGET_PROPERTIES(shader_manager PROPERTIES FOLDER "MyUtils")
 TARGET_INCLUDE_DIRECTORIES(shader_manager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
