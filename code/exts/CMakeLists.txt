@@ -1,11 +1,10 @@
 #--------------------------------------------------------------------------
 # exts
 #--------------------------------------------------------------------------
-ADD_LIBRARY(exts INTERFACE)
 
 ADD_SUBDIRECTORY(glew)
 SET_TARGET_PROPERTIES(glew PROPERTIES FOLDER "exts")
-TARGET_INCLUDE_DIRECTORIES(exts INTERFACE glew/include)
+TARGET_INCLUDE_DIRECTORIES(glew INTERFACE glew/include)
 
 SET(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "Build the GLFW example programs")
 SET(GLFW_BUILD_TESTS OFF CACHE BOOL "Build the GLFW test programs")
@@ -14,7 +13,7 @@ SET(GLFW_INSTALL OFF CACHE BOOL "Generate installation target")
 
 ADD_SUBDIRECTORY(glfw-3.1.1)
 SET_TARGET_PROPERTIES(glfw PROPERTIES FOLDER "exts")
-TARGET_INCLUDE_DIRECTORIES(exts INTERFACE glfw-3.1.1/include)
+TARGET_INCLUDE_DIRECTORIES(glfw INTERFACE glfw-3.1.1/include)
 
 ADD_SUBDIRECTORY(dirent)
 SET_TARGET_PROPERTIES(dirent PROPERTIES FOLDER "exts")
