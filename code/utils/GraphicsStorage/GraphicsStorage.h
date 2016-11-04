@@ -19,6 +19,7 @@ public:
 	static void ClearMaterials();
 	static void ClearMeshes();
 	static void ClearTextures();
+	static void ClearOBJs();
 private:
 
 };

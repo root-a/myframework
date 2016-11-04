@@ -2,6 +2,7 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "Texture2D.h"
+#include "OBJ.h"
 #include <GL/glew.h>
 
 GraphicsStorage::GraphicsStorage()
@@ -35,6 +36,15 @@ void GraphicsStorage::ClearTextures()
 	for (auto& texture : textures)
 	{
 		delete texture;
+	}
+	textures.clear();
+}
+
+void GraphicsStorage::ClearOBJs()
+{
+	for (auto& object : objects)
+	{
+		delete object;
 	}
 	textures.clear();
 }
