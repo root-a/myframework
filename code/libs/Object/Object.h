@@ -22,9 +22,9 @@ public:
 	void AssignMaterial(Material* mat);
 	void AssignMesh(Mesh* mesh);
 	int indicesSize;
-	void draw(const mwm::Matrix4& Projection, const mwm::Matrix4& View);
-	void drawLight(const mwm::Matrix4& Projection, const mwm::Matrix4& View, const mwm::Vector3& camPos);
-	void drawGeometry(const mwm::Matrix4& Projection, const mwm::Matrix4& View);
+	void draw(const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
+	void drawLight(const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
+	void drawGeometry(const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
 	mwm::Vector3 extractScale();
 	mwm::Vector3 getScale();
 	
@@ -93,13 +93,9 @@ private:
 	mwm::Vector3 meshOffset;
 	//should not be here
 	GLuint MatrixHandle;
-	GLuint ViewMatrixHandle;
 	GLuint ModelMatrixHandle;
-	GLuint MaterialAmbientIntensityValueHandle;
-	GLuint MaterialSpecularIntensityHandle;
-	GLuint MaterialDiffuseIntensityValueHandle;
 	GLuint MaterialColorHandle;
-	GLuint MaterialShininessValue;
+	GLuint MaterialPropertiesHandle;
 	GLuint PickingObjectIndexHandle;
 	GLuint TextureSamplerHandle;
 	GLuint DepthMVPMatrixHandle;

@@ -65,7 +65,7 @@ void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
 	shape->SetPosition(pos);
 	shape->SetScale(0.5f, 0.5f, 0.5f);
 	shape->node.UpdateNodeMatrix(Matrix4::identityMatrix());
-	shape->draw(*Projection, *View);
+	shape->draw(*View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
 }
 
 void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float width)

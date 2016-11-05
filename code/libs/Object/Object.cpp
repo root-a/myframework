@@ -22,38 +22,22 @@ Object::~Object()
 {
 }
 
-void Object::drawLight(const Matrix4& Projection, const Matrix4& View, const Vector3& camPos)
+void Object::drawLight(const Matrix4& ViewProjection, const GLuint currentShaderID)
 {
 	//apply transformation matrix from node
 	Matrix4 offsetMatrix = Matrix4::translate(meshOffset);
 	Matrix4 dModel = offsetMatrix*this->node.TopDownTransform;
-	//Matrix4F ViewMatrix = View.toFloat();
-	Matrix4F MVP = (dModel*View*Projection).toFloat();
-	GLuint currentShaderID = ShaderManager::Instance()->GetCurrentShaderID();
-	//vertex
+	Matrix4F MVP = (dModel*ViewProjection).toFloat();
+
 	MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-	
-	//fragment
-	//ViewMatrixHandle = glGetUniformLocation(currentShaderID, "V");
-	//glUniformMatrix4fv(ViewMatrixHandle, 1, GL_FALSE, &ViewMatrix[0][0]);
 
 	GLuint LightPosHandle = glGetUniformLocation(currentShaderID, "LightPosition_worldspace");
-	//light dir is set only for directional light once //or if many dir lights then i need to add invDir to the struct prob
+	
 	glUniform3fv(LightPosHandle, 1, &this->node.position.x);
 
 	GLuint LightRadius = glGetUniformLocation(currentShaderID, "lightRadius");
-	glUniform1f(LightRadius, this->node.scale.x);
-
-	GLuint CameraPos = glGetUniformLocation(currentShaderID, "CameraPos");
-
-	glUniform3fv(CameraPos, 1, &camPos.x);
-	
-
-	//this values are for the light, previously they were for objects so now i have to generate textures instead
-	//and move those variables out
-	//i probably wnat to keep and rename the color for light color and the specual value for shininess
-	//ok let's do this
+	glUniform1f(LightRadius, this->node.scale.x);	
 
 	GLuint LightPower = glGetUniformLocation(currentShaderID, "lightPower");
 	glUniform1f(LightPower, this->mat->diffuseIntensity);
@@ -70,14 +54,13 @@ void Object::drawLight(const Matrix4& Projection, const Matrix4& View, const Vec
 
 
 
-void Object::drawGeometry(const Matrix4& Projection, const Matrix4& View)
+void Object::drawGeometry(const Matrix4& ViewProjection, const GLuint currentShaderID)
 {
 	//apply transformation matrix from node
 	Matrix4 offsetMatrix = Matrix4::translate(meshOffset);
 	Matrix4 dModel = offsetMatrix*this->node.TopDownTransform;
 	Matrix4F ModelMatrix = dModel.toFloat();
-	Matrix4F MVP = (dModel*View*Projection).toFloat();
-	GLuint currentShaderID = ShaderManager::Instance()->GetCurrentShaderID();
+	Matrix4F MVP = (dModel*ViewProjection).toFloat();
 	//vertex
 	MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
@@ -85,16 +68,10 @@ void Object::drawGeometry(const Matrix4& Projection, const Matrix4& View)
 	ModelMatrixHandle = glGetUniformLocation(currentShaderID, "M");
 	glUniformMatrix4fv(ModelMatrixHandle, 1, GL_FALSE, &ModelMatrix[0][0]);
 
-	//below is only for geometry pass
-	MaterialShininessValue = glGetUniformLocation(currentShaderID, "MaterialShininessValue");
-	MaterialAmbientIntensityValueHandle = glGetUniformLocation(currentShaderID, "MaterialAmbientIntensityValue"); //ambient color for object
-	MaterialSpecularIntensityHandle = glGetUniformLocation(currentShaderID, "MaterialSpecularIntensityValue"); //specular color for object
-	MaterialDiffuseIntensityValueHandle = glGetUniformLocation(currentShaderID, "MaterialDiffuseIntensityValue"); //intensity of the diffuse color for object
-	MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor"); //diffuse color of the object
-	glUniform1f(MaterialDiffuseIntensityValueHandle, this->mat->diffuseIntensity);
-	glUniform1f(MaterialShininessValue, this->mat->shininess);
-	glUniform1f(MaterialAmbientIntensityValueHandle, this->mat->ambientIntensity);
-	glUniform1f(MaterialSpecularIntensityHandle, this->mat->specularIntensity);
+	MaterialPropertiesHandle = glGetUniformLocation(currentShaderID, "MaterialProperties");
+	MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor");
+	Vector4 matProperties = Vector4(this->mat->ambientIntensity, this->mat->diffuseIntensity, this->mat->specularIntensity, this->mat->shininess);
+	glUniform4fv(MaterialPropertiesHandle, 1, &matProperties.x);
 	glUniform3fv(MaterialColorHandle, 1, &this->mat->color.x);
 
 	TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
@@ -113,7 +90,7 @@ void Object::drawGeometry(const Matrix4& Projection, const Matrix4& View)
 }
 
 
-void Object::draw(const Matrix4& Projection, const Matrix4& View)
+void Object::draw(const Matrix4& ViewProjection, const GLuint currentShaderID)
 {
     //apply transformation matrix from node
 	//we do physics around the center of the object
@@ -122,34 +99,25 @@ void Object::draw(const Matrix4& Projection, const Matrix4& View)
 	Matrix4 offsetMatrix = Matrix4::translate(meshOffset); 
 	Matrix4 dModel = offsetMatrix*this->node.TopDownTransform;
 	Matrix4F ModelMatrix = dModel.toFloat();
-    Matrix4F ViewMatrix = View.toFloat();
-	Matrix4F MVP = (dModel*View*Projection).toFloat();
+	Matrix4F MVP = (dModel*ViewProjection).toFloat();
 	Matrix4F depthBiasMVP = (depthMVP*Matrix4::biasMatrix()).toFloat();
-	GLuint currentShaderID = ShaderManager::Instance()->GetCurrentShaderID();
 
 	MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
-	ViewMatrixHandle = glGetUniformLocation(currentShaderID, "V");
 	DepthBiasMatrixHandle = glGetUniformLocation(currentShaderID, "DepthBiasMVP");
 	ModelMatrixHandle = glGetUniformLocation(currentShaderID, "M");
 
-	MaterialAmbientIntensityValueHandle = glGetUniformLocation(currentShaderID, "MaterialAmbientIntensityValue");
-	MaterialSpecularIntensityHandle = glGetUniformLocation(currentShaderID, "MaterialSpecularIntensityValue");
-	MaterialDiffuseIntensityValueHandle = glGetUniformLocation(currentShaderID, "MaterialDiffuseIntensityValue");
-	MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColorValue");
-	MaterialShininessValue = glGetUniformLocation(currentShaderID, "MaterialShininessValue");
+	MaterialPropertiesHandle = glGetUniformLocation(currentShaderID, "MaterialProperties");
+	MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor");
 	PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
 	TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
 
     glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-    glUniformMatrix4fv(ViewMatrixHandle, 1, GL_FALSE, &ViewMatrix[0][0]);
 	glUniformMatrix4fv(ModelMatrixHandle, 1, GL_FALSE, &ModelMatrix[0][0]);
 	glUniformMatrix4fv(DepthBiasMatrixHandle, 1, GL_FALSE, &depthBiasMVP[0][0]);
 
-	glUniform1f(MaterialAmbientIntensityValueHandle, this->mat->ambientIntensity);
-	glUniform1f(MaterialSpecularIntensityHandle, this->mat->specularIntensity);
-    glUniform1f(MaterialDiffuseIntensityValueHandle, this->mat->diffuseIntensity);
-	glUniform1f(MaterialShininessValue, this->mat->shininess);
-	glUniform3fv(MaterialColorHandle, 1, &this->mat->color.vect[0]);
+	Vector4 matProperties = Vector4(this->mat->ambientIntensity, this->mat->diffuseIntensity, this->mat->specularIntensity, this->mat->shininess);
+	glUniform4fv(MaterialPropertiesHandle, 1, &matProperties.x);
+	glUniform3fv(MaterialColorHandle, 1, &this->mat->color.x);
 
     glUniform1ui(PickingObjectIndexHandle, ID);
     
