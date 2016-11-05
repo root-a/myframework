@@ -16,7 +16,7 @@ public:
 	Node node;
 	Material* mat;
 	Mesh* mesh;
-	int ID;
+	unsigned int ID;
 	float radius;
 	mwm::Vector3 boundingSphereOffset;
 	void AssignMaterial(Material* mat);

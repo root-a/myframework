@@ -7,9 +7,9 @@ class Scene
 {
 public:
     static Scene* Instance();
-    int idCounter;
+    unsigned int idCounter;
     Object* addChild(Object* parentNodeGR);
-    std::map<int, Object*> objectsToRender;
+    std::map<unsigned int, Object*> objectsToRender;
 	std::vector<Object*> pointLights;
 	std::vector<Object*> directionalLights;
     Object* SceneObject;

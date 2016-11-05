@@ -55,10 +55,10 @@ void Object::drawLight(const Matrix4& Projection, const Matrix4& View, const Vec
 	//i probably wnat to keep and rename the color for light color and the specual value for shininess
 	//ok let's do this
 
-	GLuint LightPower = glGetUniformLocation(ShaderManager::Instance()->GetCurrentShaderID(), "lightPower");
+	GLuint LightPower = glGetUniformLocation(currentShaderID, "lightPower");
 	glUniform1f(LightPower, this->mat->diffuseIntensity);
 
-	GLuint LightColor = glGetUniformLocation(ShaderManager::Instance()->GetCurrentShaderID(), "lightColor");
+	GLuint LightColor = glGetUniformLocation(currentShaderID, "lightColor");
 	glUniform3fv(LightColor, 1, &this->mat->color.x);
 
 	//bind vao before drawing
@@ -137,7 +137,7 @@ void Object::draw(const Matrix4& Projection, const Matrix4& View)
 	MaterialDiffuseIntensityValueHandle = glGetUniformLocation(currentShaderID, "MaterialDiffuseIntensityValue");
 	MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColorValue");
 	MaterialShininessValue = glGetUniformLocation(currentShaderID, "MaterialShininessValue");
-	PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "gObjectIndexVec4");
+	PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
 	TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
 
     glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
@@ -151,11 +151,7 @@ void Object::draw(const Matrix4& Projection, const Matrix4& View)
 	glUniform1f(MaterialShininessValue, this->mat->shininess);
 	glUniform3fv(MaterialColorHandle, 1, &this->mat->color.vect[0]);
 
-    int r = (this->ID & 0x000000FF) >>  0;
-    int g = (this->ID & 0x0000FF00) >>  8;
-    int b = (this->ID & 0x00FF0000) >> 16;
-
-    glUniform4f(PickingObjectIndexHandle, r/255.0f, g/255.0f, b/255.0f, 1.0f);
+    glUniform1ui(PickingObjectIndexHandle, ID);
     
 	//we bind texture for each object since it can be different 
     // Bind our texture in Texture Unit 0
