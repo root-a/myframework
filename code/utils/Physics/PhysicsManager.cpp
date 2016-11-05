@@ -328,7 +328,7 @@ void PhysicsManager::NarrowTestSAT(float dtInv)
 				i++;
 			}
 			
-			if (contacts.size() > 0)
+			if (contacts.size() > 0) //if we have at least one contact then we add the cumulated change in velocity to both objects
 			{
 				Contact* contact = *contacts.begin();
 				if (!contact->one->isKinematic)
@@ -342,6 +342,12 @@ void PhysicsManager::NarrowTestSAT(float dtInv)
 					contact->two->angular_velocity += changeInAng_Vel2;
 				}
 				PositionalCorrection(contact->one, contact->two, smallestPen, contact->contactNormal);
+
+				for (auto& contact : contacts)
+				{
+					delete contact;
+				}
+				contacts.clear();
 			}
 		}
 		else
