@@ -22,9 +22,6 @@ public:
 	void AssignMaterial(Material* mat);
 	void AssignMesh(Mesh* mesh);
 	int indicesSize;
-	void draw(const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
-	void drawLight(const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
-	void drawGeometry(const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
 	mwm::Vector3 extractScale();
 	mwm::Vector3 getScale();
 	
@@ -72,15 +69,13 @@ public:
 	void SetMeshOffset(const mwm::Vector3& offset);
 	mwm::Vector3 ConvertPointToWorld(const mwm::Vector3& point, const mwm::Matrix4& modelTransform);
 
-	//AABB aabb;
-	//OBB obb; //need either aabb or obb as bounding box because aabb is based on obb so their min and max values are the same
-
 	AABB aabb;
 	OBB obb;
 	void UpdateKineticEnergyStoreAndPutToSleep(float timestep);
 	void UpdateBoundingBoxes(const BoundingBox& boundingBox);
 	void SetOBBHalfExtent(const mwm::Vector3& scale);
 	void UpdateInertiaTensor();
+	mwm::Matrix4 CalculateOffetedModel() const;
 	Object* boundingBoxShape;
 	bool isAwake = true;
 	mwm::Matrix3 inverse_inertia_tensor_world;
@@ -88,22 +83,13 @@ public:
 	float restitution = 0.f;
 
 	void UpdatePosAndOrient(float timeStep);
-	void drawDepth(const mwm::Matrix4& Projection, const mwm::Matrix4& View);
-private:
 	mwm::Vector3 meshOffset;
-	//should not be here
-	GLuint MatrixHandle;
-	GLuint ModelMatrixHandle;
-	GLuint MaterialColorHandle;
-	GLuint MaterialPropertiesHandle;
-	GLuint PickingObjectIndexHandle;
-	GLuint TextureSamplerHandle;
-	GLuint DepthMVPMatrixHandle;
-	GLuint DepthBiasMatrixHandle;
+	mwm::Matrix4 depthMVP = mwm::Matrix4::identityMatrix();
+private:
 	float motion = 1.f; //make sure it does not sleep directly at start of simulation
 	bool canSleep = true;
 	float sleepEpsilon = 0.2f; 
 	
-	mwm::Matrix4 depthMVP = mwm::Matrix4::identityMatrix();
+	
 };
 

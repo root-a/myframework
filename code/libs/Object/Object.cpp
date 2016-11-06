@@ -22,150 +22,6 @@ Object::~Object()
 {
 }
 
-void Object::drawLight(const Matrix4& ViewProjection, const GLuint currentShaderID)
-{
-	//apply transformation matrix from node
-	Matrix4 offsetMatrix = Matrix4::translate(meshOffset);
-	Matrix4 dModel = offsetMatrix*this->node.TopDownTransform;
-	Matrix4F MVP = (dModel*ViewProjection).toFloat();
-
-	MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
-	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-
-	GLuint LightPosHandle = glGetUniformLocation(currentShaderID, "LightPosition_worldspace");
-	
-	glUniform3fv(LightPosHandle, 1, &this->node.position.x);
-
-	GLuint LightRadius = glGetUniformLocation(currentShaderID, "lightRadius");
-	glUniform1f(LightRadius, this->node.scale.x);	
-
-	GLuint LightPower = glGetUniformLocation(currentShaderID, "lightPower");
-	glUniform1f(LightPower, this->mat->diffuseIntensity);
-
-	GLuint LightColor = glGetUniformLocation(currentShaderID, "lightColor");
-	glUniform3fv(LightColor, 1, &this->mat->color.x);
-
-	//bind vao before drawing
-	glBindVertexArray(this->mesh->vaoHandle);
-
-	// Draw the triangles !
-	glDrawElements(GL_TRIANGLES, this->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset
-}
-
-
-
-void Object::drawGeometry(const Matrix4& ViewProjection, const GLuint currentShaderID)
-{
-	//apply transformation matrix from node
-	Matrix4 offsetMatrix = Matrix4::translate(meshOffset);
-	Matrix4 dModel = offsetMatrix*this->node.TopDownTransform;
-	Matrix4F ModelMatrix = dModel.toFloat();
-	Matrix4F MVP = (dModel*ViewProjection).toFloat();
-	//vertex
-	MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
-	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-
-	ModelMatrixHandle = glGetUniformLocation(currentShaderID, "M");
-	glUniformMatrix4fv(ModelMatrixHandle, 1, GL_FALSE, &ModelMatrix[0][0]);
-
-	MaterialPropertiesHandle = glGetUniformLocation(currentShaderID, "MaterialProperties");
-	MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor");
-	Vector4 matProperties = Vector4(this->mat->ambientIntensity, this->mat->diffuseIntensity, this->mat->specularIntensity, this->mat->shininess);
-	glUniform4fv(MaterialPropertiesHandle, 1, &matProperties.x);
-	glUniform3fv(MaterialColorHandle, 1, &this->mat->color.x);
-
-	TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
-	//we bind texture for each object since it can be different 
-	// Bind our texture in Texture Unit 0
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, this->mat->texture2D->TextureID);
-	// Set our "myTextureSampler" sampler to user Texture Unit 0
-	glUniform1i(TextureSamplerHandle, 0);
-
-	//bind vao before drawing
-	glBindVertexArray(this->mesh->vaoHandle);
-
-	// Draw the triangles !
-	glDrawElements(GL_TRIANGLES, this->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset
-}
-
-
-void Object::draw(const Matrix4& ViewProjection, const GLuint currentShaderID)
-{
-    //apply transformation matrix from node
-	//we do physics around the center of the object
-	//and in cases when pivot point is not in the center of the object 
-	//we have to apply the offset for the graphics to match their physical position 
-	Matrix4 offsetMatrix = Matrix4::translate(meshOffset); 
-	Matrix4 dModel = offsetMatrix*this->node.TopDownTransform;
-	Matrix4F ModelMatrix = dModel.toFloat();
-	Matrix4F MVP = (dModel*ViewProjection).toFloat();
-	Matrix4F depthBiasMVP = (depthMVP*Matrix4::biasMatrix()).toFloat();
-
-	MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
-	DepthBiasMatrixHandle = glGetUniformLocation(currentShaderID, "DepthBiasMVP");
-	ModelMatrixHandle = glGetUniformLocation(currentShaderID, "M");
-
-	MaterialPropertiesHandle = glGetUniformLocation(currentShaderID, "MaterialProperties");
-	MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor");
-	PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
-	TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
-
-    glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-	glUniformMatrix4fv(ModelMatrixHandle, 1, GL_FALSE, &ModelMatrix[0][0]);
-	glUniformMatrix4fv(DepthBiasMatrixHandle, 1, GL_FALSE, &depthBiasMVP[0][0]);
-
-	Vector4 matProperties = Vector4(this->mat->ambientIntensity, this->mat->diffuseIntensity, this->mat->specularIntensity, this->mat->shininess);
-	glUniform4fv(MaterialPropertiesHandle, 1, &matProperties.x);
-	glUniform3fv(MaterialColorHandle, 1, &this->mat->color.x);
-
-    glUniform1ui(PickingObjectIndexHandle, ID);
-    
-	//we bind texture for each object since it can be different 
-    // Bind our texture in Texture Unit 0
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, this->mat->texture2D->TextureID);
-    // Set our "myTextureSampler" sampler to user Texture Unit 0
-    glUniform1i(TextureSamplerHandle, 0);
-
-    //bind vao before drawing
-    glBindVertexArray(this->mesh->vaoHandle);
-
-    // Draw the triangles !
-    glDrawElements(GL_TRIANGLES, this->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset
-
-    //Unbind the VAO
-    //glBindVertexArray(0);
-}
-
-void Object::drawDepth(const Matrix4& Projection, const Matrix4& View)
-{
-	//apply transformation matrix from node
-	//we do physics around the center of the object
-	//and in cases when pivot point is not in the center of the object 
-	//we have to apply the offset for the graphics to match their physical position 
-	Matrix4 offsetMatrix = Matrix4::translate(meshOffset);
-	Matrix4 dModel = offsetMatrix*this->node.TopDownTransform;
-	Matrix4F ModelMatrix = dModel.toFloat();
-	Matrix4F ViewMatrix = View.toFloat();
-	depthMVP = dModel*View*Projection;
-	Matrix4F MVP = (depthMVP).toFloat();
-
-	GLuint depthMatrixHandle = glGetUniformLocation(ShaderManager::Instance()->GetCurrentShaderID(), "depthMVP");
-
-	glUniformMatrix4fv(depthMatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-
-	//bind vao before drawing
-	glBindVertexArray(this->mesh->vaoHandle);
-
-	// Draw the triangles !
-	glDrawElements(GL_TRIANGLES, this->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset
-
-	//Unbind the VAO
-	//glBindVertexArray(0);
-}
-
-
 void Object::AssignMaterial(Material* mat)
 {
 	this->mat = mat;
@@ -611,4 +467,14 @@ void Object::setCanSleep(const bool canSleep)
 	this->canSleep = canSleep;
 
 	if (!canSleep && !isAwake) setAwake();
+}
+
+Matrix4 Object::CalculateOffetedModel() const
+{
+	//apply transformation matrix from node
+	//we do physics around the center of the object
+	//and in cases when pivot point is not in the center of the object 
+	//we have to apply the offset for the graphics to match their physical position 
+	Matrix4 offsetMatrix = Matrix4::translate(meshOffset);
+	return offsetMatrix*this->node.TopDownTransform;
 }
