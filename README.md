@@ -17,11 +17,11 @@ My Libraries
 - HalfEdgeMesh - Half-Edge Mesh lib for 3D meshes(generation, subdivision and conversion)
 - HalfEdgeMesh2D - Half-Edge Mesh lib for 2D meshes(generation, subdivision and conversion)
 - Material - object's material that describes its properties
-- Mesh - object's mesh  
+- Mesh - object's mesh keeps track of VAO and VBO's 
 - MyMathLib - double and single floating point precision math lib, not sse yet
 - Node - object's node used for updating the transforms in scenegraph
 - OBJ - loads obj files, performs indexing and stores the indexed data
-- Object - an object that can be placed in scene, has rigid body behaviour 
+- Object - an object which can be placed in scene, has rigid body behaviour 
 - PoolParty - memory pool allocator
 
 ## utils
