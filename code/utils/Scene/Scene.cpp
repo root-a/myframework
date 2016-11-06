@@ -45,30 +45,26 @@ Object* Scene::addChild(Object* parentObject)
 	return child;
 }
 
-void Scene::addRandomObject()
+void Scene::addRandomObject(const Vector3& pos)
 {
 	Object* newChild = Scene::addChild(SceneObject);
 
-	int index = rand() % (3);
-	float rX = (float)(rand() % 20 - 10);
-	float rY = (float)(rand() % 20 - 10);
-	float rZ = (float)(rand() % 20 - 10);
-
+	int index = rand() % (GraphicsStorage::meshes.size());
 	float rS = (float)(rand() % 5);
 
-	newChild->node.TransformationMatrix = Matrix4::translate(rX, rY, rZ)*Matrix4::scale(rS, rS, rS);
+	newChild->SetPosition(pos);
+	newChild->SetScale(Vector3(rS, rS, rS));
 	newChild->radius = rS;	
 
 	Material* newMaterial = new Material();
 
 	auto it = GraphicsStorage::meshes.begin();
-	std::advance(it, index); //rand() % GraphicsStorage::meshes.size()
+	std::advance(it, index); 
 
 	newChild->AssignMesh(it->second);
 	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
-
 }
 
 Object* Scene::addObject(const char* name, const Vector3& pos)
@@ -91,31 +87,11 @@ Object* Scene::addPhysicObject(const char* name, const Vector3& pos)
 	return newObj;
 }
 
-Object* Scene::addRandomlyObject(const char* name)
+Object* Scene::addRandomlyObject(const char* name, const Vector3& position)
 {
 	Object* newChild = addChild(SceneObject);
 
-	int rX = rand() % 40 - 20;
-	int rY = rand() % 40 - 20;
-	int rZ = rand() % 40 - 20;
-	/*
-	float rX = (float)(rand() % 40 - 20);
-	float rY = (float)(rand() % 40 - 20);
-	float rZ = (float)(rand() % 40 - 20);
-	*/
-
-	while (!((rY > 8 || rY < -8) || (rZ > 8 || rZ < -8) || (rX > 8 || rX < -8)))
-	{
-		rX = rand() % 40 - 20;
-		rY = rand() % 40 - 20;
-		rZ = rand() % 40 - 20;
-		/*
-		rX = (float)(rand() % 40 - 20);
-		rY = (float)(rand() % 40 - 20);
-		rZ = (float)(rand() % 40 - 20);
-		*/
-	}
-	newChild->SetPosition(Vector3((float)rX, (float)rY, (float)rZ));
+	newChild->SetPosition(position);
 
 	//newChild->SetPosition(Vector3(0, idCounter * 2 - 10+0.001f, 0));
 	
@@ -175,30 +151,30 @@ Object* Scene::addRandomlyObject(const char* name)
 	return newChild;
 }
 
-void Scene::addRandomObjects(int num)
+void Scene::addRandomObjects(int num, int min, int max)
 {
 	for(int i = 0; i < num; i++)
     {
-	    addRandomObject();
+		addRandomObject(generateRandomIntervallVector(min, max));
     }
 }
 
 
-void Scene::addRandomlyObjects(const char* name, int num)
+void Scene::addRandomlyObjects(const char* name, int num, int min, int max)
 {
 	for (int i = 0; i < num; i++)
 	{
-		Object* obj = addObject(name, generateRandomIntervallVector(-20,20));
+		Object* obj = addObject(name, generateRandomIntervallVector(min, max));
 		obj->isKinematic = true;
 	}
 }
 
 
-void Scene::addRandomlyPhysicObjects(const char* name, int num)
+void Scene::addRandomlyPhysicObjects(const char* name, int num, int min, int max)
 {
 	for (int i = 0; i < num; i++)
 	{
-		PhysicsManager::Instance()->AddObject(addRandomlyObject(name));
+		PhysicsManager::Instance()->AddObject(addRandomlyObject(name, generateRandomIntervallVector(min, max)));
 	}
 }
 
@@ -227,7 +203,7 @@ void Scene::Clear()
 	MainDirectionalLight->node.children.clear();
 }
 
-Object* Scene::addPointLight(const Vector3& position, const Vector3& color /*= Vector3(1,1,1)*/)
+Object* Scene::addPointLight(const Vector3& position, const Vector3& color)
 {
 	Object* newChild = new Object();
 	MainPointLight->node.addChild(&newChild->node);
@@ -268,9 +244,9 @@ Object* Scene::addDirectionalLight(const Vector3& direction, const Vector3& colo
 	return newChild;
 }
 
-void Scene::addRandomPointLight()
+void Scene::addRandomPointLight(int min, int max)
 {
-	addPointLight(generateRandomIntervallVector(-20, 20), generateRandomIntervallVector(0, 255)/155.f);
+	addPointLight(generateRandomIntervallVector(min, max), generateRandomIntervallVector(0, 255)/155.f);
 }
 
 Vector3 Scene::generateRandomIntervallVector(int min, int max)
@@ -291,10 +267,10 @@ Vector3 Scene::generateRandomIntervallVector(int min, int max)
 	return Vector3((float)rX, (float)rY, (float)rZ);
 }
 
-void Scene::addRandomlyPointLights(int num)
+void Scene::addRandomlyPointLights(int num, int min, int max)
 {
 	for (int i = 0; i < num; i++)
 	{
-		addRandomPointLight();
+		addRandomPointLight(min, max);
 	}
 }

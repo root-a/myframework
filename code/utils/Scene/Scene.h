@@ -17,17 +17,17 @@ public:
 	Object* MainDirectionalLight;
     Object* LastAddedObject;
     Object* build();
-    void addRandomObject();
+	void addRandomObject(const mwm::Vector3& pos = mwm::Vector3());
 	Object* addObject(const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
 	Object* addPhysicObject(const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
-	Object* addRandomlyObject(const char* name);
-	void addRandomObjects(int num);
-	void addRandomlyObjects(const char* name, int num);
+	Object* addRandomlyObject(const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
+	void addRandomObjects(int num, int min = -20, int max = 20);
+	void addRandomlyObjects(const char* name, int num, int min = -20, int max = 20);
 	Object* addPointLight(const mwm::Vector3& position, const mwm::Vector3& color = mwm::Vector3(1.f, 1.f, 1.f));
-	void addRandomPointLight();
+	void addRandomPointLight(int min = -20, int max = 20);
 	Object* addDirectionalLight(const mwm::Vector3& direction, const mwm::Vector3& color = mwm::Vector3(1.f, 1.f, 1.f));
-	void addRandomlyPointLights(int num);
-	void addRandomlyPhysicObjects(const char* name, int numberOfSpheres);
+	void addRandomlyPointLights(int num, int min = -20, int max = 20);
+	void addRandomlyPhysicObjects(const char* name, int num, int min = -20, int max = 20);
 	mwm::Vector3 generateRandomIntervallVector(int min, int max);
 
 	void Clear();
