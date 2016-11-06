@@ -62,46 +62,6 @@ void Object::IntegrateMid(float timestep, const Vector3& gravity)
 
 	//acceleration is 
 	//change in velocity / change in time
-	Vector3 oldVelocity = this->velocity;
-	Vector3 changeInVel = acceleration * timestep;
-	this->velocity += changeInVel; 
-
-	Vector3 oldAngularVel = this->angular_velocity;
-	this->angular_velocity += angular_acc * timestep;
-
-	this->velocity *= pow(damping, timestep); 
-	this->angular_velocity *= pow(damping, timestep);
-
-	//midpoint	
-	Vector3 changeInPos = 0.5f*(this->velocity + oldVelocity)*timestep;	
-
-	this->Translate(changeInPos);
-
-	Vector3 axis = this->angular_velocity.vectNormalize();
-	float angle = 0.5f*(this->angular_velocity.vectLengt() + oldAngularVel.vectLengt());
-	if (angle != 0){
-		Quaternion test(angle * timestep, axis);
-		SetOrientation((test*GetOrientation()).Normalized());
-	}
-
-	//clear force
-	this->accum_force = Vector3(0.f, 0.f, 0.f);
-	this->accum_torque = Vector3(0.f, 0.f, 0.f);
-
-	UpdateKineticEnergyStoreAndPutToSleep(timestep);
-
-}
-
-void Object::IntegrateMid2(float timestep, const Vector3& gravity)
-{
-	if (!isAwake || isKinematic) return;
-	
-	this->acceleration = gravity + this->accum_force * this->massInverse;
-
-	this->angular_acc = inverse_inertia_tensor_world*this->accum_torque;
-
-	//acceleration is 
-	//change in velocity / change in time
 	Vector3 changeInVel = acceleration * (timestep * 0.5f); //half-step
 	Vector3 changeInVel2 = (acceleration + changeInVel) * timestep; // midpoint result
 	this->velocity += changeInVel2;
@@ -201,12 +161,6 @@ Vector3 Object::ConvertPointToWorld(const Vector3& point, const Matrix4& modelTr
 	return pointInWorld;
 }
 
-void Object::SetPosition( float x, float y, float z )
-{
-	this->node.position = Vector3(x, y, z);
-}
-
-
 void Object::SetPosition(const Vector3& vector )
 {
 	this->node.position = vector;
@@ -217,27 +171,12 @@ Vector3 Object::GetPosition() const
 	return this->node.position;
 }
 
-
-void Object::SetScale(float x, float y, float z)
-{
-	this->node.scale = Vector3(x, y, z);
-	Vector3 extents = mesh->obj->dimensions*this->node.scale;
-	this->obb.halfExtent = extents*0.5f;
-	SetMass(this->mass);
-}
-
-
 void Object::SetScale(const Vector3& vector )
 {
 	this->node.scale = vector;
 	Vector3 extents = mesh->obj->dimensions*this->node.scale;
 	this->obb.halfExtent = extents*0.5f;
 	SetMass(this->mass);
-}
-
-void Object::Translate(float x, float y, float z)
-{
-	this->node.position += Vector3(x, y, z);
 }
 
 void Object::Translate(const Vector3& vector)
@@ -344,46 +283,7 @@ void Object::SetOBBHalfExtent(const Vector3& scale)
 	obb.halfExtent = scale;
 }
 
-void Object::IntegrateRunge2(float timestep, const Vector3& gravity)
-{
-	if (!isAwake || isKinematic) return;
-
-	this->acceleration = gravity + this->accum_force * this->massInverse;
-
-	this->angular_acc = inverse_inertia_tensor_world*this->accum_torque;
-
-	//runge kutta
-	//first step is euler
-	Vector3 changeInVel1 = acceleration; //this is k1 for vel for time 0 prev acc + force
-	Vector3 changeInAng1 = angular_acc; //this is k1 for ang for time 0 prev acc + force
-
-	Vector3 changeInVel2 = acceleration + (timestep / 2.0f) * changeInVel1; //k2 vel
-	Vector3 changeInAng2 = angular_acc + (timestep / 2.0f) * changeInAng1; //k2 ang
-
-	Vector3 changeInVel3 = acceleration + (timestep / 2.0f) * changeInVel2; //k3 vel
-	Vector3 changeInAng3 = angular_acc + (timestep / 2.0f) * changeInAng2; //k3 ang
-
-	Vector3 changeInVel4 = acceleration + timestep * changeInVel3; //k4 vel
-	Vector3 changeInAng4 = angular_acc + timestep * changeInAng3; //k4 ang
-
-	Vector3 changeInVelF = (timestep / 6.0f) * (changeInVel1 + 2.0f*(changeInVel2 + changeInVel3) + changeInVel4);
-	Vector3 changeInAngF = (timestep / 6.0f) * (changeInAng1 + 2.0f*(changeInAng2 + changeInAng3) + changeInAng4);
-
-	this->velocity *= pow(damping, timestep);
-	this->angular_velocity *= pow(damping, timestep);
-
-	this->velocity += changeInVelF;
-	this->angular_velocity += changeInAngF;
-
-	//clear force
-	this->accum_force = Vector3(0.f, 0.f, 0.f);
-	this->accum_torque = Vector3(0.f, 0.f, 0.f);
-
-	UpdateKineticEnergyStoreAndPutToSleep(timestep);
-
-}
-
-void Object::IntegrateRunge3(float timestep, const Vector3& gravity)
+void Object::IntegrateRunge(float timestep, const Vector3& gravity)
 {
 	if (!isAwake || isKinematic) return;
 

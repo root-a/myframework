@@ -218,7 +218,7 @@ Object* Scene::addPointLight(const Vector3& position, const Vector3& color)
 	//newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
-	newChild->SetScale(5, 5, 5);
+	newChild->SetScale(Vector3(5.f, 5.f, 5.f));
 	newChild->radius = newChild->getScale().x;
 	pointLights.push_back(newChild);
 	//Object* sphere = addObject("sphere");

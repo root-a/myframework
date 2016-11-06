@@ -22,16 +22,12 @@ public:
 	void AssignMaterial(Material* mat);
 	void AssignMesh(Mesh* mesh);
 	int indicesSize;
-	mwm::Vector3 extractScale();
-	mwm::Vector3 getScale();
 	
 	void setRadius(float radius);	
 	
 	void IntegrateEuler(float timestep, const mwm::Vector3& gravity);
 	void IntegrateMid(float timestep, const mwm::Vector3& gravity);
-	void IntegrateMid2(float timestep, const mwm::Vector3& gravity);
-	void IntegrateRunge2(float timestep, const mwm::Vector3& gravity); //acceleration only
-	void IntegrateRunge3(float timestep, const mwm::Vector3& gravity); //acceleration pos and rot
+	void IntegrateRunge(float timestep, const mwm::Vector3& gravity); //acceleration pos and rot
 	void setAwake(const bool awake = true);
 	void setCanSleep(const bool canSleep);
 	void ApplyImpulse(const mwm::Vector3& force, const mwm::Vector3& picking_point);
@@ -41,20 +37,17 @@ public:
 	void SetMass(float mass);
 	mwm::Vector3 GetMeshDimensions();
 	void SetInertiaTensor(const mwm::Matrix3& I);
-	
-	void SetPosition(float x, float y, float z);
+
 	void SetPosition(const mwm::Vector3& vector);
-	mwm::Vector3 GetPosition() const;
-	
-	void SetScale(float x, float y, float z);
 	void SetScale(const mwm::Vector3& vector);
-	
-	void Translate(float x, float y, float z);
 	void Translate(const mwm::Vector3& vector);
-	
 	void SetOrientation(const mwm::Quaternion& q);
+
 	mwm::Quaternion GetOrientation();
-	
+	mwm::Vector3 extractScale();
+	mwm::Vector3 getScale();
+	mwm::Vector3 GetPosition() const;
+
 	float mass = 1.f;
 	float massInverse = 1.f/1.f;
 	float damping = 0.85f;
