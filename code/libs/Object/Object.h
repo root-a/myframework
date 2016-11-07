@@ -46,7 +46,8 @@ public:
 	mwm::Quaternion GetOrientation();
 	mwm::Vector3 extractScale();
 	mwm::Vector3 getScale();
-	mwm::Vector3 GetPosition() const;
+	mwm::Vector3 GetWorldPosition() const;
+	mwm::Vector3 GetLocalPosition() const;
 
 	float mass = 1.f;
 	float massInverse = 1.f/1.f;
@@ -61,7 +62,7 @@ public:
 	mwm::Vector3 angular_acc;
 	void SetMeshOffset(const mwm::Vector3& offset);
 	mwm::Vector3 ConvertPointToWorld(const mwm::Vector3& point, const mwm::Matrix4& modelTransform);
-
+	mwm::Matrix3 extentsM;
 	AABB aabb;
 	OBB obb;
 	void UpdateKineticEnergyStoreAndPutToSleep(float timestep);

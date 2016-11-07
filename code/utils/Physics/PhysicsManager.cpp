@@ -878,6 +878,7 @@ void PhysicsManager::Clear()
 	zAxis.clear();
 	satOverlaps.clear();
 	fullOverlaps.clear();
+	gravity = Vector3(0.f, -9.f, 0.f);
 }
 
 

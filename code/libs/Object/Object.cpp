@@ -31,10 +31,7 @@ void Object::AssignMesh(Mesh* mesh)
 {
 	this->mesh = mesh;
 	SetMeshOffset(mesh->obj->CenterOfMass()*-1.f);
-	Vector3 extents = mesh->obj->dimensions*this->node.scale;
-	this->obb.halfExtent = extents*0.5f;
-	if (mass < FLT_MAX) SetInertiaTensor(Matrix3::CuboidInertiaTensor(this->mass, extents));
-	else inverse_inertia_tensor = Matrix3();
+	SetScale(this->node.scale);
 }
 
 void Object::setRadius(float radius)
@@ -89,7 +86,7 @@ void Object::IntegrateMid(float timestep, const Vector3& gravity)
 	this->accum_force = Vector3(0.f, 0.f, 0.f);
 	this->accum_torque = Vector3(0.f, 0.f, 0.f);
 
-	UpdateKineticEnergyStoreAndPutToSleep(timestep);
+	if (canSleep) UpdateKineticEnergyStoreAndPutToSleep(timestep);
 
 }
 
@@ -127,7 +124,7 @@ void Object::IntegrateEuler(float timestep, const Vector3& gravity)
 	this->accum_force = Vector3(0.f, 0.f, 0.f);
 	this->accum_torque = Vector3(0.f, 0.f, 0.f);
 
-	UpdateKineticEnergyStoreAndPutToSleep(timestep);
+	if (canSleep) UpdateKineticEnergyStoreAndPutToSleep(timestep);
 
 	//UpdateTransforms();
 }
@@ -138,7 +135,7 @@ void Object::ApplyImpulse(const Vector3& force, const Vector3& picking_point)
 	this->accum_force += force;
 	//DebugDraw::Instance()->DrawShapeAtPos("cube", picking_point);
 	//DebugDraw::Instance()->DrawShapeAtPos("pyramid", picking_point+force);
-	Vector3 directionFromCenterToPickingPoint = picking_point - GetPosition();
+	Vector3 directionFromCenterToPickingPoint = picking_point - GetWorldPosition();
 	Vector3 torque = directionFromCenterToPickingPoint.crossProd(force);
 	this->accum_torque += torque;
 }
@@ -149,7 +146,7 @@ void Object::ApplyImpulse(const Vector3& direction, float magnitude, const Vecto
 	this->accum_force += direction*magnitude;
 	//DebugDraw::Instance()->DrawShapeAtPos("cube", point);
 	//DebugDraw::Instance()->DrawShapeAtPos("pyramid", picking_point+force);
-	Vector3 directionFromCenterToPickingPoint = point - GetPosition();
+	Vector3 directionFromCenterToPickingPoint = point - GetWorldPosition();
 	Vector3 torque = directionFromCenterToPickingPoint.crossProd(direction);
 	this->accum_torque += torque*magnitude;
 }
@@ -166,7 +163,13 @@ void Object::SetPosition(const Vector3& vector )
 	this->node.position = vector;
 }
 
-Vector3 Object::GetPosition() const
+Vector3 Object::GetWorldPosition() const
+{
+	return this->node.TopDownTransform.getPosition();
+}
+
+
+mwm::Vector3 Object::GetLocalPosition() const
 {
 	return this->node.position;
 }
@@ -175,6 +178,7 @@ void Object::SetScale(const Vector3& vector )
 {
 	this->node.scale = vector;
 	Vector3 extents = mesh->obj->dimensions*this->node.scale;
+	extentsM = Matrix3::scale(extents);
 	this->obb.halfExtent = extents*0.5f;
 	SetMass(this->mass);
 }
@@ -252,7 +256,7 @@ void Object::UpdateBoundingBoxes(const BoundingBox& boundingBox)
 {
 	//OBB
 	obb.model = node.orientation.ConvertToMatrix3(); //don't let the model contain the scale
-	obb.mm = boundingBox.CalcValuesInWorld(Matrix3::scale(node.scale*mesh->obj->dimensions) * obb.model, node.position);
+	obb.mm = boundingBox.CalcValuesInWorld(extentsM * obb.model, node.position);
 
 	//AABB
 	aabb.model = Matrix4::scale((obb.mm.max - obb.mm.min))*Matrix4::translate(node.position);
@@ -341,7 +345,7 @@ void Object::IntegrateRunge(float timestep, const Vector3& gravity)
 	this->accum_force = Vector3(0.f, 0.f, 0.f);
 	this->accum_torque = Vector3(0.f, 0.f, 0.f);
 
-	UpdateKineticEnergyStoreAndPutToSleep(timestep);
+	if(canSleep) UpdateKineticEnergyStoreAndPutToSleep(timestep);
 
 }
 

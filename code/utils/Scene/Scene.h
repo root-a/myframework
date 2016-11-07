@@ -28,7 +28,8 @@ public:
 	Object* addDirectionalLight(const mwm::Vector3& direction, const mwm::Vector3& color = mwm::Vector3(1.f, 1.f, 1.f));
 	void addRandomlyPointLights(int num, int min = -20, int max = 20);
 	void addRandomlyPhysicObjects(const char* name, int num, int min = -20, int max = 20);
-	mwm::Vector3 generateRandomIntervallVector(int min, int max);
+	mwm::Vector3 generateRandomIntervallVectorCubic(int min, int max);
+	mwm::Vector3 generateRandomIntervallVectorFlat(int min, int max, int axis = 0, int axisHeight = 0);
 
 	void Clear();
 private:

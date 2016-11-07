@@ -26,6 +26,8 @@ public:
 	mwm::Vector3 GetPosition();
 	mwm::Vector3 GetPosition2();
 
+	void SetPosition(mwm::Vector3 pos);
+
 	bool holdingForward;
 	bool holdingBackward;
 	bool holdingRight;

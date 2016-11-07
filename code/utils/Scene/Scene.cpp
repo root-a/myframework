@@ -155,7 +155,7 @@ void Scene::addRandomObjects(int num, int min, int max)
 {
 	for(int i = 0; i < num; i++)
     {
-		addRandomObject(generateRandomIntervallVector(min, max));
+		addRandomObject(generateRandomIntervallVectorCubic(min, max));
     }
 }
 
@@ -164,7 +164,7 @@ void Scene::addRandomlyObjects(const char* name, int num, int min, int max)
 {
 	for (int i = 0; i < num; i++)
 	{
-		Object* obj = addObject(name, generateRandomIntervallVector(min, max));
+		Object* obj = addObject(name, generateRandomIntervallVectorCubic(min, max));
 		obj->isKinematic = true;
 	}
 }
@@ -174,7 +174,7 @@ void Scene::addRandomlyPhysicObjects(const char* name, int num, int min, int max
 {
 	for (int i = 0; i < num; i++)
 	{
-		PhysicsManager::Instance()->AddObject(addRandomlyObject(name, generateRandomIntervallVector(min, max)));
+		PhysicsManager::Instance()->AddObject(addRandomlyObject(name, generateRandomIntervallVectorCubic(min, max)));
 	}
 }
 
@@ -246,10 +246,10 @@ Object* Scene::addDirectionalLight(const Vector3& direction, const Vector3& colo
 
 void Scene::addRandomPointLight(int min, int max)
 {
-	addPointLight(generateRandomIntervallVector(min, max), generateRandomIntervallVector(0, 255)/155.f);
+	addPointLight(generateRandomIntervallVectorCubic(min, max), generateRandomIntervallVectorCubic(0, 255)/155.f);
 }
 
-Vector3 Scene::generateRandomIntervallVector(int min, int max)
+Vector3 Scene::generateRandomIntervallVectorCubic(int min, int max)
 {
 	int range = max - min + 1;
 	int num = rand() % range + min;
@@ -266,6 +266,21 @@ Vector3 Scene::generateRandomIntervallVector(int min, int max)
 	}
 	return Vector3((float)rX, (float)rY, (float)rZ);
 }
+
+
+mwm::Vector3 Scene::generateRandomIntervallVectorFlat(int min, int max, int axis, int axisHeight)
+{
+	int range = max - min + 1;
+	int num = rand() % range + min;
+
+	int r1 = rand() % range + min;
+	int r2 = rand() % range + min;
+
+	if (axis == 1) return Vector3((float)axisHeight, (float)r1, (float)r2);
+	else if (axis == 2) return Vector3((float)r1, (float)axisHeight, (float)r2);
+	else return Vector3((float)r1, (float)r2, (float)axisHeight);
+}
+
 
 void Scene::addRandomlyPointLights(int num, int min, int max)
 {
