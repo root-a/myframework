@@ -1,22 +1,22 @@
 #pragma once
 #include "MyMathLib.h"
-#include "Object.h"
+#include "RigidBody.h"
 
 struct ObjectPoint
 {
-	Object* obj;
+	RigidBody* body;
 	bool isMin = false;
 	ObjectPoint(){}
-	ObjectPoint(Object* ent, bool min){ obj = ent; isMin = min; }
+	ObjectPoint(RigidBody* entRb, bool min){ body = entRb; isMin = min; }
 	float value(int axis)
 	{
 		if (isMin)
 		{
-			return obj->obb.mm.min[axis];
+			return body->obb.mm.min[axis];
 		}
 		else
 		{
-			return obj->obb.mm.max[axis];
+			return body->obb.mm.max[axis];
 		}
 	}
 };

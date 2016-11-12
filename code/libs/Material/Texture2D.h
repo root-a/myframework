@@ -6,7 +6,6 @@ public:
 	Texture2D();
 	~Texture2D();
 	unsigned int TextureID;
-	int meshID;
 	
 private:
 

@@ -13,7 +13,7 @@ SET(files_physics_manager
 SOURCE_GROUP("physics_manager" FILES ${files_physics_manager})
 
 ADD_LIBRARY(physics_manager STATIC ${files_physics_manager})
-TARGET_LINK_LIBRARIES(physics_manager mymathlib debug_draw object)
+TARGET_LINK_LIBRARIES(physics_manager mymathlib debug_draw object rigidbody)
 SET_TARGET_PROPERTIES(physics_manager PROPERTIES LINKER_LANGUAGE CXX)
 SET_TARGET_PROPERTIES(physics_manager PROPERTIES FOLDER "MyUtils")
 TARGET_INCLUDE_DIRECTORIES(physics_manager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

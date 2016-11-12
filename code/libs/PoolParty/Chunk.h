@@ -14,15 +14,8 @@ public:
 	int current_free_index = 0;
 	int data_size = length;
 
-	void* operator new(size_t i)
-	{
-		return _mm_malloc(i, 16);
-	}
-
-		void operator delete(void* p)
-	{
-		_mm_free(p);
-	}
+	void* operator new(size_t i){ return _mm_malloc(i, 16); }
+	void operator delete(void* p) { _mm_free(p); }
 private:
 	//Chunk();
 };

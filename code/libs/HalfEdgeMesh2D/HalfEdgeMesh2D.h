@@ -1,7 +1,7 @@
 #pragma once
-#include <vector>
 #include <list>
 #include "MyMathLib.h"
+#include "Vector.h"
 
 class Vertex;
 class Edge;
@@ -14,11 +14,11 @@ public:
 	~HalfEdgeMesh2D();
 	void Construct(const char * path);
 
-	std::vector<Vertex*> vertices;
-	std::vector<Edge*> edges;
-	std::vector<Face*> faces;
-	std::vector<Face*> goals;
-	std::vector<mwm::Vector2> goalsPos;
+	cop4530::Vector<Vertex*> vertices;
+	cop4530::Vector<Edge*> edges;
+	cop4530::Vector<Face*> faces;
+	cop4530::Vector<Face*> goals;
+	cop4530::Vector<mwm::Vector2> goalsPos;
 
 	Face* startFace;
 	Face* endFace;

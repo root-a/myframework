@@ -15,9 +15,9 @@ GraphicsStorage::~GraphicsStorage()
 
 void GraphicsStorage::ClearMaterials()
 {
-	for (auto& mat : materials)
+	for (auto& material : materials)
 	{
-		delete mat;
+		delete material;
 	}
 	materials.clear();
 }
@@ -46,7 +46,7 @@ void GraphicsStorage::ClearOBJs()
 	{
 		delete object;
 	}
-	textures.clear();
+	objects.clear();
 }
 
 std::map<std::string, Mesh*> GraphicsStorage::meshes;

@@ -17,8 +17,7 @@ public:
 
 	void UpdateSize(int width, int height);
 
-	mwm::Matrix4 getViewMatrix();
-	mwm::Matrix4 getProjectionMatrix();
+	mwm::Matrix4& getViewMatrix();
 	mwm::Vector3 getDirection();
 	mwm::Vector3 getUp();
 
@@ -35,9 +34,10 @@ public:
 	bool holdingUp;
 	bool holdingDown;
 
-	
+	mwm::Matrix4 ProjectionMatrix;
 private:
 	mwm::Matrix4 ViewMatrix;
+	
 	mwm::Vector3 direction;
 	mwm::Vector3 up;
 	mwm::Vector3 right;

@@ -4,7 +4,6 @@
 #include "PoolParty.h"
 #include "Vector.h"
 
-using namespace cop4530;
 class Vertex;
 class Edge;
 class Face;
@@ -23,9 +22,9 @@ private:
 	PoolParty<Vertex,1000> vertexPool;
 	PoolParty<Edge,1000> edgePool;
 	PoolParty<Face,1000> facePool;
-	Vector<Vertex*> vertices;
-	Vector<Edge*> edges;
-	Vector<Face*> faces;
+	cop4530::Vector<Vertex*> vertices;
+	cop4530::Vector<Edge*> edges;
+	cop4530::Vector<Face*> faces;
 	bool checkIfSameVect(mwm::Vector3 &vect1, mwm::Vector3 &vect2);
 	void SplitHalfEdges();
 	void CalculateOldPosition();

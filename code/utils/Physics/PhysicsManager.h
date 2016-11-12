@@ -1,5 +1,4 @@
 #pragma once
-#include <vector>
 #include "Object.h"
 #include <unordered_set>
 #include "OverlapPair.h"
@@ -11,8 +10,8 @@ struct Contact
 	mwm::Vector3 contactPoint;
 	mwm::Vector3 contactNormal;
 	float penetration = -1;
-	Object* one = nullptr;
-	Object* two = nullptr;
+	RigidBody* one = nullptr;
+	RigidBody* two = nullptr;
 
 	bool operator<(const Contact& rhs) const
 	{
@@ -58,7 +57,7 @@ public:
 	};
 
 	
-	void AddObject(Object* obj);
+	void RegisterRigidBody(RigidBody* body);
 	void SortAndSweep();
 	void NarrowTestSAT(float deltaTime);
 	
@@ -83,15 +82,15 @@ private:
 	PhysicsManager& operator=(const PhysicsManager&);
 	void ProcessContact(Contact* contact, mwm::Vector3&vel1, mwm::Vector3& ang_vel1, mwm::Vector3&vel2, mwm::Vector3& ang_vel2, float dtInv);
 	void CalcFaceVertices(const mwm::Vector3& pos, mwm::Vector3* vertices, const mwm::Vector3& axis, const mwm::Matrix3& model, const mwm::Vector3& halfExtents, bool counterClockwise = true);
-	void GenerateContactPointToFace2(mwm::Vector3 &toCentre, std::unordered_set<Contact*> &contacts, mwm::Vector3& smallestAxis, float smallestPen, Object* oneObj, Object* twoObj, int typeOfCollision, mwm::Vector3 * reference_face, mwm::Vector3 * incident_face);
+	void GenerateContactPointToFace2(mwm::Vector3 &toCentre, std::unordered_set<Contact*> &contacts, mwm::Vector3& smallestAxis, float smallestPen, RigidBody* oneObj, RigidBody* twoObj, int typeOfCollision);
 
 	size_t DrawPlaneClipContacts(std::vector<mwm::Vector3> &contacts, const mwm::Vector3& normal, size_t vertCount, const mwm::Vector3& normalColor);
 
 	void SortAxis(std::vector<ObjectPoint*>& axisList, axis axisToSort);
-	bool CheckBoundingBoxes(Object* obj1, Object* obj2);
+	bool CheckBoundingBoxes(RigidBody* body1, RigidBody* body2);
 	void FlipMTVTest(mwm::Vector3 &mtv, const mwm::Vector3 &toCentre);
 
-	void FilterContactsAgainstReferenceFace(std::vector<mwm::Vector3> &contacts, const mwm::Vector3& refNormal, float pos_offsett, std::unordered_set<Contact*> &contact_points_out, float penetration, Object* one, Object* two);
+	void FilterContactsAgainstReferenceFace(std::vector<mwm::Vector3> &contacts, const mwm::Vector3& refNormal, float pos_offsett, std::unordered_set<Contact*> &contact_points_out, float penetration, RigidBody* one, RigidBody* two);
 	
 	void ClaculateIncidentAxis(mwm::Vector3& incident_axis, const mwm::Matrix3 &two, mwm::Vector3 smallestAxis);
 
@@ -101,25 +100,25 @@ private:
 	void DrawCollisionNormal(Contact* contact);
 	void DrawReferenceNormal(Contact* contact, int typeOfCollision);
 	void DrawSidePlanes(const mwm::Vector3& normal1, const mwm::Vector3& normal2, const mwm::Vector3& onePosition, int index1, int index2, const mwm::Vector3& oneHalfSize);
-	void PositionalCorrection(Object* one, Object* two, float penetration, mwm::Vector3& normal);
-	void PositionalImpulseCorrection(Object* one, Object* two, Contact* contact);
-	bool IntersectionTest(const Object* oneObj, const Object* twoObj, float& smallestPenetration, mwm::Vector3& smallestAxis, mwm::Vector3& toCentre, int& axisNumRes, int& bestSingleAxis);
-	bool overlapOnAxis(const Object* oneObj, const Object* twoObj, const mwm::Vector3 &axis, const int axisNum, int& resAxisNum, const mwm::Vector3 &toCentre, float& smallestPenetration, mwm::Vector3& smallestAxis);
-	float penetrationOnAxis(const Object* oneObj, const Object* twoObj, const mwm::Vector3 &axis, const mwm::Vector3 &toCentre);
+	void PositionalCorrection(RigidBody* one, RigidBody* two, float penetration, mwm::Vector3& normal);
+	void PositionalImpulseCorrection(RigidBody* one, RigidBody* two, Contact* contact);
+	bool IntersectionTest(const RigidBody* oneObj, const RigidBody* twoObj, float& smallestPenetration, mwm::Vector3& smallestAxis, mwm::Vector3& toCentre, int& axisNumRes, int& bestSingleAxis);
+	bool overlapOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const mwm::Vector3 &axis, const int axisNum, int& resAxisNum, const mwm::Vector3 &toCentre, float& smallestPenetration, mwm::Vector3& smallestAxis);
+	float penetrationOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const mwm::Vector3 &axis, const mwm::Vector3 &toCentre);
 	float transformToAxis(const mwm::Matrix3 &boxModel, const mwm::Vector3 &axis, const mwm::Vector3 &boxHalfSize);
-	void GenerateContacts(mwm::Vector3& MTV, const float& penetration, mwm::Vector3& toCentre, std::unordered_set<Contact*> &contacts, Object* oneObj, Object* twoObj, int axisNumRes, int& bestSingleAxis);
+	void GenerateContacts(mwm::Vector3& MTV, const float& penetration, mwm::Vector3& toCentre, std::unordered_set<Contact*> &contacts, RigidBody* oneObj, RigidBody* twoObj, int axisNumRes, int& bestSingleAxis);
 
 	void DrawFaceDebug(std::unordered_set<Contact*> &contacts, mwm::Vector3 * reference_face, mwm::Vector3 * incident_face, int typeOfCollision);
 
 	void DrawReferenceAndIncidentFace(mwm::Vector3 * reference_face, mwm::Vector3 * incident_face);
 
-	void GenerateContactPointToFace(Object* one, Object* two, const mwm::Vector3 &toCentre, std::unordered_set<Contact*> &contacts, int axisNum, float smallestPen);
-	void GenerateContactEdgeToEdge(const mwm::Vector3 &toCentre, std::unordered_set<Contact*> &contacts, mwm::Vector3& smallestAxis, float smallestPen, Object* oneObj, Object* twoObj, int axisNumRes, int& bestSingleAxis);
+	void GenerateContactPointToFace(RigidBody* one, RigidBody* two, const mwm::Vector3 &toCentre, std::unordered_set<Contact*> &contacts, int axisNum, float smallestPen);
+	void GenerateContactEdgeToEdge(const mwm::Vector3 &toCentre, std::unordered_set<Contact*> &contacts, mwm::Vector3& smallestAxis, float smallestPen, RigidBody* oneObj, RigidBody* twoObj, int axisNumRes, int& bestSingleAxis);
 	mwm::Vector3 contactPoint(const mwm::Vector3 &pOne, const mwm::Vector3 &dOne, float oneSize, const mwm::Vector3 &pTwo, const mwm::Vector3 &dTwo, float twoSize, bool useOne) const;
 
 };
 
-inline bool PhysicsManager::overlapOnAxis(const Object* oneObj, const Object* twoObj, const mwm::Vector3 &axis, const int axisNum, int& resAxisNum, const mwm::Vector3 &toCentre, float& smallestPenetration, mwm::Vector3& smallestAxis)
+inline bool PhysicsManager::overlapOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const mwm::Vector3 &axis, const int axisNum, int& resAxisNum, const mwm::Vector3 &toCentre, float& smallestPenetration, mwm::Vector3& smallestAxis)
 {
 	if (axis.squareMag() < 0.0001) return true;
 
@@ -137,7 +136,7 @@ inline bool PhysicsManager::overlapOnAxis(const Object* oneObj, const Object* tw
 }
 
 
-inline float PhysicsManager::penetrationOnAxis(const Object* oneObj, const Object* twoObj, const mwm::Vector3 &axis, const mwm::Vector3 &toCentre)
+inline float PhysicsManager::penetrationOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const mwm::Vector3 &axis, const mwm::Vector3 &toCentre)
 {
 	// Project the half-size of one onto axis
 	float oneProject = transformToAxis(oneObj->obb.model, axis, oneObj->obb.halfExtent);

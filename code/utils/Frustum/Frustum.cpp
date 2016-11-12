@@ -18,13 +18,12 @@ FrustumManager* FrustumManager::Instance()
 
 	return &instance;
 }
-void FrustumManager::ExtractPlanes(const Matrix4& Projection, const Matrix4& View)
+void FrustumManager::ExtractPlanes(const Matrix4& VP)
 {
-	Matrix4 dMVP = View*Projection;
-	Vector4 col1 = Vector4(dMVP[0][0], dMVP[1][0], dMVP[2][0], dMVP[3][0]);
-	Vector4 col2 = Vector4(dMVP[0][1], dMVP[1][1], dMVP[2][1], dMVP[3][1]);
-	Vector4 col3 = Vector4(dMVP[0][2], dMVP[1][2], dMVP[2][2], dMVP[3][2]);
-	Vector4 col4 = Vector4(dMVP[0][3], dMVP[1][3], dMVP[2][3], dMVP[3][3]);
+	Vector4 col1 = Vector4(VP._matrix[0][0], VP._matrix[1][0], VP._matrix[2][0], VP._matrix[3][0]);
+	Vector4 col2 = Vector4(VP._matrix[0][1], VP._matrix[1][1], VP._matrix[2][1], VP._matrix[3][1]);
+	Vector4 col3 = Vector4(VP._matrix[0][2], VP._matrix[1][2], VP._matrix[2][2], VP._matrix[3][2]);
+	Vector4 col4 = Vector4(VP._matrix[0][3], VP._matrix[1][3], VP._matrix[2][3], VP._matrix[3][3]);
 
 	planes[0] = col4 + col1;
 	planes[1] = col4 - col1;

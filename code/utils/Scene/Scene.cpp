@@ -42,6 +42,7 @@ Object* Scene::addChild(Object* parentObject)
 	objectsToRender[idCounter] = child;
 	idCounter++;
 	LastAddedObject = child;
+
 	return child;
 }
 
@@ -54,7 +55,6 @@ void Scene::addRandomObject(const Vector3& pos)
 
 	newChild->SetPosition(pos);
 	newChild->SetScale(Vector3(rS, rS, rS));
-	newChild->radius = rS;	
 
 	Material* newMaterial = new Material();
 
@@ -71,80 +71,8 @@ Object* Scene::addObject(const char* name, const Vector3& pos)
 {
 	Object* newChild = Scene::addChild(SceneObject);
 	newChild->SetPosition(pos);
-
 	newChild->AssignMesh(GraphicsStorage::meshes[name]);
 	Material* newMaterial = new Material();
-	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
-	GraphicsStorage::materials.push_back(newMaterial);
-	newChild->AssignMaterial(newMaterial);
-	return newChild;
-}
-
-Object* Scene::addPhysicObject(const char* name, const Vector3& pos)
-{
-	Object* newObj = addObject(name, pos);
-	PhysicsManager::Instance()->AddObject(newObj);
-	return newObj;
-}
-
-Object* Scene::addRandomlyObject(const char* name, const Vector3& position)
-{
-	Object* newChild = addChild(SceneObject);
-
-	newChild->SetPosition(position);
-
-	//newChild->SetPosition(Vector3(0, idCounter * 2 - 10+0.001f, 0));
-	
-	/*
-	else if (idCounter < 5)
-	{
-		newChild->SetPosition(Vector3(2, idCounter * 2 - 9.9-4, 0));
-	}
-	else if (idCounter < 7)
-	{
-		newChild->SetPosition(Vector3(0, idCounter * 2 - 9.9 - 4 *2, 2));
-	}
-	else if (idCounter < 9)
-	{
-		newChild->SetPosition(Vector3(-2, idCounter * 2 - 9.9 - 4 *3, 0));
-	}
-	else if (idCounter < 11)
-	{
-		newChild->SetPosition(Vector3(0, idCounter * 2 - 9.9 - 4 *4, -2));
-	}
-	else if (idCounter < 13)
-	{
-		newChild->SetPosition(Vector3(-2, idCounter * 2 - 9.9 - 4 *5, -2));
-	}
-	else if (idCounter < 15)
-	{
-		newChild->SetPosition(Vector3(2, idCounter * 2 - 9.9 - 4 * 6, 2));
-	}
-	else if (idCounter < 17)
-	{
-		newChild->SetPosition(Vector3(-2, idCounter * 2 - 9.9 - 4 * 7, 2));
-	}
-	else if (idCounter < 19)
-	{
-		newChild->SetPosition(Vector3(2, idCounter * 2 - 9.9 - 4 * 8, -2));
-	}
-	*/
-	/*
-	if (idCounter == 1)
-	{
-		newChild->SetPosition(Vector3(idCounter * 7, 2.2, 0));
-		newChild->SetOrientation(Quaternion(0.78,Vector3(1,1,0)));
-		//newChild->SetPosition(newChild->GetPosition()+Vector3(0, -1.4, 0));
-		//newChild->SetRotation(Matrix4::rotateAngle(Vector3(1, 0, 0), 45));
-	}
-	else
-	{
-		newChild->SetPosition(Vector3(idCounter * 3, 0, 0));
-	}
-	*/
-	Material* newMaterial = new Material();
-
-	newChild->AssignMesh(GraphicsStorage::meshes[name]);
 	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
@@ -165,8 +93,17 @@ void Scene::addRandomlyObjects(const char* name, int num, int min, int max)
 	for (int i = 0; i < num; i++)
 	{
 		Object* obj = addObject(name, generateRandomIntervallVectorCubic(min, max));
-		obj->isKinematic = true;
 	}
+}
+
+
+Object* Scene::addPhysicObject(const char* name, const Vector3& pos)
+{
+	Object* object = addObject(name, pos);
+	RigidBody* body = new RigidBody(object);
+	object->AddComponent(body);
+	PhysicsManager::Instance()->RegisterRigidBody(body);
+	return object;
 }
 
 
@@ -174,7 +111,7 @@ void Scene::addRandomlyPhysicObjects(const char* name, int num, int min, int max
 {
 	for (int i = 0; i < num; i++)
 	{
-		PhysicsManager::Instance()->AddObject(addRandomlyObject(name, generateRandomIntervallVectorCubic(min, max)));
+		addPhysicObject(name, generateRandomIntervallVectorCubic(min, max));
 	}
 }
 
@@ -185,6 +122,7 @@ void Scene::Clear()
 		delete obj.second;
 	}
 	objectsToRender.clear();
+
 	SceneObject->node.children.clear();
 	idCounter = 0;
 
@@ -193,6 +131,7 @@ void Scene::Clear()
 		delete obj;
 	}
 	pointLights.clear();
+
 	MainPointLight->node.children.clear();
 
 	for (auto& obj : directionalLights)
@@ -200,6 +139,7 @@ void Scene::Clear()
 		delete obj;
 	}
 	directionalLights.clear();
+
 	MainDirectionalLight->node.children.clear();
 }
 
@@ -219,7 +159,6 @@ Object* Scene::addPointLight(const Vector3& position, const Vector3& color)
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
 	newChild->SetScale(Vector3(5.f, 5.f, 5.f));
-	newChild->radius = newChild->getScale().x;
 	pointLights.push_back(newChild);
 	//Object* sphere = addObject("sphere");
 	//newChild->node.addChild(&sphere->node);
@@ -268,7 +207,7 @@ Vector3 Scene::generateRandomIntervallVectorCubic(int min, int max)
 }
 
 
-mwm::Vector3 Scene::generateRandomIntervallVectorFlat(int min, int max, int axis, int axisHeight)
+mwm::Vector3 Scene::generateRandomIntervallVectorFlat(int min, int max, axis axis, int axisHeight)
 {
 	int range = max - min + 1;
 	int num = rand() % range + min;
@@ -276,8 +215,8 @@ mwm::Vector3 Scene::generateRandomIntervallVectorFlat(int min, int max, int axis
 	int r1 = rand() % range + min;
 	int r2 = rand() % range + min;
 
-	if (axis == 1) return Vector3((float)axisHeight, (float)r1, (float)r2);
-	else if (axis == 2) return Vector3((float)r1, (float)axisHeight, (float)r2);
+	if (axis == x) return Vector3((float)axisHeight, (float)r1, (float)r2);
+	else if (axis == y) return Vector3((float)r1, (float)axisHeight, (float)r2);
 	else return Vector3((float)r1, (float)r2, (float)axisHeight);
 }
 

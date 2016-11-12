@@ -5,6 +5,7 @@
 #include "Edge.h"
 #include "Face.h"
 
+using namespace cop4530;
 using namespace mwm;
 
 HalfEdgeMesh2D::HalfEdgeMesh2D()
@@ -169,12 +170,12 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	//find pairs
 	//first we need to find all edges that have source vertex same as edge->next->vertex
 	//vecOfEdges
-	std::vector<std::vector<Edge*>> pairCandidatesForEachEdge;
+	Vector<Vector<Edge*>> pairCandidatesForEachEdge;
 	//edges with same source(edge->vertex) as edge->next->vertex
-	std::vector<Edge*> edgesWithSameSource;
-	for (size_t i = 0; i < edges.size(); i++)
+	Vector<Edge*> edgesWithSameSource;
+	for (int i = 0; i < edges.size(); i++)
 	{	
-		for (size_t j = 0; j < edges.size(); j++)
+		for (int j = 0; j < edges.size(); j++)
 		{
 			//printf("edge J %f and edgeNext i %f\n", edges.at(j)->vertex->pos.vect[0], edges.at(i)->next->vertex->pos.vect[0]);
 			if (checkIfSameVect(edges.at(j)->vertex->pos, edges.at(i)->next->vertex->pos))
@@ -188,9 +189,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	}
 
 	//now when we added candidates we need to test them if their next source is the same, if true then we got a pair
-	for (size_t i = 0; i < edges.size(); i++)
+	for (int i = 0; i < edges.size(); i++)
 	{
-		for (size_t j = 0; j < pairCandidatesForEachEdge.at(i).size(); j++)
+		for (int j = 0; j < pairCandidatesForEachEdge.at(i).size(); j++)
 		{
 			if (checkIfSameVect(pairCandidatesForEachEdge.at(i).at(j)->next->vertex->pos, edges.at(i)->vertex->pos))
 			{
@@ -200,7 +201,7 @@ void HalfEdgeMesh2D::Construct(const char * path)
 		}
 	}
 
-	for (size_t i = 0; i < edges.size(); i++)
+	for (int i = 0; i < edges.size(); i++)
 	{
 		if (edges.at(i)->next == edges.at(i)->pair)
 		{
@@ -222,7 +223,7 @@ bool HalfEdgeMesh2D::checkIfSameVect(Vector2 &vect1, Vector2 &vect2)
 
 Face* HalfEdgeMesh2D::findNode(Vector2 point)
 {
-	for (size_t i = 0; i < faces.size(); i++)
+	for (int i = 0; i < faces.size(); i++)
 	{
 		if (this->isPointInNode(point, faces.at(i)))
 		{
@@ -261,8 +262,8 @@ bool HalfEdgeMesh2D::isPointInNode(Vector2 point, Face* node)
 void HalfEdgeMesh2D::quadrangulate()
 {
 	std::list<Face*> toOptimize;
-	std::vector<Face*> optimized;
-	for (size_t i = 0; i < faces.size(); i++)
+	Vector<Face*> optimized;
+	for (int i = 0; i < faces.size(); i++)
 	{
 		toOptimize.push_back(faces.at(i));
 	}
@@ -280,15 +281,14 @@ void HalfEdgeMesh2D::quadrangulate()
 				optimized.push_back(face);
 		}
 	}
-
 	faces = optimized;
 }
 
 void HalfEdgeMesh2D::optimizeMesh()
 {
 	std::list<Face*> toOptimize;
-	std::vector<Face*> optimized;
-	for (size_t i = 0; i < faces.size(); i++)
+	Vector<Face*> optimized;
+	for (int i = 0; i < faces.size(); i++)
 	{
 		toOptimize.push_back(faces.at(i));
 	}

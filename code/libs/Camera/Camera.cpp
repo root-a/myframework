@@ -33,7 +33,7 @@ Camera::~Camera()
 {
 }
 
-Matrix4 Camera::getViewMatrix(){
+Matrix4& Camera::getViewMatrix(){
 	return ViewMatrix;
 }
 
@@ -181,3 +181,5 @@ void Camera::SetPosition(mwm::Vector3 pos)
 	//this would be required if one did change the camera matrix directly rather than changing the position variable 
 	initialPosition = pos;
 }
+
+

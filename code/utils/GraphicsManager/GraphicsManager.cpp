@@ -149,16 +149,14 @@ bool GraphicsManager::LoadTextures(const char * path)
 
 		char texturePath[128];
 		//meshID not in use currently
-		int meshID;
 		// read the first word of the line
-		int res = fscanf(file, "%s %d", texturePath, &meshID);
+		int res = fscanf(file, "%s", texturePath);
 		if (res == EOF)
 		{
 			break; // EOF = End Of File. Quit the loop.
 		}
 		
 		Texture2D* texture2D = LoadTexture(texturePath);
-		texture2D->meshID = meshID;
 		GraphicsStorage::textures.push_back(texture2D);
 	}
 	fclose(file);
