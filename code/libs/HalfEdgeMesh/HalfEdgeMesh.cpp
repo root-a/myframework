@@ -101,11 +101,11 @@ void HalfEdgeMesh::Construct(OBJ &object)
 	//find pairs
 	//first we need to find all edges that have source vertex same as edge->next->vertex
 	//vecOfEdges
-	std::vector<std::vector<Edge*>> pairCandidatesForEachEdge;
-	//edges with same source(edge->vertex) as edge->next->vertex
-	std::vector<Edge*> edgesWithSameSource;
+	Vector<Vector<Edge*>> pairCandidatesForEachEdge;
 	for (int i = 0; i < edges.size(); i++)
 	{	
+		//edges with same source(edge->vertex) as edge->next->vertex
+		Vector<Edge*> edgesWithSameSource;
 		for (int j = 0; j < edges.size(); j++)
 		{
 			//printf("edge J %f and edgeNext i %f\n", edges.at(j)->vertex->pos.vect[0], edges.at(i)->next->vertex->pos.vect[0]);
@@ -116,13 +116,12 @@ void HalfEdgeMesh::Construct(OBJ &object)
 			}
 		}
 		pairCandidatesForEachEdge.push_back(edgesWithSameSource);
-		edgesWithSameSource.clear();
 	}
 
 	//now when we added candidates we need to test them if their next source is the same, if true then we got a pair
 	for (int i = 0; i < edges.size(); i++)
 	{
-		for (size_t j = 0; j < pairCandidatesForEachEdge.at(i).size(); j++)
+		for (int j = 0; j < pairCandidatesForEachEdge.at(i).size(); j++)
 		{
 			if (checkIfSameVect(pairCandidatesForEachEdge.at(i).at(j)->next->vertex->pos, edges.at(i)->vertex->pos))
 			{

@@ -1,3 +1,4 @@
+#pragma once
 #include "MyMathLib.h"
 class Edge;
 

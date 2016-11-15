@@ -10,7 +10,9 @@ using namespace mwm;
 
 HalfEdgeMesh2D::HalfEdgeMesh2D()
 {
-
+	vertexPool.CreatePoolParty();
+	edgePool.CreatePoolParty();
+	facePool.CreatePoolParty();
 }
 
 HalfEdgeMesh2D::~HalfEdgeMesh2D()
@@ -43,10 +45,10 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				
 					
 				//let's get vertices we wanna work with
-				Vertex* vertice1 = new Vertex();
-				Vertex* vertice2 = new Vertex();
-				Vertex* vertice3 = new Vertex();
-				Vertex* vertice4 = new Vertex();
+				Vertex* vertice1 = vertexPool.PoolPartyAlloc();
+				Vertex* vertice2 = vertexPool.PoolPartyAlloc();
+				Vertex* vertice3 = vertexPool.PoolPartyAlloc();
+				Vertex* vertice4 = vertexPool.PoolPartyAlloc();
 
 				vertice1->pos = Vector2(x, y + faceSize);
 				vertice2->pos = Vector2(x, y);
@@ -54,9 +56,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				vertice4->pos = Vector2(x + faceSize, y + faceSize);
 
 				//create new edges
-				Edge* newEdge1 = new Edge();
-				Edge* newEdge2 = new Edge();
-				Edge* newEdge3 = new Edge();
+				Edge* newEdge1 = edgePool.PoolPartyAlloc();
+				Edge* newEdge2 = edgePool.PoolPartyAlloc();
+				Edge* newEdge3 = edgePool.PoolPartyAlloc();
 
 				//connect vertices to edges
 				newEdge1->vertex = vertice1;
@@ -90,9 +92,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				edges.push_back(newEdge2);
 				edges.push_back(newEdge3);
 				
-				Edge* newEdge4 = new Edge();
-				Edge* newEdge5 = new Edge();
-				Edge* newEdge6 = new Edge();
+				Edge* newEdge4 = edgePool.PoolPartyAlloc();
+				Edge* newEdge5 = edgePool.PoolPartyAlloc();
+				Edge* newEdge6 = edgePool.PoolPartyAlloc();
 
 				//connect vertices to edges
 				newEdge4->vertex = vertice3;
@@ -131,8 +133,8 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				vertices.push_back(vertice3);
 				vertices.push_back(vertice4);
 
-				Face* newFace = new Face();
-				Face* newFace2 = new Face();
+				Face* newFace = facePool.PoolPartyAlloc();
+				Face* newFace2 = facePool.PoolPartyAlloc();
 				newFace->edge = newEdge1;
 				newFace2->edge = newEdge4;
 
@@ -172,20 +174,20 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	//vecOfEdges
 	Vector<Vector<Edge*>> pairCandidatesForEachEdge;
 	//edges with same source(edge->vertex) as edge->next->vertex
-	Vector<Edge*> edgesWithSameSource;
 	for (int i = 0; i < edges.size(); i++)
 	{	
+		Vector<Edge*> edgesWithSameSource;
 		for (int j = 0; j < edges.size(); j++)
 		{
 			//printf("edge J %f and edgeNext i %f\n", edges.at(j)->vertex->pos.vect[0], edges.at(i)->next->vertex->pos.vect[0]);
 			if (checkIfSameVect(edges.at(j)->vertex->pos, edges.at(i)->next->vertex->pos))
 			{
+				Edge* edge = edges.at(j);
 				//we might try to avoid adding an edge that is next for the edges.at(i) here as it's not allowed to be a pair
 				edgesWithSameSource.push_back(edges.at(j));
 			}
 		}
 		pairCandidatesForEachEdge.push_back(edgesWithSameSource);
-		edgesWithSameSource.clear();
 	}
 
 	//now when we added candidates we need to test them if their next source is the same, if true then we got a pair

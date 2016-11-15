@@ -13,7 +13,7 @@ public:
 	mwm::Vector2 getMidPointMiniMaxi();
 	mwm::Vector2 min(mwm::Vector2 &v1, mwm::Vector2 &v2);
 	mwm::Vector2 max(mwm::Vector2 &v1, mwm::Vector2 &v2);
-	bool joined = false;
+	bool joined;
 private:
 	
 };

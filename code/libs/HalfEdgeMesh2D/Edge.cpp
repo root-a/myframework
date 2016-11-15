@@ -5,6 +5,11 @@ using namespace mwm;
 
 Edge::Edge()
 {
+	vertex, midVertex = nullptr;
+	next = nullptr;
+	prev = nullptr;
+	pair = nullptr;
+	face = nullptr;
 }
 
 Edge::~Edge()
