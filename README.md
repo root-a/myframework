@@ -12,6 +12,7 @@ External libraries required by my libraries
 My Libraries
 - App - base class for application
 - Camera - implementation of 3D FPS Camera
+- Component - base class for components that are build pieces for Object
 - Drawables - basic implementation of OpenGL3.0+ figures, points, lines, planes
 - GLwindow - class that encapsulate GLFW window functionality
 - HalfEdgeMesh - Half-Edge Mesh lib for 3D meshes(generation, subdivision and conversion)
@@ -21,11 +22,14 @@ My Libraries
 - MyMathLib - double and single floating point precision math lib, not sse yet
 - Node - object's node used for updating the transforms in scenegraph
 - OBJ - loads obj files, performs indexing and stores the indexed data
-- Object - an object which can be placed in scene, has rigid body behaviour 
+- Object - an object which can be placed in scene
+- Particle - contains definitions for particle and particle system
 - PoolParty - memory pool allocator
+- RigidBody - component encapsulating the rigidbody behaviour, integration, applying and reacting to impulses
 
 ## utils
 Useful utilities that make use of the libraries
+- CameraManager - manager for cameras, responsible for calculating and providing various combinations of M V P
 - DebugDraw - manager for rendering basic 2D and 3D shapes (mostly useful with forward rendering)
 - Frustum - frustum culling manager, uses bounding spheres for culling
 - GraphicsManager - manager for loading all assets like models, textures, shaders
@@ -34,3 +38,4 @@ Useful utilities that make use of the libraries
 - Render - set of functions to render different passes
 - Scene - Scene-graph manager
 - ShaderManager - manager for switching shaders and keeping track of active shader program
+- Time - time class containing time related static variables
