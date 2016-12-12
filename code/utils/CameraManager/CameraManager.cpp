@@ -37,7 +37,7 @@ void CameraManager::SetCurrentCamera(const char* name)
 
 void CameraManager::Update()
 {
-	currentCamera->Update((float)Time::timeStep);
+	currentCamera->Update((float)Time::deltaTime);
 	Matrix4 View = currentCamera->getViewMatrix();
 	ViewProjection = View*currentCamera->ProjectionMatrix;
 	up = Vector3(View[0][1], View[1][1], View[2][1]);

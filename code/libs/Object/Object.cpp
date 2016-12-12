@@ -126,9 +126,13 @@ void Object::Update()
 void Object::CalculateRadius()
 {
 	Vector3 halfExtents = (mesh->obj->dimensions*node.scale)*0.5f;
-	/*
-	float maxRadius = std::max(halfExtents.x, halfExtents.y); 
-	radius = std::max(maxRadius, halfExtents.z); //perfect for sphere
-	*/
-	radius = sqrt(pow(halfExtents.x, 2) + pow(halfExtents.y, 2) + pow(halfExtents.z, 2)); //perfect for cuboid
+	if (mesh->obj->name.compare("sphere") == 0)
+	{
+		//radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere
+		radius = halfExtents.x;
+	}
+	else
+	{
+		radius = halfExtents.vectLengthSSE(); //perfect for cuboid
+	}
 }

@@ -21,7 +21,7 @@ Render::drawLight(const Object* object, const Matrix4& ViewProjection, const GLu
 	glUniform3fv(LightPosHandle, 1, &object->node.position.x);
 
 	GLuint LightRadius = glGetUniformLocation(currentShaderID, "lightRadius");
-	glUniform1f(LightRadius, object->node.scale.x);
+	glUniform1f(LightRadius, object->radius);
 
 	GLuint LightPower = glGetUniformLocation(currentShaderID, "lightPower");
 	glUniform1f(LightPower, object->mat->diffuseIntensity);

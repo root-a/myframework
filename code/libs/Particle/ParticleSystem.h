@@ -22,6 +22,10 @@ public:
 	void SetTexture(GLuint textureID);
 	void SetEmissionRate(int emissionRate);
 	void SetColor(const mwm::Vector4& color);
+	void SetSize(float size);
+	void SetLifeTime(float lifetime);
+	void SetDirection(const mwm::Vector3& direction);
+	void SetSpread(float spread);
 	void Update();
 	static const mwm::Vector3 g_vertex_buffer_data[4];
 	mwm::Vector4* g_particule_position_size_data;
@@ -49,5 +53,9 @@ private:
 	mwm::Vector4 Color;
 	void SetUp();
 	int aliveParticles;
+	float Size;
+	float LifeTime;
+	mwm::Vector3 Direction;
+	float Spread;
 };
 

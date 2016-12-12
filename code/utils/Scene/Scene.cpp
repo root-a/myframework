@@ -10,7 +10,7 @@ using namespace mwm;
 
 Scene::Scene()
 {
-	idCounter = 0;
+	idCounter = 1;
 }
 
 Scene::~Scene()
@@ -124,7 +124,7 @@ void Scene::Clear()
 	objectsToRender.clear();
 
 	SceneObject->node.children.clear();
-	idCounter = 0;
+	idCounter = 1;
 
 	for (auto& obj : pointLights)
 	{
@@ -158,7 +158,8 @@ Object* Scene::addPointLight(const Vector3& position, const Vector3& color)
 	//newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
-	newChild->SetScale(Vector3(5.f, 5.f, 5.f));
+	newChild->SetScale(Vector3(4.f, 4.f, 4.f));
+	//newChild->mat->SetDiffuseIntensity(5.5f);
 	pointLights.push_back(newChild);
 	//Object* sphere = addObject("sphere");
 	//newChild->node.addChild(&sphere->node);
@@ -185,7 +186,7 @@ Object* Scene::addDirectionalLight(const Vector3& direction, const Vector3& colo
 
 void Scene::addRandomPointLight(int min, int max)
 {
-	addPointLight(generateRandomIntervallVectorCubic(min, max), generateRandomIntervallVectorCubic(0, 255)/155.f);
+	addPointLight(generateRandomIntervallVectorCubic(min, max), generateRandomIntervallVectorCubic(0, 255)/255.f);
 }
 
 Vector3 Scene::generateRandomIntervallVectorCubic(int min, int max)

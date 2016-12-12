@@ -30,6 +30,11 @@ ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
 	}
 	EmissionRate = emissionRate;
 	Color = Vector4(1.f, 1.f, 1.f, 0.8f);
+	Size = 1.f;
+	LifeTime = 0.2f;
+	Direction = Vector3(0.0f, 10.0f, 0.0f);
+	Spread = 1.5f;
+	aliveParticles = 0;
 	SetUp();
 }
 
@@ -74,11 +79,11 @@ int ParticleSystem::UpdateParticles(double deltaTime, const mwm::Vector3& camPos
 			p.lifeTime -= (float)deltaTime;
 
 			// Simulate simple physics : gravity only, no collisions
-			//p.speed += Vector3(0.0f, -9.81f, 0.0f) * (float)deltaTime * 0.5f;
-			//p.pos += p.speed * (float)deltaTime;
+			p.speed += Vector3(0.0f, -9.81f, 0.0f) * (float)deltaTime * 0.5f;
+			p.pos += p.speed * (float)deltaTime;
 			p.cameraDistance = (p.pos - camPos).vectLengthSSE();
-			p.size -= (float)deltaTime*3.5f;
-			if (p.size < 0.f) p.size = 0.f;
+			//p.size -= (float)deltaTime*3.5f;
+			//if (p.size < 0.f) p.size = 0.f; p.lifeTime = 0.f;
 			// Fill the GPU buffer
 			g_particule_position_size_data[ParticlesCount] = Vector4(p.pos, p.size);
 			g_particule_color_data[ParticlesCount] = p.color;
@@ -147,7 +152,9 @@ void ParticleSystem::Draw(const Matrix4& ViewProjection, GLuint currentShaderID,
 
 	glEnable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	// Use additive blending to give it a 'glow' effect
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	CameraRightHandle = glGetUniformLocation(currentShaderID, "CameraRight");
 	CameraUpHandle = glGetUniformLocation(currentShaderID, "CameraUp");
@@ -175,6 +182,9 @@ void ParticleSystem::Draw(const Matrix4& ViewProjection, GLuint currentShaderID,
 
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, aliveParticles);
 
+	// Don't forget to reset to default blending mode
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
 	glDisable(GL_BLEND);
 }
 
@@ -189,16 +199,14 @@ void ParticleSystem::GenerateNewParticles(double deltaTime)
 	// but limit this to 16 ms (60 fps), or if you have 1 long frame (1sec),
 	// newparticles will be huge and the next frame even longer.
 	int newparticles = (int)(deltaTime*EmissionRate);
-	if (newparticles > (int)(0.016f*EmissionRate))
-		newparticles = (int)(0.016f*EmissionRate);
+	if (newparticles > (int)(deltaTime*EmissionRate))
+		newparticles = (int)(deltaTime*EmissionRate);
 
 	for (int i = 0; i < newparticles; i++){
 		int particleIndex = FindUnusedParticle();
-		ParticlesContainer[particleIndex].lifeTime = 0.2f; // This particle will live 5 seconds.
+		ParticlesContainer[particleIndex].lifeTime = LifeTime; // This particle will live 5 seconds.
 		ParticlesContainer[particleIndex].pos = object->GetWorldPosition(); //Vector3();
 
-		float spread = 1.5f;
-		Vector3 maindir = Vector3(0.0f, 10.0f, 0.0f);
 		// Very bad way to generate a random direction; 
 		// See for instance http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution instead,
 		// combined with some user-controlled parameters (main direction, spread, etc)
@@ -208,10 +216,10 @@ void ParticleSystem::GenerateNewParticles(double deltaTime)
 			(rand() % 2000 - 1000.0f) / 1000.0f
 			);
 
-		ParticlesContainer[particleIndex].speed = maindir + randomdir*spread;
+		ParticlesContainer[particleIndex].speed = Direction + randomdir*Spread;
 		ParticlesContainer[particleIndex].color = Color;
 
-		ParticlesContainer[particleIndex].size = 1.f;//(float)((rand() % 1000) / 2000.0f + 0.1f);
+		ParticlesContainer[particleIndex].size = Size;//(float)((rand() % 1000) / 2000.0f + 0.1f);
 	}
 }
 
@@ -225,6 +233,11 @@ void ParticleSystem::SetColor(const mwm::Vector4& color)
 	Color = color;
 }
 
+void ParticleSystem::SetSize(float size)
+{
+	Size = size;
+}
+
 void ParticleSystem::Update()
 {
 	GenerateNewParticles(Time::timeStep);
@@ -232,3 +245,17 @@ void ParticleSystem::Update()
 	SortParticles();
 }
 
+void ParticleSystem::SetLifeTime(float lifetime)
+{
+	LifeTime = lifetime;
+}
+
+void ParticleSystem::SetDirection(const mwm::Vector3& direction)
+{
+	Direction = direction;
+}
+
+void ParticleSystem::SetSpread(float spread)
+{
+	Spread = spread;
+}
