@@ -40,6 +40,8 @@ ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
 
 ParticleSystem::~ParticleSystem()
 {
+	glBindVertexArray(0);
+	glDeleteVertexArrays(1, &vaoHandle);
 	glDeleteBuffers(1, &billboard_vertex_buffer);
 	glDeleteBuffers(1, &particles_position_buffer);
 	glDeleteBuffers(1, &particles_color_buffer);
@@ -104,6 +106,11 @@ void ParticleSystem::SortParticles(){
 
 void ParticleSystem::SetUp()
 {
+	//Create VAO
+	glGenVertexArrays(1, &vaoHandle);
+	//Bind VAO
+	glBindVertexArray(vaoHandle);
+
 	glGenBuffers(1, &billboard_vertex_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
 	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vector3), g_vertex_buffer_data, GL_STATIC_DRAW);
@@ -125,25 +132,25 @@ void ParticleSystem::SetUp()
 	glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(2);
+
+	//Unbind the VAO now that the VBOs have been set up
+	glBindVertexArray(0);
 }
 
 void ParticleSystem::UpdateBuffers()
 {
+	//Bind VAO
+	glBindVertexArray(vaoHandle);
+
 	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
 
 	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
 	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4), g_particule_position_size_data);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(1);
 
 	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
 	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4), g_particule_color_data);
-	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(2);
 }
 
 void ParticleSystem::Draw(const Matrix4& ViewProjection, GLuint currentShaderID, const Vector3& cameraUp, const Vector3& cameraRight)

@@ -64,9 +64,6 @@ void Plane::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Proje
 	//bind vao before drawing
 	glBindVertexArray(this->mesh->vaoHandle);
 
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->vertexbuffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-
 	// Draw the triangles !
 	glDrawElements(GL_TRIANGLES, this->mesh->indicesSize, GL_UNSIGNED_SHORT, (void*)0); // mode, count, type, element array buffer offset
 	//glUseProgram(prevShader);

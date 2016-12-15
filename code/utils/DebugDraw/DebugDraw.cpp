@@ -74,8 +74,11 @@ void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
 void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float width)
 {
 	Matrix4 model = Matrix4::translate(position);
-	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normal);
-	float tetha = acos(normal.z);
+	float length = normal.vectLengthSSE();
+	Vector3 normalized = normal.normalizeSSE();
+	
+	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normalized);
+	float tetha = acos(normalized.z);
 	if (axis.squareMag() < 0.0001f)
 	{
 		axis = Vector3(1.f, 0.f, 0.f);
@@ -85,6 +88,9 @@ void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float w
 		float  deg = (tetha * 180.f) / 3.14159f;
 		model = Matrix4::rotateAngle(axis, deg)*model;
 	}
+
+	model = Matrix4::scale(Vector3(length, length, length))*model;
+	
 	
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
@@ -205,9 +211,6 @@ void DebugDraw::DrawQuad()
 {
 	//bind vao before drawing
 	glBindVertexArray(plane.mesh->vaoHandle);
-
-	glBindBuffer(GL_ARRAY_BUFFER, plane.mesh->vertexbuffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 
 	// Draw the triangles !
 	glDrawElements(GL_TRIANGLES, plane.mesh->indicesSize, GL_UNSIGNED_SHORT, (void*)0); // mode, count, type, element array buffer offset

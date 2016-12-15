@@ -60,9 +60,6 @@ void Point::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Proje
 	//bind vao before drawing
 	glBindVertexArray(this->mesh->vaoHandle);
 
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->vertexbuffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-
 	glPointSize(size);
 	// Draw the lines !
 	glDrawElements(GL_POINTS, 1, GL_UNSIGNED_SHORT, 0);

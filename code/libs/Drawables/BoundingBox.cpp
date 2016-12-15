@@ -70,9 +70,6 @@ void BoundingBox::Draw(const mwm::Matrix4& Model, const mwm::Matrix4& View, cons
 	//bind vao before drawing
 	glBindVertexArray(this->mesh->vaoHandle);
 
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->vertexbuffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-
 	// Draw the lines !
 	glDrawElements(GL_LINES, 24, GL_UNSIGNED_SHORT, 0);
 }

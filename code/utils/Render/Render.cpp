@@ -32,15 +32,6 @@ Render::drawLight(const Object* object, const Matrix4& ViewProjection, const GLu
 	//bind vao before drawing
 	glBindVertexArray(object->mesh->vaoHandle);
 
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->vertexbuffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->uvbuffer);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->normalbuffer);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
 	// Draw the triangles !
 	glDrawElements(GL_TRIANGLES, object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset
 }
@@ -74,15 +65,6 @@ Render::drawGeometry(const Object* object, const Matrix4& ViewProjection, const 
 
 	//bind vao before drawing
 	glBindVertexArray(object->mesh->vaoHandle);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->vertexbuffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->uvbuffer);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->normalbuffer);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
 	// Draw the triangles !
 	glDrawElements(GL_TRIANGLES, object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset
@@ -126,15 +108,6 @@ Render::draw(const Object* object, const Matrix4& ViewProjection, const GLuint c
 	//bind vao before drawing
 	glBindVertexArray(object->mesh->vaoHandle);
 
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->vertexbuffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->uvbuffer);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->normalbuffer);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
 	// Draw the triangles !
 	glDrawElements(GL_TRIANGLES, object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset
 }
@@ -152,15 +125,6 @@ Render::drawDepth(Object* object, const Matrix4& ViewProjection, const GLuint cu
 
 	//bind vao before drawing
 	glBindVertexArray(object->mesh->vaoHandle);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->vertexbuffer);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->uvbuffer);
-	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-	glBindBuffer(GL_ARRAY_BUFFER, object->mesh->normalbuffer);
-	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 
 	// Draw the triangles !
 	glDrawElements(GL_TRIANGLES, object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset

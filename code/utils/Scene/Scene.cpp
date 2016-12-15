@@ -198,7 +198,8 @@ Vector3 Scene::generateRandomIntervallVectorCubic(int min, int max)
 	int rY = rand() % range + min;
 	int rZ = rand() % range + min;
 
-	while (!((rY > 8 || rY < -8) || (rZ > 8 || rZ < -8) || (rX > 8 || rX < -8)))
+	//while (!((rY > 5 || rY < -5) || (rZ > 5 || rZ < -5) || (rX > 5 || rX < -5)))
+	while ((rY == 0) || (rZ == 0) || (rX == 0))
 	{
 		rX = rand() % range + min;
 		rY = rand() % range + min;
