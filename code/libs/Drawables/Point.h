@@ -15,7 +15,6 @@ public:
 	Mesh* mesh;
 	Material* mat;
 	
-	static const unsigned short elements[1];
 	static const mwm::Vector3 vertices[1];
 
 	unsigned int MatrixHandle;

@@ -12,7 +12,7 @@ public:
 	mwm::Matrix4 TransformationMatrix;
 	mwm::Matrix4 TopDownTransform;
 	std::string name;
-	void UpdateNodeMatrix(const mwm::Matrix4& ParentMatrix);
+	virtual void UpdateNodeMatrix(const mwm::Matrix4& ParentMatrix);
 	mwm::Vector3 position;
 	mwm::Vector3 scale;
 	mwm::Quaternion orientation;

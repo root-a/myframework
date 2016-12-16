@@ -14,12 +14,6 @@ const Vector3 Point::vertices[] = {
 	Vector3(0.f, 0.f, 0.f)
 };
 
-const GLushort Point::elements[] = {
-	0
-};
-
-
-
 void Point::SetUpBuffers()
 {
 	mesh = new Mesh();
@@ -34,12 +28,6 @@ void Point::SetUpBuffers()
 	glBufferData(GL_ARRAY_BUFFER, 1 * sizeof(Vector3), &vertices[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(0);
-
-	// 4th element buffer Generate a buffer for the indices as well
-	glGenBuffers(1, &mesh->elementbuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->elementbuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, 1 * sizeof(GLushort), &elements[0], GL_STATIC_DRAW);
-	mesh->indicesSize = 1;
 
 	//Unbind the VAO now that the VBOs have been set up
 	glBindVertexArray(0);

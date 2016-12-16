@@ -13,7 +13,7 @@ SET(files_drawables
 SOURCE_GROUP("drawables" FILES ${files_drawables})
 
 ADD_LIBRARY(drawables STATIC ${files_drawables})
-TARGET_LINK_LIBRARIES(drawables mymathlib material mesh glew)
+TARGET_LINK_LIBRARIES(drawables mymathlib material mesh component node glew)
 SET_TARGET_PROPERTIES(drawables PROPERTIES LINKER_LANGUAGE CXX)
 SET_TARGET_PROPERTIES(drawables PROPERTIES FOLDER "MyLibs")
 TARGET_INCLUDE_DIRECTORIES(drawables PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
