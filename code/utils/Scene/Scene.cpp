@@ -11,10 +11,14 @@ using namespace mwm;
 Scene::Scene()
 {
 	idCounter = 1;
+	SceneObject = new Object();
+	MainPointLight = new Object();
+	MainDirectionalLight = new Object();
 }
 
 Scene::~Scene()
 {
+	
 }
 
 Scene* Scene::Instance()
@@ -24,17 +28,8 @@ Scene* Scene::Instance()
 	return &instance;
 }
 
-Object* Scene::build()
-{
-	SceneObject = new Object();
-	MainPointLight = new Object();
-	MainDirectionalLight = new Object();
-	return SceneObject;
-}
-
 Object* Scene::addChild(Object* parentObject)
 {
-	//bind
 	Object* child = new Object();
 	parentObject->node.addChild(&child->node);
 
@@ -153,18 +148,12 @@ Object* Scene::addPointLight(const Vector3& position, const Vector3& color)
 	newChild->SetPosition(position);
 
 	Material* newMaterial = new Material();
-	newMaterial->SetColor(color); //light color
-	//newMaterial->SetDiffuseIntensity(1); //for light it's power
-	
+	newMaterial->SetColor(color); 
 	newChild->AssignMesh(GraphicsStorage::meshes["sphere"]);
-	//newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
 	newChild->SetScale(Vector3(4.f, 4.f, 4.f));
-	//newChild->mat->SetDiffuseIntensity(5.5f);
 	pointLights.push_back(newChild);
-	//Object* sphere = addObject("sphere");
-	//newChild->node.addChild(&sphere->node);
 	return newChild;
 }
 
@@ -174,10 +163,8 @@ Object* Scene::addDirectionalLight(const Vector3& direction, const Vector3& colo
 	MainDirectionalLight->node.addChild(&newChild->node);
 
 	Material* newMaterial = new Material();
-	newMaterial->SetColor(color); //light color
-	//newMaterial->SetDiffuseIntensity(1); //for light it's power
+	newMaterial->SetColor(color);
 	newChild->AssignMesh(GraphicsStorage::meshes["plane"]);
-	//newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
 
@@ -200,13 +187,6 @@ Vector3 Scene::generateRandomIntervallVectorCubic(int min, int max)
 	int rY = rand() % range + min;
 	int rZ = rand() % range + min;
 
-	//while (!((rY > 5 || rY < -5) || (rZ > 5 || rZ < -5) || (rX > 5 || rX < -5)))
-	while ((rY == 0) || (rZ == 0) || (rX == 0))
-	{
-		rX = rand() % range + min;
-		rY = rand() % range + min;
-		rZ = rand() % range + min;
-	}
 	return Vector3((float)rX, (float)rY, (float)rZ);
 }
 

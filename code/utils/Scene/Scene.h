@@ -23,7 +23,7 @@ public:
 	Object* MainPointLight;
 	Object* MainDirectionalLight;
     Object* LastAddedObject;
-    Object* build();
+
 	void addRandomObject(const mwm::Vector3& pos = mwm::Vector3());
 	Object* addObject(const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
 	Object* addPhysicObject(const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
