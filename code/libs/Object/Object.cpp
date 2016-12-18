@@ -17,6 +17,11 @@ Object::Object()
 
 Object::~Object()
 {
+	ClearComponents();
+}
+
+void Object::ClearComponents()
+{
 	for (auto& component : components)
 	{
 		delete component;
@@ -99,7 +104,7 @@ void Object::SetMeshOffset(const Vector3& offset)
 	meshOffset = offset;
 }
 
-Matrix4 Object::CalculateOffetedModel() const
+Matrix4 Object::CalculateOffsettedModel() const
 {
 	//apply transformation matrix from node
 	//we do physics around the center of the object

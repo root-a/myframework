@@ -19,6 +19,7 @@ public:
 	float radius;
 	void Update();
 	void AddComponent(Component* newComponent);
+	void ClearComponents();
 	void AssignMaterial(Material* mat);
 	void AssignMesh(Mesh* mesh);
 	
@@ -41,7 +42,7 @@ public:
 	
 	void SetMeshOffset(const mwm::Vector3& offset);
 	
-	mwm::Matrix4 CalculateOffetedModel() const;
+	mwm::Matrix4 CalculateOffsettedModel() const;
 
 	mwm::Vector3 meshOffset;
 	mwm::Matrix4 depthMVP = mwm::Matrix4::identityMatrix();

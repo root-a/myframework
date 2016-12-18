@@ -1,48 +1,46 @@
-#include "LineSystem.h"
+#include "PointSystem.h"
 #include "Mesh.h"
 #include "Material.h"
 #include <algorithm>
 #include <GL/glew.h>
-
 using namespace mwm;
-LineSystem::LineSystem(int maxCount){
+PointSystem::PointSystem(int maxCount){
 
 	MaxCount = maxCount;
 	LastUsed = 0;
 	ActiveCount = 0;
-	linesContainer = new FastLine[maxCount];
-	positions = new Vector3[maxCount * 2];
-	colors = new Vector4[maxCount * 2];
+	pointsContainer = new FastPoint[maxCount];
+	positions = new Vector3[maxCount];
+	colors = new Vector4[maxCount];
 	SetUpBuffers();
 }
 
-LineSystem::~LineSystem()
+const Vector3 PointSystem::vertices[] = {
+	Vector3(0.f, 0.f, 0.f)
+};
+
+PointSystem::~PointSystem()
 {
 	glBindVertexArray(0);
 	glDeleteVertexArrays(1, &vaoHandle);
 	glDeleteBuffers(1, &vertexBuffer);
 	glDeleteBuffers(1, &colorBuffer);
-	delete[] linesContainer;
+	delete[] pointsContainer;
 	delete[] positions;
 	delete[] colors;
 }
 
-const Vector3 LineSystem::vertices[] = {
-	Vector3(0.f, 0.f, 0.f),
-	Vector3(0.f, 0.f, 1.f)
-};
-
-int LineSystem::FindUnused()
+int PointSystem::FindUnused()
 {
 	for (int i = LastUsed; i < MaxCount; i++){
-		if (linesContainer[i].CanDraw() == false){
+		if (pointsContainer[i].CanDraw() == false){
 			LastUsed = i;
 			return i;
 		}
 	}
 
 	for (int i = 0; i < LastUsed; i++){
-		if (linesContainer[i].CanDraw() == false){
+		if (pointsContainer[i].CanDraw() == false){
 			LastUsed = i;
 			return i;
 		}
@@ -51,52 +49,51 @@ int LineSystem::FindUnused()
 	return 0;
 }
 
-int LineSystem::UpdateContainer()
+int PointSystem::UpdateContainer()
 {
 	int LinesCount = 0;
 	for (int i = 0; i < MaxCount; i++){
 
-		FastLine& l = linesContainer[i];
+		FastPoint& p = pointsContainer[i];
 
-		if (l.CanDraw())
+		if (p.CanDraw())
 		{
-			positions[LinesCount] = l.nodeA.position;
-			positions[LinesCount + 1] = l.nodeB.position;
+			positions[LinesCount] = p.node.position;
 
-			colors[LinesCount] = l.colorA;
-			colors[LinesCount + 1] = l.colorB;
+			colors[LinesCount] = p.color;
 
-			LinesCount += 2;
-			l.UpdateDrawState();
+			LinesCount += 1;
+
+			p.UpdateDrawState();
 		}
 		else{
-			l.cameraDistance = -1.0f;
+			p.cameraDistance = -1.0f;
 		}
 	}
 	return LinesCount;
 }
 
-void LineSystem::SetUpBuffers()
+void PointSystem::SetUpBuffers()
 {
 	glGenVertexArrays(1, &vaoHandle);
 	glBindVertexArray(vaoHandle);
 
 	glGenBuffers(1, &vertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * 2 * sizeof(Vector3), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector3), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 
 	glGenBuffers(1, &colorBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * 2 * sizeof(Vector4), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(1);
 
 	glBindVertexArray(0);
 }
 
-void LineSystem::UpdateBuffers()
+void PointSystem::UpdateBuffers()
 {
 	//Bind VAO
 	glBindVertexArray(vaoHandle);
@@ -110,35 +107,34 @@ void LineSystem::UpdateBuffers()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4), colors);
 }
 
-void LineSystem::Draw(const Matrix4& ViewProjection, const GLuint currentShaderID, float width)
+
+void PointSystem::Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID, float size)
 {
 	UpdateBuffers();
 
 	ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
 	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
 
-	glLineWidth(width);
-	glDrawArrays(GL_LINES, 0, ActiveCount);
-	glLineWidth(1.f);
+	glPointSize(size);
+	glDrawArrays(GL_POINTS, 0, ActiveCount);
+	glPointSize(1.f);
 }
 
-FastLine* LineSystem::GetLine()
+FastPoint* PointSystem::GetPoint()
 {
-	FastLine* fl = &linesContainer[FindUnused()];
-	fl->DrawAlways();
-	return fl;
+	FastPoint* fp = &pointsContainer[FindUnused()];
+	fp->DrawAlways();
+	return fp;
 }
 
-void LineSystem::Update()
+FastPoint* PointSystem::GetPointOnce()
+{
+	FastPoint* fp = &pointsContainer[FindUnused()];
+	fp->DrawOnce();
+	return fp;
+}
+
+void PointSystem::Update()
 {
 	ActiveCount = UpdateContainer();
 }
-
-FastLine* LineSystem::GetLineOnce()
-{
-	FastLine* fl = &linesContainer[FindUnused()];
-	fl->DrawOnce();
-	return fl;
-}
-
-

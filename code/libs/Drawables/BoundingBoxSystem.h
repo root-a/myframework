@@ -1,26 +1,23 @@
 #pragma once
 #include "MyMathLib.h"
+#include "Node.h"
 #include "Component.h"
-#include "LineNode.h"
 
 class Mesh;
 class Material;
 
-class FastLine
+class FastBoundingBox
 {
 public:
-	FastLine()
-	{ 
-		colorA = mwm::Vector4(0.f, 3.f, 3.f, 0.1f);
-		colorB = mwm::Vector4(3.f, 3.f, 0.f, 0.1f);
+	FastBoundingBox()
+	{
+		color = mwm::Vector4(0.f, 3.f, 3.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 	};
-	~FastLine(){};
-	LineNode nodeA;
-	LineNode nodeB;
-	mwm::Vector4 colorA;
-	mwm::Vector4 colorB;
+	~FastBoundingBox(){};
+	Node node;
+	mwm::Vector4 color;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -32,7 +29,7 @@ public:
 	
 	float cameraDistance;
 
-	bool operator<(FastLine& that){
+	bool operator<(FastBoundingBox& that){
 		// Sort in reverse order : far particles drawn first.
 		return this->cameraDistance > that.cameraDistance;
 	}
@@ -44,24 +41,24 @@ private:
 	bool drawAlways;
 };
 
-
-class LineSystem : public Component
+class BoundingBoxSystem : public Component
 {
 	
 public:
 	
-	LineSystem(int maxCount);
-	~LineSystem();
+	BoundingBoxSystem(int maxCount);
+	~BoundingBoxSystem();
 	int FindUnused();
 	void SetUpBuffers();
 	void UpdateBuffers();
-	void Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID, float width = 4.f);
-	FastLine* GetLine();
-	FastLine* GetLineOnce();
+	void Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID);
+	FastBoundingBox* GetBoundingBox();
+	FastBoundingBox* GetBoundingBoxOnce();
 	int UpdateContainer();
 	void Update();
 
-	static const mwm::Vector3 vertices[2];
+	static const unsigned short elements[24];
+	static const mwm::Vector3 vertices[8];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
@@ -69,16 +66,18 @@ public:
 	int LastUsed;
 	int ActiveCount;
 	int MaxCount;
-	mwm::Vector3* positions;
+
+	mwm::Matrix4F* models;
 	mwm::Vector4* colors;
-	FastLine* linesContainer;
-	
+	FastBoundingBox* boundingBoxesContainer;
 
 	unsigned int vaoHandle;
 	unsigned int vertexBuffer;
+	unsigned int modelBuffer;
 	unsigned int colorBuffer;
+	unsigned int elementBuffer;
 
 	unsigned int ViewProjectionHandle;
+
+	mwm::MinMax CalcValuesInWorld(const mwm::Matrix3& modelMatrix, const mwm::Vector3& position) const;	
 };
-
-

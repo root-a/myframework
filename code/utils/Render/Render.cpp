@@ -10,7 +10,7 @@ using namespace mwm;
 void 
 Render::drawLight(const Object* object, const Matrix4& ViewProjection, const GLuint currentShaderID)
 {
-	Matrix4 dModel = object->CalculateOffetedModel();
+	Matrix4 dModel = object->CalculateOffsettedModel();
 	Matrix4F MVP = (dModel*ViewProjection).toFloat();
 
 	GLuint MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
@@ -39,7 +39,7 @@ Render::drawLight(const Object* object, const Matrix4& ViewProjection, const GLu
 void 
 Render::drawGeometry(const Object* object, const Matrix4& ViewProjection, const GLuint currentShaderID)
 {
-	Matrix4 dModel = object->CalculateOffetedModel();
+	Matrix4 dModel = object->CalculateOffsettedModel();
 	Matrix4F ModelMatrix = dModel.toFloat();
 	Matrix4F MVP = (dModel*ViewProjection).toFloat();
 	//vertex
@@ -74,7 +74,7 @@ Render::drawGeometry(const Object* object, const Matrix4& ViewProjection, const 
 void 
 Render::draw(const Object* object, const Matrix4& ViewProjection, const GLuint currentShaderID)
 {
-	Matrix4 dModel = object->CalculateOffetedModel();
+	Matrix4 dModel = object->CalculateOffsettedModel();
 	Matrix4F ModelMatrix = dModel.toFloat();
 	Matrix4F MVP = (dModel*ViewProjection).toFloat();
 	Matrix4F depthBiasMVP = (object->depthMVP*Matrix4::biasMatrix()).toFloat();
@@ -115,7 +115,7 @@ Render::draw(const Object* object, const Matrix4& ViewProjection, const GLuint c
 void 
 Render::drawDepth(Object* object, const Matrix4& ViewProjection, const GLuint currentShaderID)
 {
-	Matrix4 dModel = object->CalculateOffetedModel();
+	Matrix4 dModel = object->CalculateOffsettedModel();
 	object->depthMVP = dModel*ViewProjection;
 	Matrix4F MVP = (object->depthMVP).toFloat();
 

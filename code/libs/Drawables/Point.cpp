@@ -51,5 +51,6 @@ void Point::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Proje
 	glPointSize(size);
 	// Draw the lines !
 	glDrawElements(GL_POINTS, 1, GL_UNSIGNED_SHORT, 0);
+	glPointSize(1.f);
 	//glUseProgram(prevShader);
 }

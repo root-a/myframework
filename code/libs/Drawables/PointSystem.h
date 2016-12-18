@@ -1,26 +1,23 @@
 #pragma once
 #include "MyMathLib.h"
-#include "Component.h"
 #include "LineNode.h"
+#include "Component.h"
 
 class Mesh;
 class Material;
 
-class FastLine
+class FastPoint
 {
 public:
-	FastLine()
-	{ 
-		colorA = mwm::Vector4(0.f, 3.f, 3.f, 0.1f);
-		colorB = mwm::Vector4(3.f, 3.f, 0.f, 0.1f);
+	FastPoint()
+	{
+		color = mwm::Vector4(0.f, 3.f, 3.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 	};
-	~FastLine(){};
-	LineNode nodeA;
-	LineNode nodeB;
-	mwm::Vector4 colorA;
-	mwm::Vector4 colorB;
+	~FastPoint(){};
+	LineNode node;
+	mwm::Vector4 color;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -32,7 +29,7 @@ public:
 	
 	float cameraDistance;
 
-	bool operator<(FastLine& that){
+	bool operator<(FastPoint& that){
 		// Sort in reverse order : far particles drawn first.
 		return this->cameraDistance > that.cameraDistance;
 	}
@@ -44,24 +41,23 @@ private:
 	bool drawAlways;
 };
 
-
-class LineSystem : public Component
+class PointSystem : public Component
 {
-	
+
 public:
-	
-	LineSystem(int maxCount);
-	~LineSystem();
+
+	PointSystem(int maxCount);
+	~PointSystem();
 	int FindUnused();
 	void SetUpBuffers();
 	void UpdateBuffers();
-	void Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID, float width = 4.f);
-	FastLine* GetLine();
-	FastLine* GetLineOnce();
+	void Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID, float size = 10.0f);
+	FastPoint* GetPoint();
+	FastPoint* GetPointOnce();
 	int UpdateContainer();
 	void Update();
 
-	static const mwm::Vector3 vertices[2];
+	static const mwm::Vector3 vertices[1];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
@@ -71,8 +67,8 @@ public:
 	int MaxCount;
 	mwm::Vector3* positions;
 	mwm::Vector4* colors;
-	FastLine* linesContainer;
-	
+	FastPoint* pointsContainer;
+
 
 	unsigned int vaoHandle;
 	unsigned int vertexBuffer;
@@ -80,5 +76,3 @@ public:
 
 	unsigned int ViewProjectionHandle;
 };
-
-

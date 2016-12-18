@@ -141,6 +141,8 @@ void Scene::Clear()
 	directionalLights.clear();
 
 	MainDirectionalLight->node.children.clear();
+
+	SceneObject->ClearComponents();
 }
 
 Object* Scene::addPointLight(const Vector3& position, const Vector3& color)
