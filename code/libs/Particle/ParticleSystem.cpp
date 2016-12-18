@@ -133,6 +133,14 @@ void ParticleSystem::SetUp()
 	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(2);
 
+	// These functions are specific to glDrawArrays*Instanced*.
+	// The first parameter is the attribute buffer we're talking about.
+	// The second parameter is the "rate at which generic vertex attributes advance when rendering multiple instances"
+	// http://www.opengl.org/sdk/docs/man/xhtml/glVertexAttribDivisor.xml
+	glVertexAttribDivisor(0, 0); // particles vertices : always reuse the same 4 vertices -> 0
+	glVertexAttribDivisor(1, 1); // positions : one per quad (its center)                 -> 1
+	glVertexAttribDivisor(2, 1); // color : one per quad                                  -> 1
+
 	//Unbind the VAO now that the VBOs have been set up
 	glBindVertexArray(0);
 }
@@ -141,8 +149,6 @@ void ParticleSystem::UpdateBuffers()
 {
 	//Bind VAO
 	glBindVertexArray(vaoHandle);
-
-	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
 
 	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
@@ -178,14 +184,6 @@ void ParticleSystem::Draw(const Matrix4& ViewProjection, GLuint currentShaderID,
 	glBindTexture(GL_TEXTURE_2D, TextureID);
 	TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
 	glUniform1i(TextureSamplerHandle, 0);
-
-	// These functions are specific to glDrawArrays*Instanced*.
-	// The first parameter is the attribute buffer we're talking about.
-	// The second parameter is the "rate at which generic vertex attributes advance when rendering multiple instances"
-	// http://www.opengl.org/sdk/docs/man/xhtml/glVertexAttribDivisor.xml
-	glVertexAttribDivisor(0, 0); // particles vertices : always reuse the same 4 vertices -> 0
-	glVertexAttribDivisor(1, 1); // positions : one per quad (its center)                 -> 1
-	glVertexAttribDivisor(2, 1); // color : one per quad                                  -> 1
 
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, aliveParticles);
 
