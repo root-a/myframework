@@ -130,7 +130,7 @@ void Object::Update()
 
 void Object::CalculateRadius()
 {
-	Vector3 halfExtents = (mesh->obj->dimensions*node.scale)*0.5f;
+	Vector3 halfExtents = (mesh->obj->dimensions*node.TopDownTransform.extractScale())*0.5f;
 	if (mesh->obj->name.compare("sphere") == 0)
 	{
 		//radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere

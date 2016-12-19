@@ -33,10 +33,11 @@ public:
 	Vector3 crossProd(const Vector3& rightVector) const; //!< cross product function returning normal vector
 	static Vector4 vec3TOvec4(const Vector3& _3Dvector, float w = 0); //!< function to convert 3D vector to 4D vector
 
-	Vector3 operator* (const float& rightFloat) const; //!< vector*num returns new matrix
-	Vector3 operator* (const Vector3& rightVector) const; //!< vector*num returns new matrix
-	friend Vector3 operator* (const float& leftFloat, const Vector3& rightVector); //!< vector*matrix returns new matrix
+	Vector3 operator* (const float& rightFloat) const; //!< vector*num returns new vector
+	Vector3 operator* (const Vector3& rightVector) const; //!< vector*num returns new vector
+	friend Vector3 operator* (const float& leftFloat, const Vector3& rightVector); //!< vector*matrix returns new vector
 	Vector3 operator/ (const float& rightFloat) const; //!< vector/num returns new matrix
+	Vector3 operator/ (const Vector3& rightVector) const; //!< vector/num returns new matrix
 
 	Vector3 normalizeSSE() const;
 	float vectLengthSSE() const;

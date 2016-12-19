@@ -42,7 +42,7 @@ void Quaternion::InsertAt(unsigned int index, float value)
 	this->quaternion[index] = value;
 }
 
-Quaternion Quaternion::operator*(Quaternion& v) const
+Quaternion Quaternion::operator*(const Quaternion& v) const
 {
 	Quaternion result;
 
@@ -63,7 +63,7 @@ Quaternion Quaternion::operator*(const float& number) const
 	return result;
 }
 
-void Quaternion::operator*=(Quaternion& v)
+void Quaternion::operator*=(const Quaternion& v)
 {
 	this->x = this->w*v.x + this->x*v.w + this->y*v.z - this->z*v.y; //x
 	this->y = this->w*v.y - this->x*v.z + this->y*v.w + this->z*v.x; //y
@@ -85,7 +85,7 @@ void Quaternion::Normalize()
 	}
 }
 
-Quaternion Quaternion::Normalized()
+Quaternion Quaternion::Normalized() const
 {
 	Quaternion result;
 
@@ -99,7 +99,7 @@ Quaternion Quaternion::Normalized()
 	return result;
 }
 
-Matrix4 Quaternion::ConvertToMatrix()
+Matrix4 Quaternion::ConvertToMatrix() const
 {
 	Matrix4 rotation;
 	rotation[0][0] = 1 - 2 * y*y - 2 * z*z;
@@ -142,7 +142,7 @@ void Quaternion::addScaledVector(const Vector3& vector, float scale)
 	z += q.z * 0.5f;
 }
 
-Matrix3 Quaternion::ConvertToMatrix3()
+Matrix3 Quaternion::ConvertToMatrix3() const
 {
 	Matrix3 rotation;
 	rotation[0][0] = 1 - 2 * y*y - 2 * z*z;

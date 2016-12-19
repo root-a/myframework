@@ -117,9 +117,17 @@ Vector3 operator* (const float& leftFloat, const Vector3& rightVector)
 /*! \fn vector/num returns new matrix*/
 Vector3 Vector3::operator/ (const float& rightFloat) const
 {
-	float x = this->vect[0] / rightFloat;
-	float y = this->vect[1] / rightFloat;
-	float z = this->vect[2] / rightFloat;
+	float x = this->x / rightFloat;
+	float y = this->y / rightFloat;
+	float z = this->z / rightFloat;
+	return Vector3(x, y, z);
+}
+
+Vector3 Vector3::operator/ (const Vector3& rightVector) const
+{
+	float x = this->x / rightVector.x;
+	float y = this->y / rightVector.y;
+	float z = this->z / rightVector.z;
 	return Vector3(x, y, z);
 }
 

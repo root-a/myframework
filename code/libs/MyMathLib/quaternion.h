@@ -27,16 +27,16 @@ public:
 	/// Set a value of a component of a vector
 	void InsertAt(unsigned int index, float value);
 
-	Quaternion operator*(Quaternion& v) const;
-	void operator*=(Quaternion& v);
+	Quaternion operator*(const Quaternion& v) const;
+	void operator*=(const Quaternion& v);
 	Quaternion operator*(const float& number)const;
 
 	float Magnitude();
 	/// Normalize this vector
 	void Normalize();
-	Quaternion Normalized();
-	Matrix4 ConvertToMatrix();
-	Matrix3 ConvertToMatrix3();
+	Quaternion Normalized() const;
+	Matrix4 ConvertToMatrix() const;
+	Matrix3 ConvertToMatrix3() const;
 
 	/// Overloaded access operator for Vector
 	float& operator[](unsigned int index);
