@@ -53,7 +53,7 @@ Vector3 Object::extractScale()
 
 Vector3 Object::getScale()
 {
-	return this->node.scale;
+	return this->node.totalScale;
 }
 
 void Object::SetPosition(const Vector3& vector )
@@ -74,7 +74,10 @@ mwm::Vector3 Object::GetLocalPosition() const
 
 void Object::SetScale(const Vector3& vector )
 {
-	this->node.scale = vector;
+	Vector3 parentScale = this->node.totalScale / this->node.localScale;
+	this->node.localScale = vector;
+	this->node.totalScale = this->node.localScale * parentScale;
+
 	CalculateRadius();
 	if (RigidBody* body = GetComponent<RigidBody>()) body->UpdateHExtentsAndMass();
 }
@@ -130,7 +133,7 @@ void Object::Update()
 
 void Object::CalculateRadius()
 {
-	Vector3 halfExtents = (mesh->obj->dimensions*node.TopDownTransform.extractScale())*0.5f;
+	Vector3 halfExtents = (mesh->obj->dimensions*node.totalScale)*0.5f;
 	if (mesh->obj->name.compare("sphere") == 0)
 	{
 		//radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere

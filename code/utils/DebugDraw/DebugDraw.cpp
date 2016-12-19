@@ -67,7 +67,7 @@ void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
 	Object* shape = DebugDraw::Instance()->debugShapes[shapeName];
 	shape->SetPosition(pos);
 	shape->SetScale(Vector3(0.5f, 0.5f, 0.5f));
-	shape->node.UpdateNodeMatrix(Matrix4::identityMatrix());
+	shape->node.UpdateNodeTransform(Node());
 	Render::draw(shape, *View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
 }
 

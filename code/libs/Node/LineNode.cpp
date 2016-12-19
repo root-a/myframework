@@ -11,11 +11,11 @@ LineNode::~LineNode()
 {
 }
 
-void LineNode::UpdateNodeMatrix(const Matrix4& ParentMatrix)
+void LineNode::UpdateNodeTransform(const Node& parentNode)
 {
-	this->position = ParentMatrix.getPosition();
+	this->position = parentNode.TopDownTransform.getPosition();
 	for (size_t i = 0; i < children.size(); i++)
 	{
-		children.at(i)->UpdateNodeMatrix(ParentMatrix);
+		children.at(i)->UpdateNodeTransform(*this);
 	}
 }
