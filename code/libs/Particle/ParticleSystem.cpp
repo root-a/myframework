@@ -245,8 +245,8 @@ void ParticleSystem::SetSize(float size)
 
 void ParticleSystem::Update()
 {
-	GenerateNewParticles(Time::timeStep);
-	aliveParticles = UpdateParticles(Time::timeStep, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
+	GenerateNewParticles(Time::deltaTime);
+	aliveParticles = UpdateParticles(Time::deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
 	SortParticles();
 }
 
