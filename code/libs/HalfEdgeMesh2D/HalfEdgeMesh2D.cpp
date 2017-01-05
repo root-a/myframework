@@ -4,9 +4,36 @@
 #include "Vertex.h"
 #include "Edge.h"
 #include "Face.h"
+#include <unordered_map>
+#include <unordered_set>
 
 using namespace cop4530;
 using namespace mwm;
+
+//std specialization
+namespace std
+{
+	template <>
+	class hash < Vertex* >
+	{
+	public:
+		size_t operator()(const Vertex* val) const {
+			return val->pos.a ^ val->pos.b;
+			//return val->contactPoint.squareMag();//works
+
+		}
+	};
+
+	template <>
+	class equal_to < Vertex* >
+	{
+	public:
+		bool operator()(const Vertex* lhs, const Vertex* rhs) const
+		{
+			return (lhs->pos == rhs->pos);
+		}
+	};
+}
 
 HalfEdgeMesh2D::HalfEdgeMesh2D()
 {
@@ -27,6 +54,7 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	float x = 0.0f;
 	float y = 0.0f;
 	int faceSize = 20;
+	//std::unordered_map < Vertex*, Vector<Edge*> > test;
 	while (fgets(line, sizeof(line), file)) 
 	{
 		if (line[0] == '/' || line[0] == ';' || line[0] == '#') continue; /* ignore comment line */
@@ -65,10 +93,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				newEdge2->vertex = vertice2;
 				newEdge3->vertex = vertice3;
 
-				//connect edges to vertices
-				vertice1->edge = newEdge1;
-				vertice2->edge = newEdge2;
-				vertice3->edge = newEdge3;
+				//test[vertice1].push_back(newEdge1);
+				//test[vertice2].push_back(newEdge2);
+				//test[vertice3].push_back(newEdge3);
 
 				//set pair and mid to nullptr
 				newEdge1->pair = nullptr;
@@ -101,18 +128,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				newEdge5->vertex = vertice4;
 				newEdge6->vertex = vertice1;
 
-				//connect edges to vertices
-				vertice3->edge = newEdge4;
-				vertice4->edge = newEdge5;
-				vertice1->edge = newEdge6;
-
-				//set pair and mid to nullptr
-				newEdge4->pair = nullptr;
-				newEdge5->pair = nullptr;
-				newEdge6->pair = nullptr;
-				newEdge4->midVertex = nullptr;
-				newEdge5->midVertex = nullptr;
-				newEdge6->midVertex = nullptr;
+				//test[vertice3].push_back(newEdge4);
+				//test[vertice4].push_back(newEdge5);
+				//test[vertice1].push_back(newEdge6);
 
 				//connect edges with next
 				newEdge4->next = newEdge5;
@@ -163,53 +181,57 @@ void HalfEdgeMesh2D::Construct(const char * path)
 					//endFacePos = newFace2->edge->vertex->pos;
 					endFacePos = newFace2->getMidPointAverage();
 				}
+
+				
 			}
 			x = x + faceSize;
 		}
 	}
 	fclose(file);
-	
+	/*
+	for (auto& edgei : edges) //for every edge, let's find a pair
+	{
+		//edge->next->vertex -> give all edges with same source vertex as edge next
+		//from that bunch we want edge with next 
+		Vector<Edge*>& edgez = test[edgei->next->vertex];
+		for (auto& edgej : edgez)
+		{
+			if (edgej->next->vertex->pos == edgei->vertex->pos)
+			{
+				edgei->pair = edgej;
+				edgej->pair = edgei;
+				break;
+			}
+		}
+	}
+	*/
 	//find pairs
-	//first we need to find all edges that have source vertex same as edge->next->vertex
-	//vecOfEdges
-	Vector<Vector<Edge*>> pairCandidatesForEachEdge;
-	//edges with same source(edge->vertex) as edge->next->vertex
+	
 	for (int i = 0; i < edges.size(); i++)
 	{	
-		Vector<Edge*> edgesWithSameSource;
 		for (int j = 0; j < edges.size(); j++)
 		{
-			//printf("edge J %f and edgeNext i %f\n", edges.at(j)->vertex->pos.vect[0], edges.at(i)->next->vertex->pos.vect[0]);
-			if (checkIfSameVect(edges.at(j)->vertex->pos, edges.at(i)->next->vertex->pos))
+			if (edges.at(j)->vertex->pos == edges.at(i)->next->vertex->pos) //we could just compare pointers but we have double vertices, not per triangle but per quad
 			{
-				Edge* edge = edges.at(j);
-				//we might try to avoid adding an edge that is next for the edges.at(i) here as it's not allowed to be a pair
-				edgesWithSameSource.push_back(edges.at(j));
-			}
-		}
-		pairCandidatesForEachEdge.push_back(edgesWithSameSource);
-	}
-
-	//now when we added candidates we need to test them if their next source is the same, if true then we got a pair
-	for (int i = 0; i < edges.size(); i++)
-	{
-		for (int j = 0; j < pairCandidatesForEachEdge.at(i).size(); j++)
-		{
-			if (checkIfSameVect(pairCandidatesForEachEdge.at(i).at(j)->next->vertex->pos, edges.at(i)->vertex->pos))
-			{
-				edges.at(i)->pair = pairCandidatesForEachEdge.at(i).at(j);
-				//edges.at(j)->pair = edges.at(i);
+				if (edges.at(j)->next->vertex->pos == edges.at(i)->vertex->pos)
+				{
+					edges.at(i)->pair = edges.at(j);
+					edges.at(j)->pair = edges.at(i);
+					break;
+				}
 			}
 		}
 	}
-
-	for (int i = 0; i < edges.size(); i++)
+	
+	/*
+	for (int i = 0; i < edges.size(); i++) //error check, if we connected the edge to itself as pair
 	{
 		if (edges.at(i)->next == edges.at(i)->pair)
 		{
 			printf("error %d \n", i);
 		}
 	}
+	*/
 }
 
 bool HalfEdgeMesh2D::checkIfSameVect(Vector2 &vect1, Vector2 &vect2)

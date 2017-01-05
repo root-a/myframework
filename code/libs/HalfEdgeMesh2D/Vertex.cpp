@@ -2,7 +2,7 @@
 
 Vertex::Vertex()
 {
-	edge = nullptr;
+
 }
 
 Vertex::~Vertex()

@@ -90,6 +90,12 @@ Vector2 Vector2::operator/ (const float& rightFloat) const
 	float v = this->vect[1] / rightFloat;
 	return Vector2(u, v);
 }
+
+bool Vector2::operator==(const Vector2& v)const
+{
+	if (vect[0] != v.vect[0] || vect[1] != v.vect[1]) return false;
+	else return true;
+}
 }
 
 

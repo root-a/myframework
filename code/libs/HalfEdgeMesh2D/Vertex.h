@@ -8,7 +8,6 @@ public:
 	mwm::Vector2 pos, normal, newPos;
 	mwm::Vector2 tex;
 	mwm::Vector4 color;
-	Edge* edge;
 	Vertex();
 	~Vertex();
 	void* operator new(size_t i){ return _mm_malloc(i, 16); }

@@ -8,6 +8,7 @@ public:
 	union
 	{
 		struct{ float x, y; };
+		struct{ signed a, b; }; //for hashing a^b
 		float vect[2];
 	};
 
@@ -26,7 +27,8 @@ public:
 	Vector2 operator* (const float& rightFloat) const; //!< vector*num returns new matrix
 	friend Vector2 operator* (const float& leftFloat, const Vector2& rightVector); //!< num*matrix returns new matrix
 	Vector2 operator/ (const float& rightFloat) const; //!< vector/num returns new matrix
-
+	/// Compares two vectors if they are the same
+	bool operator==(const Vector2& v)const;
 protected:
 };
 }

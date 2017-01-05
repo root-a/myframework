@@ -166,13 +166,8 @@ void Vector3::operator/=(const float& number)
 
 bool Vector3::operator==(const Vector3& v)const
 {
-	for (int i = 0; i < 3; i++)
-	{
-		if (vect[i] != v.vect[i]){
-			return false;
-		}
-	}
-	return true;
+	if (vect[0] != v.vect[0] || vect[1] != v.vect[1] || vect[2] != v.vect[2]) return false;	
+	else return true;
 }
 
 /*! \fn operator[] overload for indexing */
