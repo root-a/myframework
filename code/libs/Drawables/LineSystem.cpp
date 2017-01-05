@@ -3,6 +3,7 @@
 #include "Material.h"
 #include <algorithm>
 #include <GL/glew.h>
+#include "Node.h"
 
 using namespace mwm;
 LineSystem::LineSystem(int maxCount){
@@ -60,8 +61,8 @@ int LineSystem::UpdateContainer()
 
 		if (l.CanDraw())
 		{
-			positions[LinesCount] = l.nodeA.position;
-			positions[LinesCount + 1] = l.nodeB.position;
+			positions[LinesCount] = l.GetPositionA();
+			positions[LinesCount + 1] = l.GetPositionB();
 
 			colors[LinesCount] = l.colorA;
 			colors[LinesCount + 1] = l.colorB;
@@ -141,4 +142,34 @@ FastLine* LineSystem::GetLineOnce()
 	return fl;
 }
 
+void FastLine::AttachEndA(Node* node)
+{
+	nodeA = node;
+}
 
+void FastLine::AttachEndB(Node* node)
+{
+	nodeB = node;
+}
+
+void FastLine::DetachEndA()
+{
+	localNodeA.TopDownTransform = nodeA->TopDownTransform;
+	nodeA = &localNodeA;
+}
+
+void FastLine::DetachEndB()
+{
+	localNodeB.TopDownTransform = nodeB->TopDownTransform;
+	nodeB = &localNodeB;
+}
+
+mwm::Vector3 FastLine::GetPositionA()
+{
+	return nodeA->TopDownTransform.getPosition();
+}
+
+mwm::Vector3 FastLine::GetPositionB()
+{
+	return nodeB->TopDownTransform.getPosition();
+}

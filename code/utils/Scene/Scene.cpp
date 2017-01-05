@@ -74,6 +74,18 @@ Object* Scene::addObject(const char* name, const Vector3& pos)
 	return newChild;
 }
 
+Object* Scene::addObject(Object* parent, const char* name /*= "cube"*/, const mwm::Vector3& pos /*= mwm::Vector3()*/)
+{
+	Object* newChild = Scene::addChild(parent);
+	newChild->SetPosition(pos);
+	newChild->AssignMesh(GraphicsStorage::meshes[name]);
+	Material* newMaterial = new Material();
+	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
+	GraphicsStorage::materials.push_back(newMaterial);
+	newChild->AssignMaterial(newMaterial);
+	return newChild;
+}
+
 void Scene::addRandomObjects(int num, int min, int max)
 {
 	for(int i = 0; i < num; i++)

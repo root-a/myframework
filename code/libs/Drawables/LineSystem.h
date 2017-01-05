@@ -5,6 +5,7 @@
 
 class Mesh;
 class Material;
+class Node;
 
 class FastLine
 {
@@ -15,12 +16,21 @@ public:
 		colorB = mwm::Vector4(3.f, 3.f, 0.f, 0.1f);
 		draw = false;
 		drawAlways = false;
+		nodeA = &localNodeA;
+		nodeB = &localNodeB;
 	};
 	~FastLine(){};
-	LineNode nodeA;
-	LineNode nodeB;
+	void AttachEndA(Node* node);
+	void AttachEndB(Node* node);
+	void DetachEndA();
+	void DetachEndB();
+	mwm::Vector3 GetPositionA();
+	mwm::Vector3 GetPositionB();
+
 	mwm::Vector4 colorA;
 	mwm::Vector4 colorB;
+	LineNode localNodeA;
+	LineNode localNodeB;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -42,6 +52,8 @@ protected:
 private:
 	bool draw;
 	bool drawAlways;
+	Node* nodeA;
+	Node* nodeB;
 };
 
 
