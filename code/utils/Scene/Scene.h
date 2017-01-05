@@ -15,7 +15,7 @@ public:
 
     static Scene* Instance();
     unsigned int idCounter;
-    Object* addChild(Object* parentNodeGR);
+    Object* addChildTo(Object* parentNodeGR);
     std::map<unsigned int, Object*> objectsToRender;
 	std::vector<Object*> pointLights;
 	std::vector<Object*> directionalLights;
@@ -25,8 +25,8 @@ public:
     Object* LastAddedObject;
 
 	void addRandomObject(const mwm::Vector3& pos = mwm::Vector3());
-	Object* addObject(const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
-	Object* addObject(Object* parent, const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
+	Object* addObjectToScene(const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
+	Object* addObjectTo(Object* parent, const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
 	Object* addPhysicObject(const char* name = "cube", const mwm::Vector3& pos = mwm::Vector3());
 	void addRandomObjects(int num, int min = -20, int max = 20);
 	void addRandomlyObjects(const char* name, int num, int min = -20, int max = 20);

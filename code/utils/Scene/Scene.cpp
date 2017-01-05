@@ -28,7 +28,7 @@ Scene* Scene::Instance()
 	return &instance;
 }
 
-Object* Scene::addChild(Object* parentObject)
+Object* Scene::addChildTo(Object* parentObject)
 {
 	Object* child = new Object();
 	parentObject->node.addChild(&child->node);
@@ -43,7 +43,7 @@ Object* Scene::addChild(Object* parentObject)
 
 void Scene::addRandomObject(const Vector3& pos)
 {
-	Object* newChild = Scene::addChild(SceneObject);
+	Object* newChild = Scene::addChildTo(SceneObject);
 
 	int index = rand() % (GraphicsStorage::meshes.size());
 	float rS = (float)(rand() % 5);
@@ -62,9 +62,9 @@ void Scene::addRandomObject(const Vector3& pos)
 	newChild->AssignMaterial(newMaterial);
 }
 
-Object* Scene::addObject(const char* name, const Vector3& pos)
+Object* Scene::addObjectToScene(const char* name, const Vector3& pos)
 {
-	Object* newChild = Scene::addChild(SceneObject);
+	Object* newChild = Scene::addChildTo(SceneObject);
 	newChild->SetPosition(pos);
 	newChild->AssignMesh(GraphicsStorage::meshes[name]);
 	Material* newMaterial = new Material();
@@ -74,9 +74,9 @@ Object* Scene::addObject(const char* name, const Vector3& pos)
 	return newChild;
 }
 
-Object* Scene::addObject(Object* parent, const char* name /*= "cube"*/, const mwm::Vector3& pos /*= mwm::Vector3()*/)
+Object* Scene::addObjectTo(Object* parent, const char* name /*= "cube"*/, const mwm::Vector3& pos /*= mwm::Vector3()*/)
 {
-	Object* newChild = Scene::addChild(parent);
+	Object* newChild = Scene::addChildTo(parent);
 	newChild->SetPosition(pos);
 	newChild->AssignMesh(GraphicsStorage::meshes[name]);
 	Material* newMaterial = new Material();
@@ -99,14 +99,14 @@ void Scene::addRandomlyObjects(const char* name, int num, int min, int max)
 {
 	for (int i = 0; i < num; i++)
 	{
-		Object* obj = addObject(name, generateRandomIntervallVectorCubic(min, max));
+		Object* obj = addObjectToScene(name, generateRandomIntervallVectorCubic(min, max));
 	}
 }
 
 
 Object* Scene::addPhysicObject(const char* name, const Vector3& pos)
 {
-	Object* object = addObject(name, pos);
+	Object* object = addObjectToScene(name, pos);
 	RigidBody* body = new RigidBody(object);
 	object->AddComponent(body);
 	PhysicsManager::Instance()->RegisterRigidBody(body);

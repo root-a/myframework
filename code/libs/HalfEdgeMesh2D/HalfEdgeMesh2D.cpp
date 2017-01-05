@@ -206,7 +206,6 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	}
 	*/
 	//find pairs
-	
 	for (int i = 0; i < edges.size(); i++)
 	{	
 		for (int j = 0; j < edges.size(); j++)

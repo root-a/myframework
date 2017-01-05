@@ -99,38 +99,23 @@ void HalfEdgeMesh::Construct(OBJ &object)
 	}
 
 	//find pairs
-	//first we need to find all edges that have source vertex same as edge->next->vertex
-	//vecOfEdges
-	Vector<Vector<Edge*>> pairCandidatesForEachEdge;
-	for (int i = 0; i < edges.size(); i++)
-	{	
-		//edges with same source(edge->vertex) as edge->next->vertex
-		Vector<Edge*> edgesWithSameSource;
-		for (int j = 0; j < edges.size(); j++)
-		{
-			//printf("edge J %f and edgeNext i %f\n", edges.at(j)->vertex->pos.vect[0], edges.at(i)->next->vertex->pos.vect[0]);
-			if (checkIfSameVect(edges.at(j)->vertex->pos, edges.at(i)->next->vertex->pos))
-			{
-				//we might try to avoid adding an edge that is next for the edges.at(i) here as it's not allowed to be a pair
-				edgesWithSameSource.push_back(edges.at(j));
-			}
-		}
-		pairCandidatesForEachEdge.push_back(edgesWithSameSource);
-	}
-
-	//now when we added candidates we need to test them if their next source is the same, if true then we got a pair
 	for (int i = 0; i < edges.size(); i++)
 	{
-		for (int j = 0; j < pairCandidatesForEachEdge.at(i).size(); j++)
+		for (int j = 0; j < edges.size(); j++)
 		{
-			if (checkIfSameVect(pairCandidatesForEachEdge.at(i).at(j)->next->vertex->pos, edges.at(i)->vertex->pos))
+			if (edges.at(j)->vertex->pos == edges.at(i)->next->vertex->pos) //we could just compare pointers but we have double vertices, not per triangle but per quad
 			{
-				edges.at(i)->pair = pairCandidatesForEachEdge.at(i).at(j);
-				//edges.at(j)->pair = edges.at(i);
+				if (edges.at(j)->next->vertex->pos == edges.at(i)->vertex->pos)
+				{
+					edges.at(i)->pair = edges.at(j);
+					edges.at(j)->pair = edges.at(i);
+					break;
+				}
 			}
 		}
 	}
 
+	/*
 	for (int i = 0; i < edges.size(); i++)
 	{
 		if (edges.at(i)->next == edges.at(i)->pair)
@@ -138,6 +123,7 @@ void HalfEdgeMesh::Construct(OBJ &object)
 			printf("error %d \n", i);
 		}
 	}
+	*/
 }
 
 bool HalfEdgeMesh::checkIfSameVect(Vector3 &vect1, Vector3 &vect2)
