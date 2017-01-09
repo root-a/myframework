@@ -41,7 +41,6 @@ public:
 	bool turnsRight(Edge*, Edge*);
 	bool turnsRightOrParallel(Edge*, Edge*);
 private:
-	bool checkIfSameVect(mwm::Vector2 &vect1, mwm::Vector2 &vect2);
 	
 	
 };

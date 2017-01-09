@@ -211,7 +211,13 @@ void HalfEdgeMesh2D::Construct(const char * path)
 			}
 		}
 	}
-	
+	for (int i = 0; i < allFaces.size(); i++)
+	{
+		if (allFaces[i]->edge == nullptr)
+		{
+			delete allFaces[i];
+		}
+	}
 	/*
 	for (int i = 0; i < edges.size(); i++) //error check, if we connected the edge to itself as pair
 	{
@@ -221,17 +227,6 @@ void HalfEdgeMesh2D::Construct(const char * path)
 		}
 	}
 	*/
-}
-
-bool HalfEdgeMesh2D::checkIfSameVect(Vector2 &vect1, Vector2 &vect2)
-{
-	if (vect1.vect[0] == vect2.vect[0] && vect1.vect[1] == vect2.vect[1]) {
-		return true;
-	}
-	else
-	{
-		return false;
-	}
 }
 
 Face* HalfEdgeMesh2D::findNode(Vector2 point)
