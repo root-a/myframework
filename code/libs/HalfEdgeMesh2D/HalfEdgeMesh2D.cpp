@@ -63,7 +63,7 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	width = str.length();
 	Vector<Face*> allFaces;
 	allFaces.reserve(height*width);
-	Face* emptyFace = new Face();
+	Face* emptyFace = facePool.PoolPartyAlloc();
 
 	file1.close();
 
@@ -211,13 +211,7 @@ void HalfEdgeMesh2D::Construct(const char * path)
 			}
 		}
 	}
-	for (int i = 0; i < allFaces.size(); i++)
-	{
-		if (allFaces[i]->edge == nullptr)
-		{
-			delete allFaces[i];
-		}
-	}
+
 	/*
 	for (int i = 0; i < edges.size(); i++) //error check, if we connected the edge to itself as pair
 	{
