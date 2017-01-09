@@ -4,8 +4,8 @@
 #include "Vertex.h"
 #include "Edge.h"
 #include "Face.h"
-#include <unordered_map>
-#include <unordered_set>
+#include <fstream>
+#include <string>
 
 using namespace cop4530;
 using namespace mwm;
@@ -48,29 +48,39 @@ HalfEdgeMesh2D::~HalfEdgeMesh2D()
 
 void HalfEdgeMesh2D::Construct(const char * path)
 {
-	FILE * file;
-	errno_t err = fopen_s(&file, path, "r");
-	char line[128];
-	float x = 0.0f;
-	float y = 0.0f;
-	int faceSize = 20;
-	//std::unordered_map < Vertex*, Vector<Edge*> > test;
-	while (fgets(line, sizeof(line), file)) 
+
+	std::ifstream file1(path);
+	std::string str;
+	std::string map = "";
+	int width = 0;
+	int height = 0;
+	//loading the map into a single buffer
+	while (std::getline(file1, str))
 	{
-		if (line[0] == '/' || line[0] == ';' || line[0] == '#') continue; /* ignore comment line */
-		for (int i = 0; i < sizeof(line); i++)
+		map += str;
+		height++;
+	}
+	width = str.length();
+	Vector<Face*> allFaces;
+	allFaces.reserve(height*width);
+	Face* emptyFace = new Face();
+
+	file1.close();
+
+	for (int y = 0; y < height; y++)
+	{
+		if (map[y*width] == '/' || map[y*width] == ';' || map[y*width] == '#') continue; /* ignore comment line */
+		for (int x = 0; x < width; x++)
 		{
-			if (line[i] == '\n' || line[i] == '\0')
+			int currentCell = y*width + x;
+			if (map[currentCell] == 'X')
 			{
-				x = 0;
-				y = y + faceSize;
-				break;
+				allFaces.push_back(emptyFace);
 			}
-			if (line[i] != 'X')
+			else
 			{
 				
 				//connecting
-				
 					
 				//let's get vertices we wanna work with
 				Vertex* vertice1 = vertexPool.PoolPartyAlloc();
@@ -78,10 +88,10 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				Vertex* vertice3 = vertexPool.PoolPartyAlloc();
 				Vertex* vertice4 = vertexPool.PoolPartyAlloc();
 
-				vertice1->pos = Vector2(x, y + faceSize);
-				vertice2->pos = Vector2(x, y);
-				vertice3->pos = Vector2(x + faceSize, y);
-				vertice4->pos = Vector2(x + faceSize, y + faceSize);
+				vertice1->pos = Vector2((float)x, (float)(y + 1));
+				vertice2->pos = Vector2((float)x, (float)y);
+				vertice3->pos = Vector2((float)(x + 1), (float)y);
+				vertice4->pos = Vector2((float)(x + 1), (float)(y + 1));
 
 				//create new edges
 				Edge* newEdge1 = edgePool.PoolPartyAlloc();
@@ -92,18 +102,6 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				newEdge1->vertex = vertice1;
 				newEdge2->vertex = vertice2;
 				newEdge3->vertex = vertice3;
-
-				//test[vertice1].push_back(newEdge1);
-				//test[vertice2].push_back(newEdge2);
-				//test[vertice3].push_back(newEdge3);
-
-				//set pair and mid to nullptr
-				newEdge1->pair = nullptr;
-				newEdge2->pair = nullptr;
-				newEdge3->pair = nullptr;
-				newEdge1->midVertex = nullptr;
-				newEdge2->midVertex = nullptr;
-				newEdge3->midVertex = nullptr;
 
 				//connect edges with next
 				newEdge1->next = newEdge2;
@@ -128,10 +126,6 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				newEdge5->vertex = vertice4;
 				newEdge6->vertex = vertice1;
 
-				//test[vertice3].push_back(newEdge4);
-				//test[vertice4].push_back(newEdge5);
-				//test[vertice1].push_back(newEdge6);
-
 				//connect edges with next
 				newEdge4->next = newEdge5;
 				newEdge5->next = newEdge6;
@@ -142,6 +136,37 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				newEdge5->prev = newEdge4;
 				newEdge6->prev = newEdge5;
 
+				newEdge6->pair = newEdge3;
+				newEdge3->pair = newEdge6;
+
+				
+				//is not at x boundaries?
+				if (x > 0)
+				{
+					//is cell to the right walkable?
+					if (map[currentCell-1] != 'X')
+					{
+						//pair with the last added face (the one to the right)
+						Edge* lastFaceEdge = faces.back()->edge;
+						lastFaceEdge->pair = newEdge1;
+						newEdge1->pair = lastFaceEdge;
+					}
+				}
+				
+				//is not at y boundaries?
+				if (y > 0)
+				{
+					//is cell above walkable?
+					int cellAbove = (y - 1)*width + x;
+					if (map[cellAbove] != 'X')
+					{
+						//pair with the cell above
+						Edge* aboveFaceEdge = allFaces[cellAbove]->edge->next;
+						aboveFaceEdge->pair = newEdge2;
+						newEdge2->pair = aboveFaceEdge;
+					}
+				}
+				
 				edges.push_back(newEdge4);
 				edges.push_back(newEdge5);
 				edges.push_back(newEdge6);
@@ -166,14 +191,15 @@ void HalfEdgeMesh2D::Construct(const char * path)
 
 				faces.push_back(newFace);
 				faces.push_back(newFace2);
+				allFaces.push_back(newFace2);
 				
-				if (line[i] == 'S')
+				if (map[currentCell] == 'S')
 				{
 					startFace = newFace;
 					//startFacePos = newFace->edge->vertex->pos;
 					startFacePos = newFace->getMidPointAverage();
 				}
-				if (line[i] == 'G')
+				if (map[currentCell] == 'G')
 				{
 					goals.push_back(newFace2);
 					goalsPos.push_back(newFace2->getMidPointAverage());
@@ -181,43 +207,7 @@ void HalfEdgeMesh2D::Construct(const char * path)
 					//endFacePos = newFace2->edge->vertex->pos;
 					endFacePos = newFace2->getMidPointAverage();
 				}
-
 				
-			}
-			x = x + faceSize;
-		}
-	}
-	fclose(file);
-	/*
-	for (auto& edgei : edges) //for every edge, let's find a pair
-	{
-		//edge->next->vertex -> give all edges with same source vertex as edge next
-		//from that bunch we want edge with next 
-		Vector<Edge*>& edgez = test[edgei->next->vertex];
-		for (auto& edgej : edgez)
-		{
-			if (edgej->next->vertex->pos == edgei->vertex->pos)
-			{
-				edgei->pair = edgej;
-				edgej->pair = edgei;
-				break;
-			}
-		}
-	}
-	*/
-	//find pairs
-	for (int i = 0; i < edges.size(); i++)
-	{	
-		for (int j = 0; j < edges.size(); j++)
-		{
-			if (edges.at(j)->vertex->pos == edges.at(i)->next->vertex->pos) //we could just compare pointers but we have double vertices, not per triangle but per quad
-			{
-				if (edges.at(j)->next->vertex->pos == edges.at(i)->vertex->pos)
-				{
-					edges.at(i)->pair = edges.at(j);
-					edges.at(j)->pair = edges.at(i);
-					break;
-				}
 			}
 		}
 	}

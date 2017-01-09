@@ -62,14 +62,6 @@ void HalfEdgeMesh::Construct(OBJ &object)
 		vertice2->edge = newEdge2;
 		vertice3->edge = newEdge3;
 
-		//set pair and mid to nullptr
-		newEdge1->pair = nullptr;
-		newEdge2->pair = nullptr;
-		newEdge3->pair = nullptr;
-		newEdge1->midVertex = nullptr;
-		newEdge2->midVertex = nullptr;
-		newEdge3->midVertex = nullptr;
-
 		//connect edges with next
 		newEdge1->next = newEdge2;
 		newEdge2->next = newEdge3;
@@ -99,16 +91,16 @@ void HalfEdgeMesh::Construct(OBJ &object)
 	}
 
 	//find pairs
-	for (int i = 0; i < edges.size(); i++)
-	{
-		for (int j = 0; j < edges.size(); j++)
+	for (auto& edgei : edges)
+	{	
+		for (auto& edgej : edges)
 		{
-			if (edges.at(j)->vertex->pos == edges.at(i)->next->vertex->pos) //we could just compare pointers but we have double vertices, not per triangle but per quad
+			if (edgej->vertex->pos == edgei->next->vertex->pos) //we could just compare pointers but we have double vertices, not per triangle but per quad
 			{
-				if (edges.at(j)->next->vertex->pos == edges.at(i)->vertex->pos)
+				if (edgej->next->vertex->pos == edgei->vertex->pos)
 				{
-					edges.at(i)->pair = edges.at(j);
-					edges.at(j)->pair = edges.at(i);
+					edgei->pair = edgej;
+					edgej->pair = edgei;
 					break;
 				}
 			}
