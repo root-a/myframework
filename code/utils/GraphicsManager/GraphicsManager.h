@@ -1,3 +1,5 @@
+#include <vector>
+#include <string>
 class Mesh;
 class Texture2D;
 class OBJ;
@@ -17,10 +19,12 @@ public:
 	static bool LoadMaterials(const char * path);
 	static GLuint LoadBMP(const char *imagepath);
 	static GLuint LoadDDS(const char *imagepath);
-	static unsigned char * LoadPng(const char* path, int* x, int* y, int* numOfElements, int forcedNumOfEle);
+	static unsigned char * LoadImage(const char* path, int* x, int* y, int* numOfElements, int forcedNumOfEle);
 	static GLuint LoadShaders(const char * vertex_file_path, const char * fragment_file_path);
     static GLuint CreateTexture(int width, int height, bool isDepth, unsigned char* data);
 	static void LoadAllAssets();
 	static Texture2D* LoadTexture(char* path);
+	static Texture2D* GenerateCubeMap(const std::vector<std::string>& textures);
+	static bool LoadCubeMaps(const char* path);
 private:
 };

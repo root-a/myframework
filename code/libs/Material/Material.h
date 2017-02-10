@@ -21,7 +21,8 @@ public:
 	void SetAmbientIntensity(float a);
 	void SetColor(float r, float g, float b);
 	void SetColor(const mwm::Vector3& colorC);
-	
+	float tileX;
+	float tileY;
 private:
 
 };

@@ -4,7 +4,7 @@ using namespace mwm;
 
 Material::Material()
 {
-	ambientIntensity = 0.15f;
+	ambientIntensity = 0.25f;
 
 	specularIntensity = 0.3f;
 
@@ -15,6 +15,9 @@ Material::Material()
 	color.vect[2] = 0.f;
 
 	shininess = 10.0f;
+
+	tileX = 1;
+	tileY = 1;
 }
 
 Material::~Material()

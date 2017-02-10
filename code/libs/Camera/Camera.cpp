@@ -173,13 +173,18 @@ void Camera::CalculateViewMatrix()
 	}*/
 }
 
-void Camera::SetPosition(mwm::Vector3 pos)
+void Camera::SetPosition(mwm::Vector3& pos)
 {
 	//proper way to set position would be to get the position from matrix via inverse
 	//then new position - camera pos -> vector with direction to new position 
 	//then we translate the initial position with that vector -> initialPosition += new vector with dir
 	//this would be required if one did change the camera matrix directly rather than changing the position variable 
 	initialPosition = pos;
+}
+
+mwm::Vector3 Camera::getRight()
+{
+	return right;
 }
 
 

@@ -88,6 +88,9 @@ Render::draw(const Object* object, const Matrix4& ViewProjection, const GLuint c
 	GLuint PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
 	GLuint TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
 
+	GLuint tiling = glGetUniformLocation(currentShaderID, "tiling");
+	glUniform2f(tiling, object->mat->tileX, object->mat->tileY);
+
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 	glUniformMatrix4fv(ModelMatrixHandle, 1, GL_FALSE, &ModelMatrix[0][0]);
 	glUniformMatrix4fv(DepthBiasMatrixHandle, 1, GL_FALSE, &depthBiasMVP[0][0]);
@@ -128,4 +131,16 @@ Render::drawDepth(Object* object, const Matrix4& ViewProjection, const GLuint cu
 
 	// Draw the triangles !
 	glDrawElements(GL_TRIANGLES, object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); // mode, count, type, element array buffer offset
+}
+
+void Render::drawSkybox(Object* object, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID)
+{
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, object->mat->texture2D->TextureID);
+
+	GLuint MatrixHandle = glGetUniformLocation(currentShaderID, "VP");
+	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
+
+	glBindVertexArray(object->mesh->vaoHandle);
+	glDrawElements(GL_TRIANGLES, object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0); 
 }

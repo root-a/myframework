@@ -61,7 +61,7 @@ Window::Window() :
 	window(nullptr),
 	width(1024),
 	height(768),
-	title("gscept Lab Environment")
+	title("Set Window Title!")
 {
 	// empty
 }
@@ -142,6 +142,16 @@ Window::StaticWindowSizeCallback(GLFWwindow* win, int width, int height)
 {
 	Window* window = (Window*)glfwGetWindowUserPointer(win);
 	if (nullptr != window->windowSizeCallback) window->windowSizeCallback(width, height);
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
+void
+Window::StaticWindowIconifyCallback(GLFWwindow* win, int iconified)
+{
+	Window* window = (Window*)glfwGetWindowUserPointer(win);
+	if (nullptr != window->windowIconifyCallback) window->windowIconifyCallback(iconified);
 }
 
 //------------------------------------------------------------------------------
@@ -232,7 +242,7 @@ Window::Open()
 
 	glfwSetWindowCloseCallback(this->window, Window::StaticCloseCallback);
 	glfwSetFramebufferSizeCallback(this->window, Window::StaticWindowSizeCallback);
-
+	glfwSetWindowIconifyCallback(this->window, Window::StaticWindowIconifyCallback);
 	// increase window count and return result
 	Window::WindowCount++;
 	return this->window != nullptr;

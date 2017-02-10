@@ -53,7 +53,8 @@ public:
 	void SetCloseFunction(const std::function<void()>& func);
 	/// set window resize function callback
 	void SetWindowSizeFunction(const std::function<void(int, int)>& func);
-
+	/// set window iconify function callback
+	void SetWindowIconifyFunction(const std::function<void(int)>& func);
 
 	/// get mouse button input
 	int GetMouseButton(int button);
@@ -67,6 +68,8 @@ public:
 	void GetWindowSize(int* out_width, int* out_height);
 	/// sets cursor mode
 	void SetCursorMode(int mode);
+	/// get GLFW window
+	GLFWwindow* GetGLFWWindow();
 
 private:
 
@@ -84,6 +87,8 @@ private:
 	static void StaticCloseCallback(GLFWwindow* win);
 	/// static window resize callback
 	static void StaticWindowSizeCallback(GLFWwindow* win, int width, int height);
+	/// static window iconify callback
+	static void StaticWindowIconifyCallback(GLFWwindow* win, int iconified);
 
 	/// resize update
 	void Resize();
@@ -106,6 +111,8 @@ private:
 	std::function<void()> closeCallback;
 	/// function for window resize callbacks
 	std::function<void(int, int)> windowSizeCallback;
+	/// function for window iconify callbacks
+	std::function<void(int)> windowIconifyCallback;
 
 	int32 width;
 	int32 height;
@@ -205,6 +212,24 @@ inline void
 Window::SetWindowSizeFunction(const std::function<void(int, int)>& func)
 {
 	this->windowSizeCallback = func;
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
+inline void 
+Window::SetWindowIconifyFunction(const std::function<void(int)>& func)
+{
+	this->windowIconifyCallback = func;
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
+inline GLFWwindow*
+Window::GetGLFWWindow()
+{
+	return this->window;
 }
 
 } // namespace Display

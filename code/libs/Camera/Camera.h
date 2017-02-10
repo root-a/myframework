@@ -20,12 +20,13 @@ public:
 	mwm::Matrix4& getViewMatrix();
 	mwm::Vector3 getDirection();
 	mwm::Vector3 getUp();
+	mwm::Vector3 getRight();
 
 	mwm::Vector3 GetInitPos();
 	mwm::Vector3 GetPosition();
 	mwm::Vector3 GetPosition2();
 
-	void SetPosition(mwm::Vector3 pos);
+	void SetPosition(mwm::Vector3& pos);
 
 	bool holdingForward;
 	bool holdingBackward;

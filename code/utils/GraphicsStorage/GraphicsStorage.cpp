@@ -40,6 +40,15 @@ void GraphicsStorage::ClearTextures()
 	textures.clear();
 }
 
+void GraphicsStorage::ClearCubeMaps()
+{
+	for (auto& cubemap : cubemaps)
+	{
+		delete cubemap;
+	}
+	cubemaps.clear();
+}
+
 void GraphicsStorage::ClearOBJs()
 {
 	for (auto& object : objects)
@@ -53,3 +62,4 @@ std::map<std::string, Mesh*> GraphicsStorage::meshes;
 std::vector<Texture2D*> GraphicsStorage::textures;
 std::vector<Material*> GraphicsStorage::materials;
 std::vector<OBJ*> GraphicsStorage::objects;
+std::vector<Texture2D*> GraphicsStorage::cubemaps;

@@ -163,6 +163,56 @@ bool GraphicsManager::LoadTextures(const char * path)
 	return true;
 }
 
+
+
+bool GraphicsManager::LoadCubeMaps(const char* path)
+{
+	FILE * file;
+	file = fopen(path, "r");
+	if (file == NULL){
+		printf("Impossible to open the file ! Are you in the right path ?\n");
+		getchar();
+		return false;
+	}
+	while (1){
+
+		char cubemapDirectory[128];
+		// read the first line
+		int res = fscanf(file, "%s", cubemapDirectory);
+		if (res == EOF)
+		{
+			break; // EOF = End Of File. Quit the loop.
+		}
+		FILE* texturesFile;
+		texturesFile = fopen(cubemapDirectory, "r");
+		if (texturesFile == NULL){
+			printf("Impossible to open the file ! Are you in the right path ?\n");
+			getchar();
+			return false;
+		}
+		std::vector<std::string> texturesPaths;
+		while (1)
+		{
+			char cubeMapTexturePath[128];
+			int res = fscanf(texturesFile, "%s", cubeMapTexturePath);
+			if (res == EOF)
+			{
+				break; // EOF = End Of File. Quit the loop.
+			}
+			texturesPaths.push_back(std::string(cubeMapTexturePath));
+		}
+		if (texturesPaths.size() == 6)
+		{
+			printf("Loading cubemap: %s\n", cubemapDirectory);
+			Texture2D* cubeMap = GenerateCubeMap(texturesPaths);
+			GraphicsStorage::cubemaps.push_back(cubeMap);
+		}
+		fclose(texturesFile);
+	}
+	fclose(file);
+	return true;
+}
+
 bool GraphicsManager::LoadMaterials(const char * path) {
 	
 	FILE * file;
@@ -338,7 +388,7 @@ GLuint GraphicsManager::LoadDDS(const char *imagepath){
 		width /= 2;
 		height /= 2;
 
-		// Deal with Non-Power-Of-Two textures. This code is not included in the webpage to reduce clutter.
+		// Deal with Non-Power-Of-Two textures.
 		if (width < 1) width = 1;
 		if (height < 1) height = 1;
 
@@ -536,14 +586,18 @@ void GraphicsManager::LoadAllAssets()
 	LoadTextures("Resources/textures.txt");
 	printf("\nDONE\n");
 
+	printf("\nLOADING CUBE MAPS\n");
+	LoadCubeMaps("Resources/cubemaps.txt");
+	printf("\nDONE\n");
+
 	printf("\nLOADING MATERIALS\n");
 	LoadMaterials("Resources/materials.txt");
 	printf("\nDONE\n");
 }
 
-unsigned char * GraphicsManager::LoadPng(const char* path, int* x, int* y, int* numOfElements, int forcedNumOfEle)
+unsigned char * GraphicsManager::LoadImage(const char* path, int* x, int* y, int* numOfElements, int forcedNumOfEle)
 {
-	printf("Reading image %s\n", path);
+	//printf("Reading image %s\n", path);
 	return stbi_load(path, x, y, numOfElements, forcedNumOfEle);
 }
 
@@ -552,6 +606,36 @@ Texture2D* GraphicsManager::LoadTexture(char* path)
 	Texture2D* tex = new Texture2D();
 	// Load the texture
 	tex->TextureID = LoadDDS(path);
+
+	return tex;
+}
+
+Texture2D* GraphicsManager::GenerateCubeMap(const std::vector<std::string>& textures)
+{
+	Texture2D* tex = new Texture2D();
+	// Load the texture
+	
+	GLuint cubeMapTextureID;
+	glGenTextures(1, &cubeMapTextureID);
+	//glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTextureID);
+
+	for (int i = 0; i < 6; i++)
+	{
+		int x, y, numOfElements;
+		unsigned char* data = GraphicsManager::LoadImage(textures.at(i).c_str(), &x, &y, &numOfElements, 0);
+		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, x, y, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+	}
+
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
+
+	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
+
+	tex->TextureID = cubeMapTextureID;
 
 	return tex;
 }

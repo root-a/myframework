@@ -14,11 +14,13 @@ public:
 	~GraphicsStorage();
 	static std::map<std::string,Mesh*> meshes; //get mesh by name
 	static std::vector<Texture2D*> textures;
+	static std::vector<Texture2D*> cubemaps;
 	static std::vector<Material*> materials;
 	static std::vector<OBJ*> objects;
 	static void ClearMaterials();
 	static void ClearMeshes();
 	static void ClearTextures();
+	static void ClearCubeMaps();
 	static void ClearOBJs();
 private:
 

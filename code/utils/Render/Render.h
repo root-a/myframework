@@ -14,6 +14,7 @@ public:
 	static void drawGeometry(const Object* object, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
 	static void draw(const Object* object, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
 	static void drawDepth(Object* object, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
+	static void drawSkybox(Object* object, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
 private:
     Render();
     ~Render();
