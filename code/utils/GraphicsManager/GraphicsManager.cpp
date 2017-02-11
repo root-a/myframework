@@ -171,7 +171,6 @@ bool GraphicsManager::LoadCubeMaps(const char* path)
 	file = fopen(path, "r");
 	if (file == NULL){
 		printf("Impossible to open the file ! Are you in the right path ?\n");
-		getchar();
 		return false;
 	}
 	while (1){
