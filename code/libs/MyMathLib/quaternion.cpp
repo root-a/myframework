@@ -73,7 +73,7 @@ void Quaternion::operator*=(const Quaternion& v)
 
 float Quaternion::Magnitude()
 {
-	return sqrt(x*x + y*y + z*z + w*w);
+	return sqrtf(x*x + y*y + z*z + w*w);
 }
 
 void Quaternion::Normalize()
@@ -89,7 +89,7 @@ Quaternion Quaternion::Normalized() const
 {
 	Quaternion result;
 
-	float length = sqrt(x*x + y*y + z*z + w*w);
+	float length = sqrtf(x*x + y*y + z*z + w*w);
 
 	for (int i = 0; i < 4; i++)
 	{
