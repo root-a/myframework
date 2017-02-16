@@ -74,8 +74,8 @@ void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
 void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float width)
 {
 	Matrix4 model = Matrix4::translate(position);
-	float length = normal.vectLengthSSE();
-	Vector3 normalized = normal.normalizeSSE();
+	float length = normal.vectLengt();
+	Vector3 normalized = normal.vectNormalize();
 	
 	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normalized);
 	float tetha = acos(normalized.z);

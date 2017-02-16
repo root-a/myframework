@@ -213,7 +213,7 @@ void HalfEdgeMesh::CalculateMidpointPosition()
 			Vector3 calculatedNormal = (v1->normal + v2->normal + v3->normal + v4->normal) / 4.0f;
 			midpoint->pos = calculatedPosition; // there is no reason to set this as we copy newPos to pos later on
 			midpoint->tex = calculatedUVs;
-			midpoint->normal = calculatedNormal.normalizeSSE();
+			midpoint->normal = calculatedNormal.vectNormalize();
 			midpoint->newPos = calculatedPosition;
 			halfedge->midVertex = midpoint;
 			halfedge->pair->midVertex = midpoint;

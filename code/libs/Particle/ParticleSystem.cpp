@@ -83,7 +83,7 @@ int ParticleSystem::UpdateParticles(double deltaTime, const mwm::Vector3& camPos
 			// Simulate simple physics : gravity only, no collisions
 			p.speed += Vector3(0.0f, -9.81f, 0.0f) * (float)deltaTime * 0.5f;
 			p.pos += p.speed * (float)deltaTime;
-			p.cameraDistance = (p.pos - camPos).vectLengthSSE();
+			p.cameraDistance = (p.pos - camPos).vectLengt();
 			//p.size -= (float)deltaTime*3.5f;
 			//if (p.size < 0.f) p.size = 0.f; p.lifeTime = 0.f;
 			// Fill the GPU buffer

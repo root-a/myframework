@@ -240,7 +240,7 @@ Matrix4F Matrix4F::rotateAngle(Vector3& thisVector, float angle)
 	float cosAng = cosf(sAngle * PI / 180.0f);
 	float sinAng = sinf(sAngle * PI / 180.0f);
 	float T = 1.f - cosAng;
-	Vector3 normalizedVector = thisVector.normalizeSSE();
+	Vector3 normalizedVector = thisVector.vectNormalize();
 	float x = normalizedVector.vect[0];
 	float y = normalizedVector.vect[1];
 	float z = normalizedVector.vect[2];
@@ -387,8 +387,8 @@ Matrix4F Matrix4F::sPerspective(const float &near, const float &far, const float
 Matrix4F Matrix4F::nolookAt(Vector3 eye, Vector3 target, Vector3 up)
 {
 
-	Vector3 zaxis = (eye - target).normalizeSSE();    // The "forward" vector.
-	Vector3 xaxis = up.crossProd(zaxis).normalizeSSE(); // The "right" vector.  normal(cross(up, zaxis));
+	Vector3 zaxis = (eye - target).vectNormalize();    // The "forward" vector.
+	Vector3 xaxis = up.crossProd(zaxis).vectNormalize(); // The "right" vector.  normal(cross(up, zaxis));
 	Vector3 yaxis = zaxis.crossProd(xaxis);     // The "up" vector.
 
 	// Create a 4x4 orientation matrix from the right, up, and forward vectors
@@ -435,8 +435,8 @@ Matrix4F Matrix4F::nolookAt(Vector3 eye, Vector3 target, Vector3 up)
 Matrix4F Matrix4F::lookAt(Vector3 eye, Vector3 target, Vector3 up)
 {
 
-	Vector3 zaxis = (eye - target).normalizeSSE();    // The "forward" vector.
-	Vector3 xaxis = up.crossProd(zaxis).normalizeSSE(); // The "right" vector.  normal(cross(up, zaxis));
+	Vector3 zaxis = (eye - target).vectNormalize();    // The "forward" vector.
+	Vector3 xaxis = up.crossProd(zaxis).vectNormalize(); // The "right" vector.  normal(cross(up, zaxis));
 	Vector3 yaxis = zaxis.crossProd(xaxis);     // The "up" vector.
 
 	// Create a 4x4 orientation matrix from the right, up, and forward vectors
@@ -619,22 +619,22 @@ Vector3 Matrix4F::getPosition() const
 
 Vector3 Matrix4F::getRight() const
 {
-	return Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).normalizeSSE();
+	return Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
 }
 
 Vector3 Matrix4F::getUp() const
 {
-	return Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).normalizeSSE();
+	return Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
 }
 
 Vector3 Matrix4F::getForwardNegZ() const
 {
-	return Vector3(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).normalizeSSE();
+	return Vector3(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
 }
 
 Vector3 Matrix4F::getBackPosZ() const
 {
-	return Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).normalizeSSE();
+	return Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
 }
 
 void Matrix4F::setUp(const Vector3& axis)
@@ -665,14 +665,14 @@ Vector3 Matrix4F::getAxis(int axis) const
 
 Vector3 Matrix4F::getAxisNormalized(int axis) const
 {
-	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).normalizeSSE();
+	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
 }
 
 Vector3 Matrix4F::extractScale() const
 {
-	float scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengthSSE();
-	float scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengthSSE();
-	float scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengthSSE();
+	float scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
+	float scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
+	float scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
 	return Vector3(scaleX, scaleY, scaleZ);
 }
 }

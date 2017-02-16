@@ -141,6 +141,6 @@ void Object::CalculateRadius()
 	}
 	else
 	{
-		radius = halfExtents.vectLengthSSE(); //perfect for cuboid
+		radius = halfExtents.vectLengt(); //perfect for cuboid
 	}
 }

@@ -260,7 +260,7 @@ Matrix3F Matrix3F::rotateAngle(Vector3& thisVector, float angle)
 	float cosAng = cosf(sAngle * PI / 180.0f);
 	float sinAng = sinf(sAngle * PI / 180.0f);
 	float T = 1 - cosAng;
-	Vector3 normalizedVector = thisVector.normalizeSSE();
+	Vector3 normalizedVector = thisVector.vectNormalize();
 	float x = normalizedVector.vect[0];
 	float y = normalizedVector.vect[1];
 	float z = normalizedVector.vect[2];
@@ -349,22 +349,22 @@ Matrix3F Matrix3F::CuboidInertiaTensor(float mass, Vector3 dimensions)
 
 Vector3 Matrix3F::getRight() const
 {
-	return Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).normalizeSSE();
+	return Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
 }
 
 Vector3 Matrix3F::getUp() const
 {
-	return Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).normalizeSSE();
+	return Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
 }
 
 Vector3 Matrix3F::getForwardNegZ() const
 {
-	return Vector3(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).normalizeSSE();
+	return Vector3(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
 }
 
 Vector3 Matrix3F::getBackPosZ() const
 {
-	return Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).normalizeSSE();
+	return Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
 }
 
 void Matrix3F::setUp(const Vector3& axis)
@@ -421,14 +421,14 @@ Vector3 Matrix3F::getAxis(int axis) const
 
 Vector3 Matrix3F::getAxisNormalized(int axis) const
 {
-	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).normalizeSSE();
+	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
 }
 
 Vector3 Matrix3F::extractScale() const
 {
-	float scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengthSSE();
-	float scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengthSSE();
-	float scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengthSSE();
+	float scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
+	float scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
+	float scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
 	return Vector3(scaleX, scaleY, scaleZ);
 }
 }
