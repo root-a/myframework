@@ -7,16 +7,15 @@
 namespace Display
 {
 
-/*
 #ifdef __WIN32__
 #define APICALLTYPE __stdcall
 #else
 #define APICALLTYPE
 #endif
-*/
+
 //------------------------------------------------------------------------------
 /**
-
+*/
 static void GLAPIENTRY
 GLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
 {
@@ -53,7 +52,6 @@ GLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei 
 		break;
 	}
 }
-*/
 int32 Window::WindowCount = 0;
 //------------------------------------------------------------------------------
 /**
@@ -191,11 +189,9 @@ Window::Open()
 	}
 
 	// setup window
-	/*
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE);
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-	*/
 	glfwWindowHint(GLFW_RED_BITS, 8);
 	glfwWindowHint(GLFW_GREEN_BITS, 8);
 	glfwWindowHint(GLFW_BLUE_BITS, 8);
@@ -219,12 +215,12 @@ Window::Open()
 		}
 
 		// setup debug callback
-		/*glEnable(GL_DEBUG_OUTPUT);
+		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(GLDebugCallback, NULL);
 		GLuint unusedIds;
 		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unusedIds, true);
-		*/
+		
 		// setup stuff
 		//glEnable(GL_FRAMEBUFFER_SRGB);
 		glEnable(GL_LINE_SMOOTH);
