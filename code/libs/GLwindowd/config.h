@@ -13,6 +13,7 @@
 #include <stdint.h>
 #include <atomic>
 #include <xmmintrin.h>
+#include <emmintrin.h>
 #include <assert.h>
 
 typedef uint32_t	uint32;
