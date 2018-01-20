@@ -7,18 +7,18 @@ using namespace mwm;
 void OBJ::LoadAndIndexOBJ(char* path)
 {
 	// Read our .obj file
-	std::vector<Vector3> vertices;
-	std::vector<Vector2> uvs;
-	std::vector<Vector3> normals; // Won't be used at the moment.
+	std::vector<Vector3F> vertices;
+	std::vector<Vector2F> uvs;
+	std::vector<Vector3F> normals; // Won't be used at the moment.
 	bool res = LoadOBJ(path, vertices, uvs, normals);
 
 	indexVBO(vertices, uvs, normals);
 }
 
 void OBJ::indexVBO(
-	std::vector<Vector3> & in_vertices,
-	std::vector<Vector2> & in_uvs,
-	std::vector<Vector3> & in_normals
+	std::vector<Vector3F> & in_vertices,
+	std::vector<Vector2F> & in_uvs,
+	std::vector<Vector3F> & in_normals
 	)
 {
 	std::map<PackedVertex, unsigned int> VertexToOutIndex;
@@ -66,17 +66,17 @@ bool OBJ::getSimilarVertexIndex_fast(
 
 bool OBJ::LoadOBJ(
 	const char * path,
-	std::vector<Vector3> & out_vertices,
-	std::vector<Vector2> & out_uvs,
-	std::vector<Vector3> & out_normals
+	std::vector<Vector3F> & out_vertices,
+	std::vector<Vector2F> & out_uvs,
+	std::vector<Vector3F> & out_normals
 	)
 {
 	printf("\nLoading OBJ file %s...\n", path);
 
 	std::vector<unsigned int> vertexIndices, uvIndices, normalIndices;
-	std::vector<Vector3> temp_vertices;
-	std::vector<Vector2> temp_uvs;
-	std::vector<Vector3> temp_normals;
+	std::vector<Vector3F> temp_vertices;
+	std::vector<Vector2F> temp_uvs;
+	std::vector<Vector3F> temp_normals;
 
 
 	FILE * file;
@@ -97,23 +97,22 @@ bool OBJ::LoadOBJ(
 		// else : parse lineHeader
 
 		if (strcmp(lineHeader, "v") == 0){
-			Vector3 vertex;
-			fscanf(file, "%f %f %f\n", &vertex.vect[0], &vertex.vect[1], &vertex.vect[2]);
-			temp_vertices.push_back(vertex);
+			Vector3F pos;
+			fscanf(file, "%f %f %f\n", &pos.x, &pos.y, &pos.z);
+			temp_vertices.push_back(pos);
 		}
 		else if (strcmp(lineHeader, "vt") == 0){
-			Vector2 uv;
-			fscanf(file, "%f %f\n", &uv.vect[0], &uv.vect[1]);
-			uv.vect[1] = -uv.vect[1]; // Invert V coordinate since we will only use DDS texture, which are inverted. Remove if you want to use TGA or BMP loaders.
+			Vector2F uv;
+			fscanf(file, "%f %f\n", &uv.x, &uv.y);
+			uv.y = -uv.y; // Invert V coordinate since we will only use DDS texture, which are inverted. Remove if you want to use TGA or BMP loaders.
 			temp_uvs.push_back(uv);
 		}
 		else if (strcmp(lineHeader, "vn") == 0){
-			Vector3 normal;
-			fscanf(file, "%f %f %f\n", &normal.vect[0], &normal.vect[1], &normal.vect[2]);
+			Vector3F normal;
+			fscanf(file, "%f %f %f\n", &normal.x, &normal.y, &normal.z);
 			temp_normals.push_back(normal);
 		}
 		else if (strcmp(lineHeader, "f") == 0){
-			std::string vertex1, vertex2, vertex3;
 			unsigned int vertexIndex[3], uvIndex[3], normalIndex[3];
 			int matches = fscanf(file, "%d/%d/%d %d/%d/%d %d/%d/%d\n", &vertexIndex[0], &uvIndex[0], &normalIndex[0], &vertexIndex[1], &uvIndex[1], &normalIndex[1], &vertexIndex[2], &uvIndex[2], &normalIndex[2]);
 			if (matches != 9){
@@ -147,9 +146,9 @@ bool OBJ::LoadOBJ(
 		unsigned int normalIndex = normalIndices[i];
 
 		// Get the attributes thanks to the index
-		Vector3 vertex = temp_vertices[vertexIndex - 1];
-		Vector2 uv = temp_uvs[uvIndex - 1];
-		Vector3 normal = temp_normals[normalIndex - 1];
+		Vector3F vertex = temp_vertices[vertexIndex - 1];
+		Vector2F uv = temp_uvs[uvIndex - 1];
+		Vector3F normal = temp_normals[normalIndex - 1];
 
 		// Put the attributes in buffers
 		out_vertices.push_back(vertex);
@@ -164,27 +163,27 @@ bool OBJ::LoadOBJ(
 
 void OBJ::CalculateDimensions()
 {
-	Vector3 minValues;
-	Vector3 maxValues;
+	Vector3F minValues;
+	Vector3F maxValues;
 	
 	minValues = indexed_vertices[0];
 	maxValues = indexed_vertices[0];
 	for(size_t i = 0; i < indexed_vertices.size(); ++i)
 	{
-		Vector3 currentVertex = indexed_vertices[i];
-		maxValues[0] = std::max(maxValues[0],currentVertex[0]);
-		minValues[0] = std::min(minValues[0],currentVertex[0]);
-		maxValues[1] = std::max(maxValues[1],currentVertex[1]);
-		minValues[1] = std::min(minValues[1],currentVertex[1]);
-		maxValues[2] = std::max(maxValues[2],currentVertex[2]);
-		minValues[2] = std::min(minValues[2],currentVertex[2]);		
+		Vector3F currentVertex = indexed_vertices[i];
+		maxValues.x = std::max(maxValues.x, currentVertex.x);
+		minValues.x = std::min(minValues.x, currentVertex.x);
+		maxValues.y = std::max(maxValues.y, currentVertex.y);
+		minValues.y = std::min(minValues.y, currentVertex.y);
+		maxValues.z = std::max(maxValues.z, currentVertex.z);
+		minValues.z = std::min(minValues.z, currentVertex.z);
 	}
 	
-	dimensions.vect[0] = maxValues[0]-minValues[0];
-	dimensions.vect[1] = maxValues[1]-minValues[1];
-	dimensions.vect[2] = maxValues[2]-minValues[2];
+	dimensions.x = maxValues.x - minValues.x;
+	dimensions.y = maxValues.y - minValues.y;
+	dimensions.z = maxValues.z - minValues.z;
 	
-	this->center_of_mass = minValues + this->dimensions/2.f;
+	this->center_of_mass = Vector3(minValues.x, minValues.y, minValues.z) + this->dimensions/2.0;
 
 }
 

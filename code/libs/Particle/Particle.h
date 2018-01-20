@@ -7,10 +7,10 @@ public:
 	~Particle();
 
 	mwm::Vector3 pos, speed;
-	mwm::Vector4 color;
+	mwm::Vector4F color;
 	float size, angle, weight;
 	float lifeTime;
-	float cameraDistance;
+	double cameraDistance;
 
 	bool operator<(Particle& that){
 		// Sort in reverse order : far particles drawn first.

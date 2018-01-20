@@ -1,28 +1,22 @@
 #include <cmath>
 #include "Vector2.h"
 #include "Vector3.h"
-
+#include "Vector4.h"
+#include "Vector3F.h"
 namespace mwm
 {
-Vector3::Vector3(float x, float y, float z)
-{
-	vect[0] = x;
-	vect[1] = y;
-	vect[2] = z;
-}
-
-Vector3::Vector3(const Vector2& vec, float z)
-{
-	vect[0] = vec.x;
-	vect[1] = vec.y;
-	vect[2] = z;
-}
-
 Vector3::Vector3(double x, double y, double z)
 {
-	vect[0] = (float)x;
-	vect[1] = (float)y;
-	vect[2] = (float)z;
+	this->x = x;
+	this->y = y;
+	this->z = z;
+}
+
+Vector3::Vector3(const Vector2& vec, double z)
+{
+	this->x = vec.x;
+	this->y = vec.y;
+	this->z = z;
 }
 
 Vector3::~Vector3()
@@ -30,149 +24,131 @@ Vector3::~Vector3()
 }
 
 /*! \fn add vectors amd return new one*/
-Vector3 Vector3::operator+ (const Vector3& rightVector) const
+Vector3 Vector3::operator+ (const Vector3& right) const
 {
-	return Vector3(this->vect[0] + rightVector.vect[0], this->vect[1] + rightVector.vect[1], this->vect[2] + rightVector.vect[2]);
+	return Vector3(x + right.x, y + right.y, z + right.z);
 }
 
 /*! \fn substract vectors and return new one*/
-Vector3 Vector3::operator- (const Vector3& rightVector) const
+Vector3 Vector3::operator- (const Vector3& right) const
 {
-
-	return Vector3(this->vect[0] - rightVector.vect[0], this->vect[1] - rightVector.vect[1], this->vect[2] - rightVector.vect[2]);
+	return Vector3(x - right.x, y - right.y, z - right.z);
 }
 /*! \fn dot product returns scalar*/
-float Vector3::dotAKAscalar(const Vector3& rightVector) const
+double Vector3::dotAKAscalar(const Vector3& right) const
 {
-	float x1 = this->x * rightVector.x;
-	float y1 = this->y * rightVector.y;
-	float z1 = this->z * rightVector.z;
-	return x1 + y1 + z1;
+	return x * right.x + y * right.y + z * right.z;
 }
 
 /*! \fn function returning length of instanced vector*/
-float Vector3::vectLengt() const
+double Vector3::vectLengt() const
 {
-	float x = this->vect[0];
-	float y = this->vect[1];
-	float z = this->vect[2];
 	return sqrt(x*x + y*y + z*z);
 }
 
-float Vector3::squareMag() const
+double Vector3::squareMag() const
 {
-	float x = this->vect[0];
-	float y = this->vect[1];
-	float z = this->vect[2];
-	return (x*x + y*y + z*z);
+	return x*x + y*y + z*z;
 }
 
 /*! \fn function returning new normalized vector*/
 Vector3 Vector3::vectNormalize() const
 {
-	float vLength = this->vectLengt();
-	float x = this->vect[0] / vLength;
-	float y = this->vect[1] / vLength;
-	float z = this->vect[2] / vLength;
-	return Vector3(x, y, z);
+	double length = sqrt(x*x + y*y + z*z);
+	return Vector3(x / length, y / length, z / length);
 }
 /*! \fn cross product function returning normal vector*/
-Vector3 Vector3::crossProd(const Vector3& rightVector) const
+Vector3 Vector3::crossProd(const Vector3& right) const
 {
-	float x = +((this->vect[1] * rightVector.vect[2]) - (rightVector.vect[1] * this->vect[2]));
-	float y = -((this->vect[0] * rightVector.vect[2]) - (rightVector.vect[0] * this->vect[2]));
-	float z = +((this->vect[0] * rightVector.vect[1]) - (rightVector.vect[0] * this->vect[1]));
-	return Vector3(x, y, z);
+	double tx = +((y * right.z) - (right.y * z));
+	double ty = -((x * right.z) - (right.x * z));
+	double tz = +((x * right.y) - (right.x * y));
+	return Vector3(tx, ty, tz);
 }
 
-/*! \fn function to convert 3D vector to 4D vector*/
-Vector4 Vector3::vec3TOvec4(const Vector3& _3Dvector, float w)
+/*! \fn convert this 3D vector to 4D vector*/
+Vector4 Vector3::vec3TOvec4(const Vector3& vector, double w)
 {
-	return Vector4(_3Dvector.vect[0], _3Dvector.vect[1], _3Dvector.vect[2], w);
+	return Vector4(vector.x, vector.y, vector.z, w);
 }
 
-/*! \fn vector*num returns new matrix*/
-Vector3 Vector3::operator* (const float& rightFloat) const
+/*! \fn this vector*num returns new vector*/
+Vector3 Vector3::operator* (const double& right) const
 {
-	float x = this->vect[0] * rightFloat;
-	float y = this->vect[1] * rightFloat;
-	float z = this->vect[2] * rightFloat;
-	return Vector3(x, y, z);
+	return Vector3(x * right, y * right, z * right);
 }
 
-Vector3 Vector3::operator*(const Vector3& rightVector) const
+/*! \fn this vector*vector returns new vector*/
+Vector3 Vector3::operator*(const Vector3& right) const
 {
-	return Vector3(x*rightVector.x, y*rightVector.y, z*rightVector.z);
+	return Vector3(x * right.x, y * right.y, z * right.z);
 }
 
-/*! \fn num*vector returns new matrix*/
-Vector3 operator* (const float& leftFloat, const Vector3& rightVector)
+/*! \fn num*vector returns new vector*/
+Vector3 operator* (const double& left, const Vector3& right)
 {
-	float x = rightVector.vect[0] * leftFloat;
-	float y = rightVector.vect[1] * leftFloat;
-	float z = rightVector.vect[2] * leftFloat;
-	return Vector3(x, y, z);
+	return Vector3(right.x * left, right.y * left, right.z * left);
 }
 
-/*! \fn vector/num returns new matrix*/
-Vector3 Vector3::operator/ (const float& rightFloat) const
+/*! \fn this vector/num returns new vector*/
+Vector3 Vector3::operator/ (const double& right) const
 {
-	float x = this->x / rightFloat;
-	float y = this->y / rightFloat;
-	float z = this->z / rightFloat;
-	return Vector3(x, y, z);
+	return Vector3(x / right, y / right, z / right);
 }
 
-Vector3 Vector3::operator/ (const Vector3& rightVector) const
+/*! \fn this vector/vector returns new vector*/
+Vector3 Vector3::operator/ (const Vector3& right) const
 {
-	float x = this->x / rightVector.x;
-	float y = this->y / rightVector.y;
-	float z = this->z / rightVector.z;
-	return Vector3(x, y, z);
+	return Vector3(x / right.x, y / right.y, z / right.z);
 }
 
+/*! \fn adds vector to this vector*/
 void Vector3::operator+=(const Vector3& v)
 {
-	for (int i = 0; i < 3; i++)
-	{
-		vect[i] += v.vect[i];
-	}
+	x += v.x;
+	y += v.y;
+	z += v.z;
 }
 
+/*! \fn subtracts vector from this vector*/
 void Vector3::operator-=(const Vector3& v)
 {
-	for (int i = 0; i < 3; i++)
-	{
-		vect[i] -= v.vect[i];
-	}
+	x -= v.x;
+	y -= v.y;
+	z -= v.z;
 }
 
-void Vector3::operator*=(const float& number)
+/*! \fn multiplies this vector with vector and sets result*/
+void Vector3::operator*=(const double& number)
 {
-	for (int i = 0; i < 3; i++)
-	{
-		vect[i] *= number;
-	}
+	x *= number;
+	y *= number;
+	z *= number;
 }
 
-void Vector3::operator/=(const float& number)
+/*! \fn divides this vector with number and assings result*/
+void Vector3::operator/=(const double& number)
 {
-	Vector3 temp = *this;
-	for (int i = 0; i < 3; i++)
-	{
-		vect[i] /= number;
-	}
+	x /= number;
+	y /= number;
+	z /= number;
 }
 
+/*! \fn compares vectors for equality*/
 bool Vector3::operator==(const Vector3& v)const
 {
-	if (vect[0] != v.vect[0] || vect[1] != v.vect[1] || vect[2] != v.vect[2]) return false;	
+	if (x != v.x || y != v.y || z != v.z) return false;	
 	else return true;
 }
 
 /*! \fn operator[] overload for indexing */
-float& Vector3::operator[] (int index)
+double& Vector3::operator[] (int index)
 {
 	return this->vect[index];
+}
+
+Vector3F Vector3::toFloat() const
+{
+	return Vector3F((float)x, (float)y, (float)z);
 }
 }

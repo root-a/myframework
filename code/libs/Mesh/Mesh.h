@@ -11,7 +11,7 @@ public:
 	unsigned int uvbuffer;
 	unsigned int normalbuffer;
 	unsigned int elementbuffer;
-	int indicesSize;
+	unsigned int indicesSize;
 	OBJ* obj;
 private:
 

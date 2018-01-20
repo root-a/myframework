@@ -1,8 +1,8 @@
 #pragma once
 #include "MyMathLib.h"
-#include "Node.h"
 #include "Component.h"
-
+#include "Node.h"
+#include "MinMax.h"
 class Mesh;
 class Material;
 
@@ -11,13 +11,13 @@ class FastBoundingBox
 public:
 	FastBoundingBox()
 	{
-		color = mwm::Vector4(0.f, 3.f, 3.f, 0.1f);
+		color = mwm::Vector4F(0.f, 3.f, 3.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 	};
 	~FastBoundingBox(){};
 	Node node;
-	mwm::Vector4 color;
+	mwm::Vector4F color;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -58,7 +58,7 @@ public:
 	void Update();
 
 	static const unsigned short elements[24];
-	static const mwm::Vector3 vertices[8];
+	static const mwm::Vector3F vertices[8];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
@@ -68,7 +68,7 @@ public:
 	int MaxCount;
 
 	mwm::Matrix4F* models;
-	mwm::Vector4* colors;
+	mwm::Vector4F* colors;
 	FastBoundingBox* boundingBoxesContainer;
 
 	unsigned int vaoHandle;
@@ -78,6 +78,4 @@ public:
 	unsigned int elementBuffer;
 
 	unsigned int ViewProjectionHandle;
-
-	mwm::MinMax CalcValuesInWorld(const mwm::Matrix3& modelMatrix, const mwm::Vector3& position) const;	
 };

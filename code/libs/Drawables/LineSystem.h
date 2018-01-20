@@ -12,8 +12,8 @@ class FastLine
 public:
 	FastLine()
 	{ 
-		colorA = mwm::Vector4(0.f, 3.f, 3.f, 0.1f);
-		colorB = mwm::Vector4(3.f, 3.f, 0.f, 0.1f);
+		colorA = mwm::Vector4F(0.f, 3.f, 3.f, 0.1f);
+		colorB = mwm::Vector4F(3.f, 3.f, 0.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 		nodeA = &localNodeA;
@@ -26,11 +26,15 @@ public:
 	void DetachEndB();
 	mwm::Vector3 GetPositionA();
 	mwm::Vector3 GetPositionB();
+	void SetPositionA(mwm::Vector3& pos);
+	void SetPositionB(mwm::Vector3& pos);
 
-	mwm::Vector4 colorA;
-	mwm::Vector4 colorB;
+	mwm::Vector4F colorA;
+	mwm::Vector4F colorB;
 	LineNode localNodeA;
 	LineNode localNodeB;
+	Node* nodeA;
+	Node* nodeB;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -52,8 +56,7 @@ protected:
 private:
 	bool draw;
 	bool drawAlways;
-	Node* nodeA;
-	Node* nodeB;
+	
 };
 
 
@@ -73,7 +76,7 @@ public:
 	int UpdateContainer();
 	void Update();
 
-	static const mwm::Vector3 vertices[2];
+	static const mwm::Vector3F vertices[2];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
@@ -81,8 +84,8 @@ public:
 	int LastUsed;
 	int ActiveCount;
 	int MaxCount;
-	mwm::Vector3* positions;
-	mwm::Vector4* colors;
+	mwm::Vector3F* positions;
+	mwm::Vector4F* colors;
 	FastLine* linesContainer;
 	
 

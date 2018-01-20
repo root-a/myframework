@@ -24,6 +24,18 @@ const Vector3 BoundingBox::vertices[8] = {
 	Vector3(-0.5, 0.5, -0.5)
 };
 
+const Vector3F BoundingBox::verts[8] = {
+	Vector3F(-0.5f, -0.5f, 0.5f),
+	Vector3F(0.5f, -0.5f, 0.5f),
+	Vector3F(0.5f, 0.5f, 0.5f),
+	Vector3F(-0.5f, 0.5f, 0.5f),
+
+	Vector3F(-0.5f, -0.5f, -0.5f),
+	Vector3F(0.5f, -0.5f, -0.5f),
+	Vector3F(0.5f, 0.5f, -0.5f),
+	Vector3F(-0.5f, 0.5f, -0.5f)
+};
+
 const GLushort BoundingBox::elements[] = {
 	0, 1, 1, 2, 2, 3, 3, 0,
 	4, 5, 5, 6, 6, 7, 7, 4,
@@ -41,7 +53,7 @@ void BoundingBox::SetUpBuffers()
 
 	glGenBuffers(1, &mesh->vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mesh->vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(Vector3), &vertices[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(Vector3F), &verts[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(0);
 
@@ -54,21 +66,21 @@ void BoundingBox::SetUpBuffers()
 
 }
 
-void BoundingBox::Draw(const mwm::Matrix4& Model, const mwm::Matrix4& View, const mwm::Matrix4& Projection, GLuint wireframeShader)
+void BoundingBox::Draw(const mwm::Matrix4& Model, const mwm::Matrix4& View, const mwm::Matrix4& Projection, unsigned int wireframeShader)
 {
 	Matrix4F MVP = (Model*View*Projection).toFloat();
 	MatrixHandle = glGetUniformLocation(wireframeShader, "MVP");
 	MaterialColorValueHandle = glGetUniformLocation(wireframeShader, "MaterialColorValue");
 
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-	glUniform3fv(MaterialColorValueHandle, 1, &this->mat->color.vect[0]);
+	glUniform3fv(MaterialColorValueHandle, 1, &this->mat->color.x);
 
 	glBindVertexArray(this->mesh->vaoHandle);
 
 	glDrawElements(GL_LINES, 24, GL_UNSIGNED_SHORT, 0);
 }
 
-MinMax BoundingBox::CalcValuesInWorld(const Matrix3& modelM, const Vector3& position) const
+MinMax BoundingBox::CalcValuesInWorld(const Matrix3& modelM, const Vector3& position)
 {
 	Vector3 maxValuesW = modelM * vertices[0];
 	Vector3 minValuesW = modelM * vertices[0];

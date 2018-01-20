@@ -70,28 +70,28 @@ Matrix4 Matrix4::operator~ () const
 }
 
 /*! \fn num*matrix returns new matrix*/
-Matrix4 operator*(const double& leftDouble, const Matrix4& rightMatrix)
+Matrix4 operator*(const double& left, const Matrix4& right)
 {
 	Matrix4 temp;
 	for (int i = 0; i < 4; i++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			temp._matrix[i][c] = leftDouble * rightMatrix._matrix[i][c];
+			temp._matrix[i][c] = left * right._matrix[i][c];
 		}
 	}
 	return temp;
 }
 
 /*! \fn matrix*num returns new matrix*/
-Matrix4 Matrix4::operator* (const double& rightDouble) const
+Matrix4 Matrix4::operator* (const double& right) const
 {
 	Matrix4 temp;
 	for (int i = 0; i < 4; i++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			temp._matrix[i][c] = this->_matrix[i][c] * rightDouble;
+			temp._matrix[i][c] = this->_matrix[i][c] * right;
 
 		}
 	}
@@ -100,7 +100,7 @@ Matrix4 Matrix4::operator* (const double& rightDouble) const
 }
 
 /*! \fn matrix*matrix returns new matrix*/
-Matrix4 Matrix4::operator* (const Matrix4& rightMatrix) const// matrix multi
+Matrix4 Matrix4::operator* (const Matrix4& right) const// matrix multi
 {
 	Matrix4 temp;
 
@@ -111,7 +111,7 @@ Matrix4 Matrix4::operator* (const Matrix4& rightMatrix) const// matrix multi
 		{
 			for (int k = 0; k < 4; k++)
 			{
-				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * rightMatrix._matrix[k][c];
+				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * right._matrix[k][c];
 
 			}
 		}
@@ -120,12 +120,12 @@ Matrix4 Matrix4::operator* (const Matrix4& rightMatrix) const// matrix multi
 }
 
 /*! \fn matrix*vector returns new vector*/
-Vector4 Matrix4::operator* (const Vector4& rightVector) const// matrix multi
+Vector4 Matrix4::operator* (const Vector4& right) const// matrix multi
 {
-	double vx = rightVector.vect[0];
-	double vy = rightVector.vect[1];
-	double vz = rightVector.vect[2];
-	double vw = rightVector.vect[3];
+	double vx = right.x;
+	double vy = right.y;
+	double vz = right.z;
+	double vw = right.vect[3];
 
 	double _x = this->_matrix[0][0] * vx + this->_matrix[1][0] * vy + this->_matrix[2][0] * vz + this->_matrix[3][0] * vw;
 	double _y = this->_matrix[0][1] * vx + this->_matrix[1][1] * vy + this->_matrix[2][1] * vz + this->_matrix[3][1] * vw;
@@ -135,13 +135,13 @@ Vector4 Matrix4::operator* (const Vector4& rightVector) const// matrix multi
 }
 
 /*! \fn copy matrix returns new matrix*/
-Matrix4& Matrix4::operator= (const Matrix4& rightMatrix)
+Matrix4& Matrix4::operator= (const Matrix4& right)
 {
 	for (int r = 0; r < 4; r++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			this->_matrix[r][c] = rightMatrix._matrix[r][c];
+			this->_matrix[r][c] = right._matrix[r][c];
 
 		}
 	}
@@ -150,13 +150,13 @@ Matrix4& Matrix4::operator= (const Matrix4& rightMatrix)
 }
 
 /*! \fn check if matrices are identical*/
-bool Matrix4::operator== (const Matrix4& rightMatrix) const
+bool Matrix4::operator== (const Matrix4& right) const
 {
 	for (int r = 0; r < 4; r++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			if (this->_matrix[r][c] != rightMatrix._matrix[r][c])
+			if (this->_matrix[r][c] != right._matrix[r][c])
 			{
 				return false;
 			}
@@ -262,7 +262,7 @@ Matrix4 Matrix4::rotateZ(const double &angle)
 }
 
 /*! \fn function returning rotation matrix with specified rotation angle along specified axis(vector)*/
-Matrix4 Matrix4::rotateAngle(const Vector3& thisVector, const double &angle)
+Matrix4 Matrix4::rotateAngle(const Vector3& v, const double &angle)
 {
 	double sAngle = -angle;
 	double PI = 3.14159265;
@@ -270,10 +270,10 @@ Matrix4 Matrix4::rotateAngle(const Vector3& thisVector, const double &angle)
 	double sinAng = sin(sAngle * PI / 180.0);
 	double T = 1 - cosAng;
 	
-	Vector3 normalizedVector = thisVector.vectNormalize();
-	float x = normalizedVector.vect[0];
-	float y = normalizedVector.vect[1];
-	float z = normalizedVector.vect[2];
+	Vector3 normalizedVector = v.vectNormalize();
+	double x = normalizedVector.x;
+	double y = normalizedVector.y;
+	double z = normalizedVector.z;
 	Matrix4 rotationMatrix;
 	//row1
 	rotationMatrix._matrix[0][0] = cosAng + (x*x) * T;
@@ -313,16 +313,16 @@ Matrix4 Matrix4::translate(const double &x, const double &y, const double &z)
 }
 
 /*! \fn returns translation matrix with specified translation values*/
-Matrix4 Matrix4::translate(const Vector3& rightVector)
+Matrix4 Matrix4::translate(const Vector3& right)
 {
 	Matrix4 translation;
 	translation._matrix[0][0] = 1.0;
 	translation._matrix[1][1] = 1.0;
 	translation._matrix[2][2] = 1.0;
 	translation._matrix[3][3] = 1.0;
-	translation._matrix[3][0] = rightVector.vect[0];
-	translation._matrix[3][1] = rightVector.vect[1];
-	translation._matrix[3][2] = rightVector.vect[2];
+	translation._matrix[3][0] = right.x;
+	translation._matrix[3][1] = right.y;
+	translation._matrix[3][2] = right.z;
 	return translation;
 }
 
@@ -338,12 +338,12 @@ Matrix4 Matrix4::scale(const double &x, const double &y, const double &z)
 }
 
 /*! \fn function returning new scale matrix with specified scale values*/
-Matrix4 Matrix4::scale(const Vector3& rightVector)
+Matrix4 Matrix4::scale(const Vector3& right)
 {
 	Matrix4 scaling;
-	scaling._matrix[0][0] = rightVector.vect[0];
-	scaling._matrix[1][1] = rightVector.vect[1];
-	scaling._matrix[2][2] = rightVector.vect[2];
+	scaling._matrix[0][0] = right.x;
+	scaling._matrix[1][1] = right.y;
+	scaling._matrix[2][2] = right.z;
 	scaling._matrix[3][3] = 1.0;
 	return scaling;
 }
@@ -514,17 +514,17 @@ Matrix4 Matrix4::nolookAt(Vector3 eye, Vector3 target, Vector3 up)
 	// This is transposed which is equivalent to performing an inverse
 	// if the matrix is orthonormalized (in this case, it is).
 	Matrix4 orientation;
-	orientation[0][0] = xaxis.vect[0];
-	orientation[0][1] = yaxis.vect[0];
-	orientation[0][2] = zaxis.vect[0];
+	orientation[0][0] = xaxis.x;
+	orientation[0][1] = yaxis.x;
+	orientation[0][2] = zaxis.x;
 
-	orientation[1][0] = xaxis.vect[1];
-	orientation[1][1] = yaxis.vect[1];
-	orientation[1][2] = zaxis.vect[1];
+	orientation[1][0] = xaxis.y;
+	orientation[1][1] = yaxis.y;
+	orientation[1][2] = zaxis.y;
 
-	orientation[2][0] = xaxis.vect[2];
-	orientation[2][1] = yaxis.vect[2];
-	orientation[2][2] = zaxis.vect[2];
+	orientation[2][0] = xaxis.z;
+	orientation[2][1] = yaxis.z;
+	orientation[2][2] = zaxis.z;
 
 	orientation[3][3] = 1.0;
 
@@ -539,9 +539,9 @@ Matrix4 Matrix4::nolookAt(Vector3 eye, Vector3 target, Vector3 up)
 
 	translation[2][2] = 1.0;
 
-	translation[3][0] = -eye.vect[0];
-	translation[3][1] = -eye.vect[1];
-	translation[3][2] = -eye.vect[2];
+	translation[3][0] = -eye.x;
+	translation[3][1] = -eye.y;
+	translation[3][2] = -eye.z;
 	translation[3][3] = 1.0;
 
 	// Combine the orientation and translation to compute
@@ -562,17 +562,17 @@ Matrix4 Matrix4::lookAt(Vector3 eye, Vector3 target, Vector3 up)
 	// This is transposed which is equivalent to performing an inverse
 	// if the matrix is orthonormalized (in this case, it is).
 	Matrix4 orientation;
-	orientation[0][0] = xaxis.vect[0];
-	orientation[0][1] = yaxis.vect[0];
-	orientation[0][2] = zaxis.vect[0];
+	orientation[0][0] = xaxis.x;
+	orientation[0][1] = yaxis.x;
+	orientation[0][2] = zaxis.x;
 
-	orientation[1][0] = xaxis.vect[1];
-	orientation[1][1] = yaxis.vect[1];
-	orientation[1][2] = zaxis.vect[1];
+	orientation[1][0] = xaxis.y;
+	orientation[1][1] = yaxis.y;
+	orientation[1][2] = zaxis.y;
 
-	orientation[2][0] = xaxis.vect[2];
-	orientation[2][1] = yaxis.vect[2];
-	orientation[2][2] = zaxis.vect[2];
+	orientation[2][0] = xaxis.z;
+	orientation[2][1] = yaxis.z;
+	orientation[2][2] = zaxis.z;
 
 	orientation[3][0] = -(xaxis.dotAKAscalar(eye));
 	orientation[3][1] = -(yaxis.dotAKAscalar(eye));
@@ -603,19 +603,19 @@ Matrix4 Matrix4::FPScam(Vector3 eye, const double &pitch, const double &yaw)
 
 	// Create a 4x4 view matrix from the right, up, forward and eye position vectors
 	Matrix4 FPSView;
-	FPSView[0][0] = xaxis.vect[0];
-	FPSView[0][1] = yaxis.vect[0];
-	FPSView[0][2] = zaxis.vect[0];
+	FPSView[0][0] = xaxis.x;
+	FPSView[0][1] = yaxis.x;
+	FPSView[0][2] = zaxis.x;
 	//FPSView[0][3] = 0;
 
-	FPSView[1][0] = xaxis.vect[1];
-	FPSView[1][1] = yaxis.vect[1];
-	FPSView[1][2] = zaxis.vect[1];
+	FPSView[1][0] = xaxis.y;
+	FPSView[1][1] = yaxis.y;
+	FPSView[1][2] = zaxis.y;
 	//FPSView[1][3] = 0;
 
-	FPSView[2][0] = xaxis.vect[2];
-	FPSView[2][1] = yaxis.vect[2];
-	FPSView[2][2] = zaxis.vect[2];
+	FPSView[2][0] = xaxis.z;
+	FPSView[2][1] = yaxis.z;
+	FPSView[2][2] = zaxis.z;
 	//FPSView[2][3] = 0;
 
 	FPSView[3][0] = -(xaxis.dotAKAscalar(eye));
@@ -789,9 +789,9 @@ void Matrix4::setForward(const Vector3& axis)
 
 Vector3 Matrix4::extractScale() const
 {
-	float scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
-	float scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
-	float scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
+	double scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
+	double scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
+	double scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
 	return Vector3(scaleX, scaleY, scaleZ);
 }
 }

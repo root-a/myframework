@@ -15,7 +15,7 @@ public:
 	Mesh* mesh;
 	Material* mat;
 
-	static const mwm::Vector3 vertices[2];
+	static const mwm::Vector3F vertices[2];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;

@@ -50,7 +50,7 @@ void Material::SetColor(float r, float g, float b)
 	this->color.vect[2] = b;
 }
 
-void Material::SetColor(const mwm::Vector3& colorC)
+void Material::SetColor(const mwm::Vector3F& colorC)
 {
 	color = colorC;
 }

@@ -13,7 +13,7 @@ BoundingBoxSystem::BoundingBoxSystem(int maxCount){
 	ActiveCount = 0;
 	boundingBoxesContainer = new FastBoundingBox[maxCount];
 	models = new Matrix4F[maxCount];
-	colors = new Vector4[maxCount];
+	colors = new Vector4F[maxCount];
 	SetUpBuffers();
 }
 
@@ -29,16 +29,16 @@ BoundingBoxSystem::~BoundingBoxSystem()
 	delete[] colors;
 }
 
-const Vector3 BoundingBoxSystem::vertices[8] = {
-	Vector3(-0.5, -0.5, 0.5),
-	Vector3(0.5, -0.5, 0.5),
-	Vector3(0.5, 0.5, 0.5),
-	Vector3(-0.5, 0.5, 0.5),
+const Vector3F BoundingBoxSystem::vertices[8] = {
+	Vector3F(-0.5f, -0.5f, 0.5f),
+	Vector3F(0.5f, -0.5f, 0.5f),
+	Vector3F(0.5f, 0.5f, 0.5f),
+	Vector3F(-0.5f, 0.5f, 0.5f),
 
-	Vector3(-0.5, -0.5, -0.5),
-	Vector3(0.5, -0.5, -0.5),
-	Vector3(0.5, 0.5, -0.5),
-	Vector3(-0.5, 0.5, -0.5)
+	Vector3F(-0.5f, -0.5f, -0.5f),
+	Vector3F(0.5f, -0.5f, -0.5f),
+	Vector3F(0.5f, 0.5f, -0.5f),
+	Vector3F(-0.5f, 0.5f, -0.5f)
 };
 
 const GLushort BoundingBoxSystem::elements[] = {
@@ -97,7 +97,7 @@ void BoundingBoxSystem::SetUpBuffers()
 
 	glGenBuffers(1, &vertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(Vector3), vertices, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(Vector3F), vertices, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 	glVertexAttribDivisor(0, 0); // position vertices : always reuse the same vertices -> 0
@@ -109,7 +109,7 @@ void BoundingBoxSystem::SetUpBuffers()
 	glGenBuffers(1, &colorBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
 	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(1);
 	glVertexAttribDivisor(1, 1); // colors : one per box
@@ -134,7 +134,7 @@ void BoundingBoxSystem::UpdateBuffers()
 
 	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4), colors);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), colors);
 
 	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Matrix4F), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
@@ -171,25 +171,4 @@ FastBoundingBox* BoundingBoxSystem::GetBoundingBoxOnce()
 void BoundingBoxSystem::Update()
 {
 	ActiveCount = UpdateContainer();
-}
-
-MinMax BoundingBoxSystem::CalcValuesInWorld(const Matrix3& modelM, const Vector3& position) const
-{
-	Vector3 maxValuesW = modelM * vertices[0];
-	Vector3 minValuesW = modelM * vertices[0];
-	Vector3 currentVertex;
-	for (int i = 0; i < 8; ++i)
-	{
-		currentVertex = modelM * vertices[i];
-		maxValuesW[0] = std::max(maxValuesW[0], currentVertex[0]);
-		minValuesW[0] = std::min(minValuesW[0], currentVertex[0]);
-		maxValuesW[1] = std::max(maxValuesW[1], currentVertex[1]);
-		minValuesW[1] = std::min(minValuesW[1], currentVertex[1]);
-		maxValuesW[2] = std::max(maxValuesW[2], currentVertex[2]);
-		minValuesW[2] = std::min(minValuesW[2], currentVertex[2]);
-	}
-	MinMax mm;
-	mm.max = maxValuesW + position;
-	mm.min = minValuesW + position;
-	return mm;
 }

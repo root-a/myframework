@@ -12,8 +12,8 @@ LineSystem::LineSystem(int maxCount){
 	LastUsed = 0;
 	ActiveCount = 0;
 	linesContainer = new FastLine[maxCount];
-	positions = new Vector3[maxCount * 2];
-	colors = new Vector4[maxCount * 2];
+	positions = new Vector3F[maxCount * 2];
+	colors = new Vector4F[maxCount * 2];
 	SetUpBuffers();
 }
 
@@ -28,9 +28,9 @@ LineSystem::~LineSystem()
 	delete[] colors;
 }
 
-const Vector3 LineSystem::vertices[] = {
-	Vector3(0.f, 0.f, 0.f),
-	Vector3(0.f, 0.f, 1.f)
+const Vector3F LineSystem::vertices[] = {
+	Vector3F(0.f, 0.f, 0.f),
+	Vector3F(0.f, 0.f, 1.f)
 };
 
 int LineSystem::FindUnused()
@@ -48,7 +48,6 @@ int LineSystem::FindUnused()
 			return i;
 		}
 	}
-
 	return 0;
 }
 
@@ -61,8 +60,8 @@ int LineSystem::UpdateContainer()
 
 		if (l.CanDraw())
 		{
-			positions[LinesCount] = l.GetPositionA();
-			positions[LinesCount + 1] = l.GetPositionB();
+			positions[LinesCount] = l.GetPositionA().toFloat();
+			positions[LinesCount + 1] = l.GetPositionB().toFloat();
 
 			colors[LinesCount] = l.colorA;
 			colors[LinesCount + 1] = l.colorB;
@@ -84,13 +83,13 @@ void LineSystem::SetUpBuffers()
 
 	glGenBuffers(1, &vertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * 2 * sizeof(Vector3), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * 2 * sizeof(Vector3F), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 
 	glGenBuffers(1, &colorBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * 2 * sizeof(Vector4), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * 2 * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(1);
 
@@ -104,14 +103,14 @@ void LineSystem::UpdateBuffers()
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3), positions);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3F), positions);
 
 	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4), colors);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), colors);
 }
 
-void LineSystem::Draw(const Matrix4& ViewProjection, const GLuint currentShaderID, float width)
+void LineSystem::Draw(const mwm::Matrix4 & ViewProjection, const unsigned int currentShaderID, float width)
 {
 	UpdateBuffers();
 
@@ -166,10 +165,27 @@ void FastLine::DetachEndB()
 
 mwm::Vector3 FastLine::GetPositionA()
 {
-	return nodeA->TopDownTransform.getPosition();
+	return nodeA->TopDownTransform.getPosition() + localNodeA.position;
 }
 
 mwm::Vector3 FastLine::GetPositionB()
 {
-	return nodeB->TopDownTransform.getPosition();
+	return nodeB->TopDownTransform.getPosition() + localNodeB.position;
 }
+
+void FastLine::SetPositionA(mwm::Vector3& pos)
+{
+	localNodeA.position = pos;
+}
+
+void FastLine::SetPositionB(mwm::Vector3 & pos)
+{
+	localNodeB.position = pos;
+}
+
+//we can attach lines to objects
+//if line uses object node we can then attach other lines to that line.
+//using localNodes we can apply some offsets
+//lines can be detached and they will maintain the offsets as well
+//main issue right now is that lines can be attached to the objects and not other lines as there is no way to update them until they are treated as objects
+//we could update them in separate update function treating it as second scene graph and therefore would not interact with default scene graph

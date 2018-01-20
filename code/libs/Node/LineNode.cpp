@@ -13,7 +13,7 @@ LineNode::~LineNode()
 
 void LineNode::UpdateNodeTransform(const Node& parentNode)
 {
-	this->position = parentNode.TopDownTransform.getPosition();
+	this->position = this->localPosition + parentNode.position;
 	for (size_t i = 0; i < children.size(); i++)
 	{
 		children.at(i)->UpdateNodeTransform(*this);

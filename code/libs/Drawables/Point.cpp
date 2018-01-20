@@ -10,8 +10,8 @@ Point::Point(){
 	SetUpBuffers();
 }
 
-const Vector3 Point::vertices[] = {
-	Vector3(0.f, 0.f, 0.f)
+const Vector3F Point::vertices[] = {
+	Vector3F(0.f, 0.f, 0.f)
 };
 
 void Point::SetUpBuffers()
@@ -25,7 +25,7 @@ void Point::SetUpBuffers()
 	// 1rst attribute buffer : vertices
 	glGenBuffers(1, &mesh->vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mesh->vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, 1 * sizeof(Vector3), &vertices[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 1 * sizeof(Vector3F), &vertices[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(0);
 
@@ -36,9 +36,6 @@ void Point::SetUpBuffers()
 void Point::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Projection, const GLuint shader, float size)
 {
 	Matrix4F MVP = (Model*View*Projection).toFloat();
-	//GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	//GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
-	//glUseProgram(wireframeShader);
 	MatrixHandle = glGetUniformLocation(shader, "MVP");
 	MaterialColorValueHandle = glGetUniformLocation(shader, "MaterialColorValue");
 
@@ -52,5 +49,4 @@ void Point::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Proje
 	// Draw the lines !
 	glDrawElements(GL_POINTS, 1, GL_UNSIGNED_SHORT, 0);
 	glPointSize(1.f);
-	//glUseProgram(prevShader);
 }

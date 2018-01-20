@@ -77,42 +77,42 @@ Matrix3 Matrix3::operator~ ()
 	return realTemp;
 }
 
-Matrix3 Matrix3::operator+(const Matrix3& rightMatrix)
+Matrix3 Matrix3::operator+(const Matrix3& right)
 {
 	Matrix3 realTemp;
 	for (int r = 0; r < 3; r++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			realTemp._matrix[r][c] = this->_matrix[r][c] + rightMatrix._matrix[r][c];
+			realTemp._matrix[r][c] = this->_matrix[r][c] + right._matrix[r][c];
 		}
 	}
 	return realTemp;
 }
 
 /*! \fn num*matrix returns new matrix*/
-Matrix3 operator*(const double& leftDouble, const Matrix3& rightMatrix)
+Matrix3 operator*(const double& left, const Matrix3& right)
 {
 	Matrix3 temp;
 	for (int i = 0; i < 3; i++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			temp._matrix[i][c] = leftDouble * rightMatrix._matrix[i][c];
+			temp._matrix[i][c] = left * right._matrix[i][c];
 		}
 	}
 	return temp;
 }
 
 /*! \fn matrix*num returns new matrix*/
-Matrix3 Matrix3::operator* (const double& rightDouble)
+Matrix3 Matrix3::operator* (const double& right)
 {
 	Matrix3 temp;
 	for (int i = 0; i < 3; i++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			temp._matrix[i][c] = this->_matrix[i][c] * rightDouble;
+			temp._matrix[i][c] = this->_matrix[i][c] * right;
 
 		}
 	}
@@ -121,7 +121,7 @@ Matrix3 Matrix3::operator* (const double& rightDouble)
 }
 
 /*! \fn matrix*matrix returns new matrix*/
-Matrix3 Matrix3::operator* (const Matrix3& rightMatrix) // matrix multi
+Matrix3 Matrix3::operator* (const Matrix3& right) // matrix multi
 {
 	Matrix3 temp;
 
@@ -132,7 +132,7 @@ Matrix3 Matrix3::operator* (const Matrix3& rightMatrix) // matrix multi
 		{
 			for (int k = 0; k < 3; k++)
 			{
-				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * rightMatrix._matrix[k][c];
+				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * right._matrix[k][c];
 
 			}
 		}
@@ -141,12 +141,12 @@ Matrix3 Matrix3::operator* (const Matrix3& rightMatrix) // matrix multi
 }
 
 /*! \fn matrix*vector returns new vector*/
-Vector3 Matrix3::operator* (const Vector3& rightVector) const// matrix multi
+Vector3 Matrix3::operator* (const Vector3& right) const// matrix multi
 {
 	//row major
-	double vx = rightVector.vect[0];
-	double vy = rightVector.vect[1];
-	double vz = rightVector.vect[2];
+	double vx = right.x;
+	double vy = right.y;
+	double vz = right.z;
 
 	double _x = this->_matrix[0][0] * vx + this->_matrix[1][0] * vy + this->_matrix[2][0] * vz;
 	double _y = this->_matrix[0][1] * vx + this->_matrix[1][1] * vy + this->_matrix[2][1] * vz;
@@ -155,13 +155,13 @@ Vector3 Matrix3::operator* (const Vector3& rightVector) const// matrix multi
 }
 
 /*! \fn copy matrix returns new matrix*/
-Matrix3& Matrix3::operator= (const Matrix3& rightMatrix)
+Matrix3& Matrix3::operator= (const Matrix3& right)
 {
 	for (int r = 0; r < 3; r++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			this->_matrix[r][c] = rightMatrix._matrix[r][c];
+			this->_matrix[r][c] = right._matrix[r][c];
 
 		}
 	}
@@ -170,13 +170,13 @@ Matrix3& Matrix3::operator= (const Matrix3& rightMatrix)
 }
 
 /*! \fn check if matrices are identical*/
-bool Matrix3::operator== (const Matrix3& rightMatrix)
+bool Matrix3::operator== (const Matrix3& right)
 {
 	for (int r = 0; r < 3; r++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			if (this->_matrix[r][c] != rightMatrix._matrix[r][c])
+			if (this->_matrix[r][c] != right._matrix[r][c])
 			{
 				return false;
 			}
@@ -265,17 +265,17 @@ Matrix3 Matrix3::rotateZ(double angle)
 }
 
 /*! \fn function returning rotation matrix with specified rotation angle along specified axis(vector)*/
-Matrix3 Matrix3::rotateAngle(Vector3& thisVector, double angle)
+Matrix3 Matrix3::rotateAngle(Vector3& v, double angle)
 {
 	double sAngle = -angle;
 	double PI = 3.14159265;
 	double cosAng = cos(sAngle * PI / 180.0);
 	double sinAng = sin(sAngle * PI / 180.0);
 	double T = 1 - cosAng;
-	Vector3 normalizedVector = thisVector.vectNormalize();
-	float x = normalizedVector.vect[0];
-	float y = normalizedVector.vect[1];
-	float z = normalizedVector.vect[2];
+	Vector3 normalizedVector = v.vectNormalize();
+	double x = normalizedVector.x;
+	double y = normalizedVector.y;
+	double z = normalizedVector.z;
 	Matrix3 rotationMatrix;
 	//row1
 	rotationMatrix._matrix[0][0] = cosAng + (x*x) * T;
@@ -317,12 +317,12 @@ Matrix3 Matrix3::scale(double x, double y, double z)
 	return scaling;
 }
 
-Matrix3 Matrix3::scale(const Vector3& rightVect)
+Matrix3 Matrix3::scale(const Vector3& right)
 {
 	Matrix3 scaling;
-	scaling._matrix[0][0] = rightVect.x;
-	scaling._matrix[1][1] = rightVect.y;
-	scaling._matrix[2][2] = rightVect.z;
+	scaling._matrix[0][0] = right.x;
+	scaling._matrix[1][1] = right.y;
+	scaling._matrix[2][2] = right.z;
 	//scaling._matrix[3][3] = 1;
 	return scaling;
 }
@@ -363,9 +363,9 @@ double Matrix3::det(double a, double b, double c, double d, double e, double f, 
 Matrix3 Matrix3::CuboidInertiaTensor(double mass, Vector3& dimensions)
 {
 	Matrix3 I;
-	I[0][0] = (1.f / 12.f) * mass * (dimensions.y*dimensions.y + dimensions.z*dimensions.z);
-	I[1][1] = (1.f / 12.f) * mass * (dimensions.x*dimensions.x + dimensions.z*dimensions.z);
-	I[2][2] = (1.f / 12.f) * mass * (dimensions.x*dimensions.x + dimensions.y*dimensions.y);
+	I[0][0] = (1.0 / 12.0) * mass * (dimensions.y*dimensions.y + dimensions.z*dimensions.z);
+	I[1][1] = (1.0 / 12.0) * mass * (dimensions.x*dimensions.x + dimensions.z*dimensions.z);
+	I[2][2] = (1.0 / 12.0) * mass * (dimensions.x*dimensions.x + dimensions.y*dimensions.y);
 
 	return I;
 }

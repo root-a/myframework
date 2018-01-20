@@ -3,8 +3,8 @@
 #include "Matrix3.h"
 #include "Matrix4F.h"
 #include "Matrix3F.h"
-#include "Vector3.h"
-#include "Vector4.h"
+#include "Vector3F.h"
+#include "Vector4F.h"
 #include "mLoc.h"
 
 namespace mwm
@@ -58,28 +58,28 @@ Matrix4F Matrix4F::operator~ ()
 }
 
 /*! \fn num*matrix returns new matrix*/
-Matrix4F operator*(const float& leftDouble, const Matrix4F& rightMatrix)
+Matrix4F operator*(const float& left, const Matrix4F& right)
 {
 	Matrix4F temp;
 	for (int i = 0; i < 4; i++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			temp._matrix[i][c] = leftDouble * rightMatrix._matrix[i][c];
+			temp._matrix[i][c] = left * right._matrix[i][c];
 		}
 	}
 	return temp;
 }
 
 /*! \fn matrix*num returns new matrix*/
-Matrix4F Matrix4F::operator* (const float& rightFloat)
+Matrix4F Matrix4F::operator* (const float& right)
 {
 	Matrix4F temp;
 	for (int i = 0; i < 4; i++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			temp._matrix[i][c] = this->_matrix[i][c] * rightFloat;
+			temp._matrix[i][c] = this->_matrix[i][c] * right;
 
 		}
 	}
@@ -88,7 +88,7 @@ Matrix4F Matrix4F::operator* (const float& rightFloat)
 }
 
 /*! \fn matrix*matrix returns new matrix*/
-Matrix4F Matrix4F::operator* (const Matrix4F& rightMatrix) // matrix multi
+Matrix4F Matrix4F::operator* (const Matrix4F& right) // matrix multi
 {
 	Matrix4F temp;
 
@@ -99,7 +99,7 @@ Matrix4F Matrix4F::operator* (const Matrix4F& rightMatrix) // matrix multi
 		{
 			for (int k = 0; k < 4; k++)
 			{
-				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * rightMatrix._matrix[k][c];
+				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * right._matrix[k][c];
 
 			}
 		}
@@ -108,28 +108,28 @@ Matrix4F Matrix4F::operator* (const Matrix4F& rightMatrix) // matrix multi
 }
 
 /*! \fn matrix*vector returns new vector*/
-Vector4 Matrix4F::operator* (const Vector4& rightVector) // matrix multi
+Vector4F Matrix4F::operator* (const Vector4F& right) // matrix multi
 {
-	float vx = rightVector.vect[0];
-	float vy = rightVector.vect[1];
-	float vz = rightVector.vect[2];
-	float vw = rightVector.vect[3];
+	float vx = right.x;
+	float vy = right.y;
+	float vz = right.z;
+	float vw = right.w;
 
 	float _x = this->_matrix[0][0] * vx + this->_matrix[1][0] * vy + this->_matrix[2][0] * vz + this->_matrix[3][0] * vw;
 	float _y = this->_matrix[0][1] * vx + this->_matrix[1][1] * vy + this->_matrix[2][1] * vz + this->_matrix[3][1] * vw;
 	float _z = this->_matrix[0][2] * vx + this->_matrix[1][2] * vy + this->_matrix[2][2] * vz + this->_matrix[3][2] * vw;
 	float _w = this->_matrix[0][3] * vx + this->_matrix[1][3] * vy + this->_matrix[2][3] * vz + this->_matrix[3][3] * vw;
-	return Vector4(_x, _y, _z, _w);
+	return Vector4F(_x, _y, _z, _w);
 }
 
 /*! \fn copy matrix returns new matrix*/
-Matrix4F& Matrix4F::operator= (const Matrix4F& rightMatrix)
+Matrix4F& Matrix4F::operator= (const Matrix4F& right)
 {
 	for (int r = 0; r < 4; r++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			this->_matrix[r][c] = rightMatrix._matrix[r][c];
+			this->_matrix[r][c] = right._matrix[r][c];
 
 		}
 	}
@@ -138,13 +138,13 @@ Matrix4F& Matrix4F::operator= (const Matrix4F& rightMatrix)
 }
 
 /*! \fn check if matrices are identical*/
-bool Matrix4F::operator== (const Matrix4F& rightMatrix)
+bool Matrix4F::operator== (const Matrix4F& right)
 {
 	for (int r = 0; r < 4; r++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			if (this->_matrix[r][c] != rightMatrix._matrix[r][c])
+			if (this->_matrix[r][c] != right._matrix[r][c])
 			{
 				return false;
 			}
@@ -233,17 +233,17 @@ Matrix4F Matrix4F::rotateZ(float angle)
 }
 
 /*! \fn function returning rotation matrix with specified rotation angle along specified axis(vector)*/
-Matrix4F Matrix4F::rotateAngle(Vector3& thisVector, float angle)
+Matrix4F Matrix4F::rotateAngle(Vector3F& v, float angle)
 {
 	float sAngle = -angle;
 	float PI = 3.14159265f;
 	float cosAng = cosf(sAngle * PI / 180.0f);
 	float sinAng = sinf(sAngle * PI / 180.0f);
 	float T = 1.f - cosAng;
-	Vector3 normalizedVector = thisVector.vectNormalize();
-	float x = normalizedVector.vect[0];
-	float y = normalizedVector.vect[1];
-	float z = normalizedVector.vect[2];
+	Vector3F normalizedVector = v.vectNormalize();
+	float x = normalizedVector.x;
+	float y = normalizedVector.y;
+	float z = normalizedVector.z;
 	Matrix4F rotationMatrix;
 	//row1
 	rotationMatrix._matrix[0][0] = cosAng + (x*x) * T;
@@ -384,28 +384,28 @@ Matrix4F Matrix4F::sPerspective(const float &near, const float &far, const float
 }
 
 /*! \fn lookAt matrix not optimized*/
-Matrix4F Matrix4F::nolookAt(Vector3 eye, Vector3 target, Vector3 up)
+Matrix4F Matrix4F::nolookAt(Vector3F eye, Vector3F target, Vector3F up)
 {
 
-	Vector3 zaxis = (eye - target).vectNormalize();    // The "forward" vector.
-	Vector3 xaxis = up.crossProd(zaxis).vectNormalize(); // The "right" vector.  normal(cross(up, zaxis));
-	Vector3 yaxis = zaxis.crossProd(xaxis);     // The "up" vector.
+	Vector3F zaxis = (eye - target).vectNormalize();    // The "forward" vector.
+	Vector3F xaxis = up.crossProd(zaxis).vectNormalize(); // The "right" vector.  normal(cross(up, zaxis));
+	Vector3F yaxis = zaxis.crossProd(xaxis);     // The "up" vector.
 
 	// Create a 4x4 orientation matrix from the right, up, and forward vectors
 	// This is transposed which is equivalent to performing an inverse
 	// if the matrix is orthonormalized (in this case, it is).
 	Matrix4F orientation;
-	orientation[0][0] = xaxis.vect[0];
-	orientation[0][1] = yaxis.vect[0];
-	orientation[0][2] = zaxis.vect[0];
+	orientation[0][0] = xaxis.x;
+	orientation[0][1] = yaxis.x;
+	orientation[0][2] = zaxis.x;
 
-	orientation[1][0] = xaxis.vect[1];
-	orientation[1][1] = yaxis.vect[1];
-	orientation[1][2] = zaxis.vect[1];
+	orientation[1][0] = xaxis.y;
+	orientation[1][1] = yaxis.y;
+	orientation[1][2] = zaxis.y;
 
-	orientation[2][0] = xaxis.vect[2];
-	orientation[2][1] = yaxis.vect[2];
-	orientation[2][2] = zaxis.vect[2];
+	orientation[2][0] = xaxis.z;
+	orientation[2][1] = yaxis.z;
+	orientation[2][2] = zaxis.z;
 
 	orientation[3][3] = 1;
 
@@ -420,9 +420,9 @@ Matrix4F Matrix4F::nolookAt(Vector3 eye, Vector3 target, Vector3 up)
 
 	translation[2][2] = 1;
 
-	translation[3][0] = -eye.vect[0];
-	translation[3][1] = -eye.vect[1];
-	translation[3][2] = -eye.vect[2];
+	translation[3][0] = -eye.x;
+	translation[3][1] = -eye.y;
+	translation[3][2] = -eye.z;
 	translation[3][3] = 1;
 
 	// Combine the orientation and translation to compute
@@ -432,28 +432,28 @@ Matrix4F Matrix4F::nolookAt(Vector3 eye, Vector3 target, Vector3 up)
 }
 
 /*! \fn lookAt matrix optimized*/
-Matrix4F Matrix4F::lookAt(Vector3 eye, Vector3 target, Vector3 up)
+Matrix4F Matrix4F::lookAt(Vector3F eye, Vector3F target, Vector3F up)
 {
 
-	Vector3 zaxis = (eye - target).vectNormalize();    // The "forward" vector.
-	Vector3 xaxis = up.crossProd(zaxis).vectNormalize(); // The "right" vector.  normal(cross(up, zaxis));
-	Vector3 yaxis = zaxis.crossProd(xaxis);     // The "up" vector.
+	Vector3F zaxis = (eye - target).vectNormalize();    // The "forward" vector.
+	Vector3F xaxis = up.crossProd(zaxis).vectNormalize(); // The "right" vector.  normal(cross(up, zaxis));
+	Vector3F yaxis = zaxis.crossProd(xaxis);     // The "up" vector.
 
 	// Create a 4x4 orientation matrix from the right, up, and forward vectors
 	// This is transposed which is equivalent to performing an inverse
 	// if the matrix is orthonormalized (in this case, it is).
 	Matrix4F orientation;
-	orientation[0][0] = xaxis.vect[0];
-	orientation[0][1] = yaxis.vect[0];
-	orientation[0][2] = zaxis.vect[0];
+	orientation[0][0] = xaxis.x;
+	orientation[0][1] = yaxis.x;
+	orientation[0][2] = zaxis.x;
 
-	orientation[1][0] = xaxis.vect[1];
-	orientation[1][1] = yaxis.vect[1];
-	orientation[1][2] = zaxis.vect[1];
+	orientation[1][0] = xaxis.y;
+	orientation[1][1] = yaxis.y;
+	orientation[1][2] = zaxis.y;
 
-	orientation[2][0] = xaxis.vect[2];
-	orientation[2][1] = yaxis.vect[2];
-	orientation[2][2] = zaxis.vect[2];
+	orientation[2][0] = xaxis.z;
+	orientation[2][1] = yaxis.z;
+	orientation[2][2] = zaxis.z;
 
 	orientation[3][0] = -(xaxis.dotAKAscalar(eye));
 	orientation[3][1] = -(yaxis.dotAKAscalar(eye));
@@ -468,7 +468,7 @@ Matrix4F Matrix4F::lookAt(Vector3 eye, Vector3 target, Vector3 up)
 // Pitch should be in the range of [-90 ... 90] degrees and yaw
 // should be in the range of [0 ... 360] degrees.
 /*! \fn fps cam matrix*/
-Matrix4F Matrix4F::FPScam(Vector3 eye, float pitch, float yaw)
+Matrix4F Matrix4F::FPScam(Vector3F eye, float pitch, float yaw)
 {
 	// If the pitch and yaw angles are in degrees,
 	// they need to be converted to radians. Here
@@ -478,25 +478,25 @@ Matrix4F Matrix4F::FPScam(Vector3 eye, float pitch, float yaw)
 	float cosYaw = cos(yaw);
 	float sinYaw = sin(yaw);
 
-	Vector3 xaxis = Vector3(cosYaw, 0.f, -sinYaw);
-	Vector3 yaxis = Vector3(sinYaw * sinPitch, cosPitch, cosYaw * sinPitch);
-	Vector3 zaxis = Vector3(sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw);
+	Vector3F xaxis = Vector3F(cosYaw, 0.f, -sinYaw);
+	Vector3F yaxis = Vector3F(sinYaw * sinPitch, cosPitch, cosYaw * sinPitch);
+	Vector3F zaxis = Vector3F(sinYaw * cosPitch, -sinPitch, cosPitch * cosYaw);
 
 	// Create a 4x4 view matrix from the right, up, forward and eye position vectors
 	Matrix4F FPSView;
-	FPSView[0][0] = xaxis.vect[0];
-	FPSView[0][1] = yaxis.vect[0];
-	FPSView[0][2] = zaxis.vect[0];
+	FPSView[0][0] = xaxis.x;
+	FPSView[0][1] = yaxis.x;
+	FPSView[0][2] = zaxis.x;
 	//FPSView[0][3] = 0;
 
-	FPSView[1][0] = xaxis.vect[1];
-	FPSView[1][1] = yaxis.vect[1];
-	FPSView[1][2] = zaxis.vect[1];
+	FPSView[1][0] = xaxis.y;
+	FPSView[1][1] = yaxis.y;
+	FPSView[1][2] = zaxis.y;
 	//FPSView[1][3] = 0;
 
-	FPSView[2][0] = xaxis.vect[2];
-	FPSView[2][1] = yaxis.vect[2];
-	FPSView[2][2] = zaxis.vect[2];
+	FPSView[2][0] = xaxis.z;
+	FPSView[2][1] = yaxis.z;
+	FPSView[2][2] = zaxis.z;
 	//FPSView[2][3] = 0;
 
 	FPSView[3][0] = -(xaxis.dotAKAscalar(eye));
@@ -606,74 +606,74 @@ Matrix3F Matrix4F::ConvertToMatrix3() const
 	return mat3;
 }
 
-Vector3 Matrix4F::getScale() const
+Vector3F Matrix4F::getScale() const
 {
-	return Vector3(_matrix[0][0], _matrix[1][1], _matrix[2][2]);
+	return Vector3F(_matrix[0][0], _matrix[1][1], _matrix[2][2]);
 }
 
 
-Vector3 Matrix4F::getPosition() const
+Vector3F Matrix4F::getPosition() const
 {
-	return Vector3(_matrix[3][0], _matrix[3][1], _matrix[3][2]);
+	return Vector3F(_matrix[3][0], _matrix[3][1], _matrix[3][2]);
 }
 
-Vector3 Matrix4F::getRight() const
+Vector3F Matrix4F::getRight() const
 {
-	return Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
+	return Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
 }
 
-Vector3 Matrix4F::getUp() const
+Vector3F Matrix4F::getUp() const
 {
-	return Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
+	return Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
 }
 
-Vector3 Matrix4F::getForwardNegZ() const
+Vector3F Matrix4F::getForwardNegZ() const
 {
-	return Vector3(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
+	return Vector3F(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
 }
 
-Vector3 Matrix4F::getBackPosZ() const
+Vector3F Matrix4F::getBackPosZ() const
 {
-	return Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
+	return Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
 }
 
-void Matrix4F::setUp(const Vector3& axis)
+void Matrix4F::setUp(const Vector3F& axis)
 {
 	_matrix[1][0] = axis.x;
 	_matrix[1][1] = axis.y;
 	_matrix[1][2] = axis.z;
 }
 
-void Matrix4F::setRight(const Vector3& axis)
+void Matrix4F::setRight(const Vector3F& axis)
 {
 	_matrix[0][0] = axis.x;
 	_matrix[0][1] = axis.y;
 	_matrix[0][2] = axis.z;
 }
 
-void Matrix4F::setForward(const Vector3& axis)
+void Matrix4F::setForward(const Vector3F& axis)
 {
 	_matrix[2][0] = axis.x;
 	_matrix[2][1] = axis.y;
 	_matrix[2][2] = axis.z;
 }
 
-Vector3 Matrix4F::getAxis(int axis) const
+Vector3F Matrix4F::getAxis(int axis) const
 {
-	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]);
+	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]);
 }
 
-Vector3 Matrix4F::getAxisNormalized(int axis) const
+Vector3F Matrix4F::getAxisNormalized(int axis) const
 {
-	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
+	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
 }
 
-Vector3 Matrix4F::extractScale() const
+Vector3F Matrix4F::extractScale() const
 {
-	float scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
-	float scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
-	float scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
-	return Vector3(scaleX, scaleY, scaleZ);
+	float scaleX = Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
+	float scaleY = Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
+	float scaleZ = Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
+	return Vector3F(scaleX, scaleY, scaleZ);
 }
 }
 

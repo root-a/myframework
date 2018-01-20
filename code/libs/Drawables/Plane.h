@@ -16,7 +16,7 @@ public:
 	Material* mat;
 	
 	static const unsigned short elements[6];
-	static const mwm::Vector3 vertices[4];
+	static const mwm::Vector3F vertices[4];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;

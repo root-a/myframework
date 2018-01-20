@@ -12,26 +12,24 @@ public:
 
 	union
 	{
-		float quaternion[4];
-		struct{ float x, y, z, w; };
+		double quaternion[4];
+		struct{ double x, y, z, w; };
 	};
 
 	Quaternion();
 	/// Constructor to set up a quaternion
-	Quaternion(float angle, const Vector3 &axis);
-	Quaternion(const float w, const float x, const float y, const float z);
+	Quaternion(double angle, const Vector3 &axis);
+	Quaternion(const double x, const double y, const double z, const double w);
 	~Quaternion(void);
 
-	/// Set x, y, z, w values of a Vector. W defaults to 1.
-	void Insert(float x, float y, float z, float w = 1.f);
 	/// Set a value of a component of a vector
-	void InsertAt(unsigned int index, float value);
+	void InsertAt(unsigned int index, double value);
 
 	Quaternion operator*(const Quaternion& v) const;
 	void operator*=(const Quaternion& v);
-	Quaternion operator*(const float& number)const;
+	Quaternion operator*(const double& number)const;
 
-	float Magnitude();
+	double Magnitude();
 	/// Normalize this vector
 	void Normalize();
 	Quaternion Normalized() const;
@@ -39,9 +37,7 @@ public:
 	Matrix3 ConvertToMatrix3() const;
 
 	/// Overloaded access operator for Vector
-	float& operator[](unsigned int index);
-
-	void addScaledVector(const Vector3& vector, float scale);
+	double& operator[](unsigned int index);
 };
 }
 

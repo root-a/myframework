@@ -12,8 +12,6 @@ Scene::Scene()
 {
 	idCounter = 1;
 	SceneObject = new Object();
-	MainPointLight = new Object();
-	MainDirectionalLight = new Object();
 }
 
 Scene::~Scene()
@@ -34,9 +32,7 @@ Object* Scene::addChildTo(Object* parentObject)
 	parentObject->node.addChild(&child->node);
 
 	child->ID = idCounter;
-	objectsToRender[idCounter] = child;
 	idCounter++;
-	LastAddedObject = child;
 
 	return child;
 }
@@ -44,6 +40,7 @@ Object* Scene::addChildTo(Object* parentObject)
 void Scene::addRandomObject(const Vector3& pos)
 {
 	Object* newChild = Scene::addChildTo(SceneObject);
+	pickingList[newChild->ID] = newChild;
 
 	int index = rand() % (GraphicsStorage::meshes.size());
 	float rS = (float)(rand() % 5);
@@ -65,6 +62,8 @@ void Scene::addRandomObject(const Vector3& pos)
 Object* Scene::addObjectToScene(const char* name, const Vector3& pos)
 {
 	Object* newChild = Scene::addChildTo(SceneObject);
+	pickingList[newChild->ID] = newChild;
+
 	newChild->SetPosition(pos);
 	newChild->AssignMesh(GraphicsStorage::meshes[name]);
 	Material* newMaterial = new Material();
@@ -77,6 +76,8 @@ Object* Scene::addObjectToScene(const char* name, const Vector3& pos)
 Object* Scene::addObjectTo(Object* parent, const char* name /*= "cube"*/, const mwm::Vector3& pos /*= mwm::Vector3()*/)
 {
 	Object* newChild = Scene::addChildTo(parent);
+	pickingList[newChild->ID] = newChild;
+
 	newChild->SetPosition(pos);
 	newChild->AssignMesh(GraphicsStorage::meshes[name]);
 	Material* newMaterial = new Material();
@@ -124,11 +125,11 @@ void Scene::addRandomlyPhysicObjects(const char* name, int num, int min, int max
 
 void Scene::Clear()
 {
-	for (auto& obj : objectsToRender)
+	for (auto& obj : pickingList)
 	{
 		delete obj.second;
 	}
-	objectsToRender.clear();
+	pickingList.clear();
 
 	SceneObject->node.children.clear();
 	idCounter = 1;
@@ -139,23 +140,18 @@ void Scene::Clear()
 	}
 	pointLights.clear();
 
-	MainPointLight->node.children.clear();
-
 	for (auto& obj : directionalLights)
 	{
 		delete obj;
 	}
 	directionalLights.clear();
 
-	MainDirectionalLight->node.children.clear();
-
-	SceneObject->ClearComponents();
+	SceneObject->ClearComponents(); //just clear components
 }
 
-Object* Scene::addPointLight(const Vector3& position, const Vector3& color)
+Object* Scene::addPointLight(const Vector3& position, const Vector3F& color)
 {
-	Object* newChild = new Object();
-	MainPointLight->node.addChild(&newChild->node);
+	Object* newChild = Scene::addChildTo(SceneObject);
 	
 	newChild->SetPosition(position);
 
@@ -164,15 +160,14 @@ Object* Scene::addPointLight(const Vector3& position, const Vector3& color)
 	newChild->AssignMesh(GraphicsStorage::meshes["sphere"]);
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
-	newChild->SetScale(Vector3(4.f, 4.f, 4.f));
+	newChild->SetScale(Vector3(4.0, 4.0, 4.0));
 	pointLights.push_back(newChild);
 	return newChild;
 }
 
-Object* Scene::addDirectionalLight(const Vector3& direction, const Vector3& color /*= Vector3(1, 1, 1)*/)
+Object* Scene::addDirectionalLight(const Vector3F& direction, const Vector3F& color /*= Vector3(1, 1, 1)*/)
 {
-	Object* newChild = new Object();
-	MainDirectionalLight->node.addChild(&newChild->node);
+	Object* newChild = Scene::addChildTo(SceneObject);
 
 	Material* newMaterial = new Material();
 	newMaterial->SetColor(color);
@@ -187,40 +182,71 @@ Object* Scene::addDirectionalLight(const Vector3& direction, const Vector3& colo
 
 void Scene::addRandomPointLight(int min, int max)
 {
-	addPointLight(generateRandomIntervallVectorCubic(min, max), generateRandomIntervallVectorCubic(0, 255)/255.f);
+	addPointLight(generateRandomIntervallVectorCubic(min, max), generateRandomIntervallVectorCubic(0, 255).toFloat()/255.f);
 }
 
 Vector3 Scene::generateRandomIntervallVectorCubic(int min, int max)
 {
 	int range = max - min + 1;
-	int num = rand() % range + min;
 
 	int rX = rand() % range + min;
 	int rY = rand() % range + min;
 	int rZ = rand() % range + min;
 
-	return Vector3((float)rX, (float)rY, (float)rZ);
+	return Vector3((double)rX, (double)rY, (double)rZ);
+}
+
+Vector3 Scene::generateRandomIntervallVectorSpherical(int min, int max)
+{
+	int range = max * 2 + 1;
+	int rX = 0;
+	int rY = 0;
+	int rZ = 0;
+	int sum = 0;
+	do {
+		rX = rand() % range - max;
+		rY = rand() % range - max;
+		rZ = rand() % range - max;
+		sum = rX*rX + rY*rY + rZ*rZ;
+	} while (sum > max*max || sum < min*min); //inside sphere change to < for outside of sphere
+	return Vector3(rX / 100.0, rY / 100.0, rZ / 100.0);
 }
 
 
 mwm::Vector3 Scene::generateRandomIntervallVectorFlat(int min, int max, axis axis, int axisHeight)
 {
 	int range = max - min + 1;
-	int num = rand() % range + min;
 
 	int r1 = rand() % range + min;
 	int r2 = rand() % range + min;
 
-	if (axis == x) return Vector3((float)axisHeight, (float)r1, (float)r2);
-	else if (axis == y) return Vector3((float)r1, (float)axisHeight, (float)r2);
-	else return Vector3((float)r1, (float)r2, (float)axisHeight);
+	if (axis == x) return Vector3((double)axisHeight, (double)r1, (double)r2);
+	else if (axis == y) return Vector3((double)r1, (double)axisHeight, (double)r2);
+	else return Vector3((double)r1, (double)r2, (double)axisHeight);
 }
-
 
 void Scene::addRandomlyPointLights(int num, int min, int max)
 {
 	for (int i = 0; i < num; i++)
 	{
 		addRandomPointLight(min, max);
+	}
+}
+
+void Scene::Update()
+{
+	SceneObject->node.UpdateNodeTransform(SceneObject->node);
+	SceneObject->Update();
+	for (auto& obj : pickingList)
+	{
+		obj.second->Update();
+	}
+	for (auto& obj : pointLights)
+	{
+		obj->Update();
+	}
+	for (auto& obj : directionalLights)
+	{
+		obj->Update();
 	}
 }

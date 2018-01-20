@@ -18,11 +18,11 @@ public:
 
 	void DrawShapeAtPos(const char* shapeName, const mwm::Vector3& pos);
 	void DrawLine(const mwm::Vector3& normal, const mwm::Vector3& position, float width = 4.f);
-	void DrawPlane(const mwm::Vector3& normal, const mwm::Vector3& position, const mwm::Vector3& halfExtent = mwm::Vector3(1.f, 1.f, 1.f));
-	void DrawPlaneN(const mwm::Vector3& normal, const mwm::Vector3& position, const mwm::Vector3& halfExtent = mwm::Vector3(1.f, 1.f, 1.f));
+	void DrawPlane(const mwm::Vector3& normal, const mwm::Vector3& position, const mwm::Vector3& halfExtent = mwm::Vector3(1.0, 1.0, 1.0));
+	void DrawPlaneN(const mwm::Vector3& normal, const mwm::Vector3& position, const mwm::Vector3& halfExtent = mwm::Vector3(1.0, 1.0, 1.0));
 	void DrawPoint(const mwm::Vector3& position, float size = 10.f);
 	void DrawNormal(const mwm::Vector3& normal, const mwm::Vector3& position, float width = 4.f);
-	void DrawCrossHair(int windowWidth, int windowHeight, const mwm::Vector3& color = mwm::Vector3(1.f, 1.f, 0.f));
+	void DrawCrossHair(int windowWidth, int windowHeight, const mwm::Vector3F& color = mwm::Vector3F(1.f, 1.f, 0.f));
 	void DrawQuad();
 	Material* debugMat;
 	

@@ -7,7 +7,7 @@
 class Vertex;
 class Edge;
 class Face;
-
+//Implementation of half edge mesh for 2D, it generates grid based mesh where cells are made of triangles
 class HalfEdgeMesh2D
 {
 public:

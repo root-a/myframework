@@ -74,18 +74,18 @@ void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
 void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float width)
 {
 	Matrix4 model = Matrix4::translate(position);
-	float length = normal.vectLengt();
+	double length = normal.vectLengt();
 	Vector3 normalized = normal.vectNormalize();
 	
 	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normalized);
-	float tetha = acos(normalized.z);
+	double tetha = acos(normalized.z);
 	if (axis.squareMag() < 0.0001f)
 	{
 		axis = Vector3(1.f, 0.f, 0.f);
 	}
 	if (tetha != 0)
 	{
-		float  deg = (tetha * 180.f) / 3.14159f;
+		double  deg = (tetha * 180.f) / 3.14159f;
 		model = Matrix4::rotateAngle(axis, deg)*model;
 	}
 
@@ -104,14 +104,14 @@ void DebugDraw::DrawNormal(const Vector3& normal, const Vector3& position, float
 {
 	Matrix4 model = Matrix4::translate(position);
 	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normal);
-	float tetha = acos(normal.z);
+	double tetha = acos(normal.z);
 	if (axis.squareMag() < 0.0001f)
 	{
 		axis = Vector3(1.f, 0.f, 0.f);
 	}
 	if (tetha != 0)
 	{
-		float  deg = (tetha * 180.f) / 3.14159f;
+		double  deg = (tetha * 180.f) / 3.14159f;
 		model = Matrix4::rotateAngle(axis, deg)*model;
 	}
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
@@ -126,14 +126,14 @@ void DebugDraw::DrawPlane(const Vector3& normal, const Vector3& position, const 
 {
 	Matrix4 model = Matrix4::translate(position);
 	Vector3 axis = Vector3(0.f,0.f,1.f).crossProd(normal);
-	float tetha = acos(normal.z);
+	double tetha = acos(normal.z);
 	if (axis.squareMag() < 0.0001f)
 	{
 		axis = Vector3(1.f, 0.f, 0.f);
 	}
 	if (tetha != 0)
 	{
-		float  deg = (tetha * 180.f) / 3.14159f;
+		double  deg = (tetha * 180.f) / 3.14159f;
 		model = Matrix4::rotateAngle(axis, deg)*model;
 	}
 	model = Matrix4::scale(halfExtent) * model;
@@ -150,14 +150,14 @@ void DebugDraw::DrawPlaneN(const Vector3& normal, const Vector3& position, const
 {
 	Matrix4 model = Matrix4::translate(position);
 	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normal);
-	float tetha = acos(normal.z);
+	double tetha = acos(normal.z);
 	if (axis.squareMag() < 0.0001f)
 	{
 		axis = Vector3(1.f, 0.f, 0.f);
 	}
 	if (tetha != 0)
 	{
-		float  deg = (tetha * 180.f) / 3.14159f;
+		double  deg = (tetha * 180.f) / 3.14159f;
 		model = Matrix4::rotateAngle(axis, deg)*model;
 	}
 	model = Matrix4::scale(halfExtent) * model;
@@ -181,22 +181,22 @@ void DebugDraw::DrawPoint(const Vector3& position, float size)
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
-void DebugDraw::DrawCrossHair(int windowWidth, int windowHeight, const Vector3& color)
+void DebugDraw::DrawCrossHair(int windowWidth, int windowHeight, const Vector3F& color)
 {
-	float scale = 20.f;
-	float offset = scale / 2.f;
-	float x = windowWidth / 2.f;
-	float y = windowHeight / 2.f;
-	Matrix4 model1 = Matrix4::translate(x, y + offset, 0.f);
-	Matrix4 model2 = Matrix4::translate(x - offset, y, 0.f);
+	double scale = 20.0;
+	double offset = scale / 2.0;
+	double x = windowWidth / 2.0;
+	double y = windowHeight / 2.0;
+	Matrix4 model1 = Matrix4::translate(x, y + offset, 0.0);
+	Matrix4 model2 = Matrix4::translate(x - offset, y, 0.0);
 
-	model1 = Matrix4::rotateAngle(Vector3(1.f, 0.f, 0.f), 90.f)*model1;
-	model2 = Matrix4::rotateAngle(Vector3(0.f, 1.f, 0.f), 90.f)*model2;
+	model1 = Matrix4::rotateAngle(Vector3(1.0, 0.0, 0.0), 90.0)*model1;
+	model2 = Matrix4::rotateAngle(Vector3(0.0, 1.0, 0.0), 90.0)*model2;
 	Matrix4 scaleM = Matrix4::scale(scale, scale, scale);
 	model1 = scaleM * model1;
 	model2 = scaleM * model2;
 	Matrix4 view = Matrix4::identityMatrix();
-	Matrix4 proj = Matrix4::orthographicTopToBottom(-1.f, 2000.f, 0.f, (float)windowWidth, (float)windowHeight, 0.f);
+	Matrix4 proj = Matrix4::orthographicTopToBottom(-1.0, 2000.0, 0.0, (double)windowWidth, (double)windowHeight, 0.0);
 	line.mat->color = color;
 
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();

@@ -5,7 +5,7 @@ class FrustumManager
 public:
 	static FrustumManager* Instance();
 	void ExtractPlanes(const mwm::Matrix4& VP);
-	bool isBoundingSphereInView(mwm::Vector3 position, float radius);
+	bool isBoundingSphereInView(mwm::Vector3 position, double radius);
 	
 private:
 	

@@ -10,11 +10,11 @@
 
 using namespace mwm;
 
-const Vector3 ParticleSystem::g_vertex_buffer_data[4] = {
-	Vector3(-0.5f, -0.5f, 0.0f),
-	Vector3(0.5f, -0.5f, 0.0f),
-	Vector3(-0.5f, 0.5f, 0.0f),
-	Vector3(0.5f, 0.5f, 0.0f),
+const Vector3F ParticleSystem::g_vertex_buffer_data[4] = {
+	Vector3F(-0.5f, -0.5f, 0.0f),
+	Vector3F(0.5f, -0.5f, 0.0f),
+	Vector3F(-0.5f, 0.5f, 0.0f),
+	Vector3F(0.5f, 0.5f, 0.0f),
 };
 
 ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
@@ -22,17 +22,17 @@ ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
 	this->LastUsedParticle = 0;
 	this->MaxParticles = MaxParticles;
 	ParticlesContainer = new Particle[MaxParticles];
-	g_particule_position_size_data = new Vector4[MaxParticles];
-	g_particule_color_data = new Vector4[MaxParticles];
+	g_particule_position_size_data = new Vector4F[MaxParticles];
+	g_particule_color_data = new Vector4F[MaxParticles];
 	for (int i = 0; i < MaxParticles; i++){
 		ParticlesContainer[i].lifeTime = -1.0f;
-		ParticlesContainer[i].cameraDistance = -1.0f;
+		ParticlesContainer[i].cameraDistance = -1.0;
 	}
 	EmissionRate = emissionRate;
-	Color = Vector4(1.f, 1.f, 1.f, 0.8f);
+	Color = Vector4F(1.f, 1.f, 1.f, 0.8f);
 	Size = 1.f;
 	LifeTime = 0.2f;
-	Direction = Vector3(0.0f, 10.0f, 0.0f);
+	Direction = Vector3F(0.0f, 10.0f, 0.0f);
 	Spread = 1.5f;
 	aliveParticles = 0;
 	SetUp();
@@ -81,20 +81,20 @@ int ParticleSystem::UpdateParticles(double deltaTime, const mwm::Vector3& camPos
 			p.lifeTime -= (float)deltaTime;
 
 			// Simulate simple physics : gravity only, no collisions
-			p.speed += Vector3(0.0f, -9.81f, 0.0f) * (float)deltaTime * 0.5f;
-			p.pos += p.speed * (float)deltaTime;
+			p.speed += Vector3(0.0, -9.81, 0.0) * deltaTime * 0.5;
+			p.pos += p.speed * deltaTime;
 			p.cameraDistance = (p.pos - camPos).vectLengt();
 			//p.size -= (float)deltaTime*3.5f;
 			//if (p.size < 0.f) p.size = 0.f; p.lifeTime = 0.f;
 			// Fill the GPU buffer
-			g_particule_position_size_data[ParticlesCount] = Vector4(p.pos, p.size);
+			g_particule_position_size_data[ParticlesCount] = Vector4F(p.pos.toFloat(), p.size);
 			g_particule_color_data[ParticlesCount] = p.color;
 
 			ParticlesCount++;
 		}
 		else{
 			// Particles that just died will be put at the end of the buffer in SortParticles();
-			p.cameraDistance = -1.0f;
+			p.cameraDistance = -1.0;
 		}
 	}
 	return ParticlesCount;
@@ -113,7 +113,7 @@ void ParticleSystem::SetUp()
 
 	glGenBuffers(1, &billboard_vertex_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
-	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vector3), g_vertex_buffer_data, GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vector3F), g_vertex_buffer_data, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 	
@@ -121,7 +121,7 @@ void ParticleSystem::SetUp()
 	glGenBuffers(1, &particles_position_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
 	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(1);
 
@@ -129,7 +129,7 @@ void ParticleSystem::SetUp()
 	glGenBuffers(1, &particles_color_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
 	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(2);
 
@@ -159,7 +159,7 @@ void ParticleSystem::UpdateBuffers()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4), g_particule_color_data);
 }
 
-void ParticleSystem::Draw(const Matrix4& ViewProjection, GLuint currentShaderID, const Vector3& cameraUp, const Vector3& cameraRight)
+void ParticleSystem::Draw(const Matrix4& ViewProjection, GLuint currentShaderID, const Vector3F& cameraUp, const Vector3F& cameraRight)
 {
 	UpdateBuffers();
 
@@ -215,13 +215,13 @@ void ParticleSystem::GenerateNewParticles(double deltaTime)
 		// Very bad way to generate a random direction; 
 		// See for instance http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution instead,
 		// combined with some user-controlled parameters (main direction, spread, etc)
-		Vector3 randomdir = Vector3(
+		Vector3F randomdir = Vector3F(
 			(rand() % 2000 - 1000.0f) / 1000.0f,
 			(rand() % 2000 - 1000.0f) / 1000.0f,
 			(rand() % 2000 - 1000.0f) / 1000.0f
 			);
-
-		ParticlesContainer[particleIndex].speed = Direction + randomdir*Spread;
+		randomdir = Direction + randomdir*Spread;
+		ParticlesContainer[particleIndex].speed = Vector3(randomdir.x, randomdir.y, randomdir.z);
 		ParticlesContainer[particleIndex].color = Color;
 
 		ParticlesContainer[particleIndex].size = Size;//(float)((rand() % 1000) / 2000.0f + 0.1f);
@@ -233,7 +233,7 @@ void ParticleSystem::SetEmissionRate(int emissionRate)
 	EmissionRate = emissionRate;
 }
 
-void ParticleSystem::SetColor(const mwm::Vector4& color)
+void ParticleSystem::SetColor(const mwm::Vector4F& color)
 {
 	Color = color;
 }
@@ -255,7 +255,7 @@ void ParticleSystem::SetLifeTime(float lifetime)
 	LifeTime = lifetime;
 }
 
-void ParticleSystem::SetDirection(const mwm::Vector3& direction)
+void ParticleSystem::SetDirection(const mwm::Vector3F& direction)
 {
 	Direction = direction;
 }

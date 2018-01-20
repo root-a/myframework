@@ -1,7 +1,7 @@
 #include <cmath>
 #include <memory.h>
 #include "Matrix3F.h"
-#include "Vector3.h"
+#include "Vector3F.h"
 #include "mLoc.h"
 
 namespace mwm
@@ -66,42 +66,42 @@ Matrix3F Matrix3F::operator~ ()
 	return realTemp;
 }
 
-Matrix3F Matrix3F::operator+(const Matrix3F& rightMatrix)
+Matrix3F Matrix3F::operator+(const Matrix3F& right)
 {
 	Matrix3F realTemp;
 	for (int r = 0; r < 3; r++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			realTemp._matrix[r][c] = this->_matrix[r][c] + rightMatrix._matrix[r][c];
+			realTemp._matrix[r][c] = this->_matrix[r][c] + right._matrix[r][c];
 		}
 	}
 	return realTemp;
 }
 
 /*! \fn num*matrix returns new matrix*/
-Matrix3F operator*(const float& leftDouble, const Matrix3F& rightMatrix)
+Matrix3F operator*(const float& left, const Matrix3F& right)
 {
 	Matrix3F temp;
 	for (int i = 0; i < 3; i++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			temp._matrix[i][c] = leftDouble * rightMatrix._matrix[i][c];
+			temp._matrix[i][c] = left * right._matrix[i][c];
 		}
 	}
 	return temp;
 }
 
 /*! \fn matrix*num returns new matrix*/
-Matrix3F Matrix3F::operator* (const float& rightDouble)
+Matrix3F Matrix3F::operator* (const float& right)
 {
 	Matrix3F temp;
 	for (int i = 0; i < 3; i++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			temp._matrix[i][c] = this->_matrix[i][c] * rightDouble;
+			temp._matrix[i][c] = this->_matrix[i][c] * right;
 
 		}
 	}
@@ -110,7 +110,7 @@ Matrix3F Matrix3F::operator* (const float& rightDouble)
 }
 
 /*! \fn matrix*matrix returns new matrix*/
-Matrix3F Matrix3F::operator* (const Matrix3F& rightMatrix) // matrix multi
+Matrix3F Matrix3F::operator* (const Matrix3F& right) // matrix multi
 {
 	Matrix3F temp;
 
@@ -121,7 +121,7 @@ Matrix3F Matrix3F::operator* (const Matrix3F& rightMatrix) // matrix multi
 		{
 			for (int k = 0; k < 3; k++)
 			{
-				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * rightMatrix._matrix[k][c];
+				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * right._matrix[k][c];
 
 			}
 		}
@@ -130,26 +130,26 @@ Matrix3F Matrix3F::operator* (const Matrix3F& rightMatrix) // matrix multi
 }
 
 /*! \fn matrix*vector returns new vector*/
-Vector3 Matrix3F::operator* (const Vector3& rightVector) // matrix multi
+Vector3F Matrix3F::operator* (const Vector3F& right) // matrix multi
 {
-	float vx = rightVector.vect[0];
-	float vy = rightVector.vect[1];
-	float vz = rightVector.vect[2];
+	float vx = right.x;
+	float vy = right.y;
+	float vz = right.z;
 
 	float _x = this->_matrix[0][0] * vx + this->_matrix[1][0] * vy + this->_matrix[2][0] * vz;
 	float _y = this->_matrix[0][1] * vx + this->_matrix[1][1] * vy + this->_matrix[2][1] * vz;
 	float _z = this->_matrix[0][2] * vx + this->_matrix[1][2] * vy + this->_matrix[2][2] * vz;
-	return Vector3(_x, _y, _z);
+	return Vector3F(_x, _y, _z);
 }
 
 /*! \fn copy matrix returns new matrix*/
-Matrix3F& Matrix3F::operator= (const Matrix3F& rightMatrix)
+Matrix3F& Matrix3F::operator= (const Matrix3F& right)
 {
 	for (int r = 0; r < 3; r++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			this->_matrix[r][c] = rightMatrix._matrix[r][c];
+			this->_matrix[r][c] = right._matrix[r][c];
 
 		}
 	}
@@ -158,13 +158,13 @@ Matrix3F& Matrix3F::operator= (const Matrix3F& rightMatrix)
 }
 
 /*! \fn check if matrices are identical*/
-bool Matrix3F::operator== (const Matrix3F& rightMatrix)
+bool Matrix3F::operator== (const Matrix3F& right)
 {
 	for (int r = 0; r < 3; r++)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			if (this->_matrix[r][c] != rightMatrix._matrix[r][c])
+			if (this->_matrix[r][c] != right._matrix[r][c])
 			{
 				return false;
 			}
@@ -253,17 +253,17 @@ Matrix3F Matrix3F::rotateZ(float angle)
 }
 
 /*! \fn function returning rotation matrix with specified rotation angle along specified axis(vector)*/
-Matrix3F Matrix3F::rotateAngle(Vector3& thisVector, float angle)
+Matrix3F Matrix3F::rotateAngle(Vector3F& thisVector, float angle)
 {
 	float sAngle = -angle;
 	float PI = 3.14159265f;
 	float cosAng = cosf(sAngle * PI / 180.0f);
 	float sinAng = sinf(sAngle * PI / 180.0f);
 	float T = 1 - cosAng;
-	Vector3 normalizedVector = thisVector.vectNormalize();
-	float x = normalizedVector.vect[0];
-	float y = normalizedVector.vect[1];
-	float z = normalizedVector.vect[2];
+	Vector3F normalizedVector = thisVector.vectNormalize();
+	float x = normalizedVector.x;
+	float y = normalizedVector.y;
+	float z = normalizedVector.z;
 	Matrix3F rotationMatrix;
 	//row1
 	rotationMatrix._matrix[0][0] = cosAng + (x*x) * T;
@@ -337,7 +337,7 @@ float Matrix3F::det(float a, float b, float c, float d, float e, float f, float 
 	//simplified: return (a*e*i + b*f*g + c*d*h - c*e*g - b*d*i - a*f*h);
 }
 
-Matrix3F Matrix3F::CuboidInertiaTensor(float mass, Vector3 dimensions)
+Matrix3F Matrix3F::CuboidInertiaTensor(float mass, Vector3F dimensions)
 {
 	Matrix3F I;
 	I[0][0] = (1.f / 12.f) * mass * (dimensions.vect[1] * dimensions.vect[1] + dimensions.vect[2] * dimensions.vect[2]);
@@ -347,48 +347,48 @@ Matrix3F Matrix3F::CuboidInertiaTensor(float mass, Vector3 dimensions)
 	return I;
 }
 
-Vector3 Matrix3F::getRight() const
+Vector3F Matrix3F::getRight() const
 {
-	return Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
+	return Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
 }
 
-Vector3 Matrix3F::getUp() const
+Vector3F Matrix3F::getUp() const
 {
-	return Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
+	return Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
 }
 
-Vector3 Matrix3F::getForwardNegZ() const
+Vector3F Matrix3F::getForwardNegZ() const
 {
-	return Vector3(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
+	return Vector3F(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
 }
 
-Vector3 Matrix3F::getBackPosZ() const
+Vector3F Matrix3F::getBackPosZ() const
 {
-	return Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
+	return Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
 }
 
-void Matrix3F::setUp(const Vector3& axis)
+void Matrix3F::setUp(const Vector3F& axis)
 {
 	_matrix[1][0] = axis.x;
 	_matrix[1][1] = axis.y;
 	_matrix[1][2] = axis.z;
 }
 
-void Matrix3F::setRight(const Vector3& axis)
+void Matrix3F::setRight(const Vector3F& axis)
 {
 	_matrix[0][0] = axis.x;
 	_matrix[0][1] = axis.y;
 	_matrix[0][2] = axis.z;
 }
 
-void Matrix3F::setForward(const Vector3& axis)
+void Matrix3F::setForward(const Vector3F& axis)
 {
 	_matrix[2][0] = axis.x;
 	_matrix[2][1] = axis.y;
 	_matrix[2][2] = axis.z;
 }
 
-void Matrix3F::setAxes(const Vector3& right, const Vector3& up, const Vector3& forward)
+void Matrix3F::setAxes(const Vector3F& right, const Vector3F& up, const Vector3F& forward)
 {
 	_matrix[0][0] = right.x;
 	_matrix[0][1] = right.y;
@@ -403,7 +403,7 @@ void Matrix3F::setAxes(const Vector3& right, const Vector3& up, const Vector3& f
 	_matrix[2][2] = forward.z;
 }
 
-void Matrix3F::setSkewSymmetric(const Vector3& vector)
+void Matrix3F::setSkewSymmetric(const Vector3F& vector)
 {
 	_matrix[0][0] = _matrix[1][1] = _matrix[2][2] = 0;
 	_matrix[0][1] = -vector.z;
@@ -414,21 +414,21 @@ void Matrix3F::setSkewSymmetric(const Vector3& vector)
 	_matrix[2][1] = vector.x;
 }
 
-Vector3 Matrix3F::getAxis(int axis) const
+Vector3F Matrix3F::getAxis(int axis) const
 {
-	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]);
+	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]);
 }
 
-Vector3 Matrix3F::getAxisNormalized(int axis) const
+Vector3F Matrix3F::getAxisNormalized(int axis) const
 {
-	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
+	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
 }
 
-Vector3 Matrix3F::extractScale() const
+Vector3F Matrix3F::extractScale() const
 {
-	float scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
-	float scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
-	float scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
-	return Vector3(scaleX, scaleY, scaleZ);
+	float scaleX = Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
+	float scaleY = Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
+	float scaleZ = Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
+	return Vector3F(scaleX, scaleY, scaleZ);
 }
 }

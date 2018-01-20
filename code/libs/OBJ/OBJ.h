@@ -7,21 +7,21 @@ class OBJ
 {
 public:
 	std::vector<unsigned int> indices;
-	std::vector<mwm::Vector3> indexed_vertices;
-	std::vector<mwm::Vector2> indexed_uvs;
-	std::vector<mwm::Vector3> indexed_normals;
+	std::vector<mwm::Vector3F> indexed_vertices;
+	std::vector<mwm::Vector2F> indexed_uvs;
+	std::vector<mwm::Vector3F> indexed_normals;
 	int ID;
 	std::string name;
 	bool LoadOBJ(
 		const char * path,
-		std::vector<mwm::Vector3> & out_vertices,
-		std::vector<mwm::Vector2> & out_uvs,
-		std::vector<mwm::Vector3> & out_normals
+		std::vector<mwm::Vector3F> & out_vertices,
+		std::vector<mwm::Vector2F> & out_uvs,
+		std::vector<mwm::Vector3F> & out_normals
 		);
 	void indexVBO(
-		std::vector<mwm::Vector3> & in_vertices,
-		std::vector<mwm::Vector2> & in_uvs,
-		std::vector<mwm::Vector3> & in_normals
+		std::vector<mwm::Vector3F> & in_vertices,
+		std::vector<mwm::Vector2F> & in_uvs,
+		std::vector<mwm::Vector3F> & in_normals
 		);
 	void LoadAndIndexOBJ(char* path);
 	
@@ -34,9 +34,9 @@ public:
 	void CalculateDimensions();
 private:
 	struct PackedVertex{
-		mwm::Vector3 position;
-		mwm::Vector2 uv;
-		mwm::Vector3 normal;
+		mwm::Vector3F position;
+		mwm::Vector2F uv;
+		mwm::Vector3F normal;
 		bool operator<(const PackedVertex that) const{
 			return memcmp((void*)this, (void*)&that, sizeof(PackedVertex))>0;
 		};

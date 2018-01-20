@@ -1,6 +1,7 @@
 #pragma once
 #include "MyMathLib.h"
 #include "RigidBody.h"
+#include "MinMax.h"
 
 struct ObjectPoint
 {
@@ -8,7 +9,7 @@ struct ObjectPoint
 	bool isMin = false;
 	ObjectPoint(){}
 	ObjectPoint(RigidBody* entRb, bool min){ body = entRb; isMin = min; }
-	float value(int axis)
+	double value(int axis)
 	{
 		if (isMin)
 		{

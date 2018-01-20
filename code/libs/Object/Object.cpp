@@ -13,6 +13,7 @@ using namespace mwm;
 Object::Object()
 {
 	//radius = 1.f;
+	mesh = nullptr;
 }
 
 Object::~Object()
@@ -37,13 +38,8 @@ void Object::AssignMaterial(Material* mat)
 void Object::AssignMesh(Mesh* mesh)
 {
 	this->mesh = mesh;
-	SetMeshOffset(mesh->obj->CenterOfMass()*-1.f);
+	SetMeshOffset(mesh->obj->CenterOfMass()*-1.0);
 	CalculateRadius();
-}
-
-void Object::setRadius(float radius)
-{
-	this->radius = radius;
 }
 
 Vector3 Object::extractScale()
@@ -129,18 +125,22 @@ void Object::Update()
 	{
 		component->Update();
 	}
+	CalculateRadius();
 }
 
 void Object::CalculateRadius()
 {
-	Vector3 halfExtents = (mesh->obj->dimensions*node.totalScale)*0.5f;
-	if (mesh->obj->name.compare("sphere") == 0)
+	if (mesh != nullptr)
 	{
-		//radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere
-		radius = halfExtents.x;
-	}
-	else
-	{
-		radius = halfExtents.vectLengt(); //perfect for cuboid
+		Vector3 halfExtents = (mesh->obj->dimensions*node.totalScale)*0.5;
+		if (mesh->obj->name.compare("sphere") == 0)
+		{
+			//radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere
+			radius = halfExtents.x;
+		}
+		else
+		{
+			radius = halfExtents.vectLengt(); //perfect for cuboid
+		}
 	}
 }

@@ -60,7 +60,7 @@ void HalfEdgeMesh2D::Construct(const char * path)
 		map += str;
 		height++;
 	}
-	width = str.length();
+	width = (int)str.length();
 	Vector<Face*> allFaces;
 	allFaces.reserve(height*width);
 	Face* emptyFace = facePool.PoolPartyAlloc();

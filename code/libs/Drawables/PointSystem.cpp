@@ -10,13 +10,13 @@ PointSystem::PointSystem(int maxCount){
 	LastUsed = 0;
 	ActiveCount = 0;
 	pointsContainer = new FastPoint[maxCount];
-	positions = new Vector3[maxCount];
-	colors = new Vector4[maxCount];
+	positions = new Vector3F[maxCount];
+	colors = new Vector4F[maxCount];
 	SetUpBuffers();
 }
 
-const Vector3 PointSystem::vertices[] = {
-	Vector3(0.f, 0.f, 0.f)
+const Vector3F PointSystem::vertices[] = {
+	Vector3F(0.f, 0.f, 0.f)
 };
 
 PointSystem::~PointSystem()
@@ -51,18 +51,17 @@ int PointSystem::FindUnused()
 
 int PointSystem::UpdateContainer()
 {
-	int LinesCount = 0;
+	int PointsCount = 0;
 	for (int i = 0; i < MaxCount; i++){
 
 		FastPoint& p = pointsContainer[i];
 
 		if (p.CanDraw())
 		{
-			positions[LinesCount] = p.node.position;
+			positions[PointsCount] = p.node.position.toFloat();
+			colors[PointsCount] = p.color;
 
-			colors[LinesCount] = p.color;
-
-			LinesCount += 1;
+			PointsCount += 1;
 
 			p.UpdateDrawState();
 		}
@@ -70,7 +69,7 @@ int PointSystem::UpdateContainer()
 			p.cameraDistance = -1.0f;
 		}
 	}
-	return LinesCount;
+	return PointsCount;
 }
 
 void PointSystem::SetUpBuffers()
@@ -80,13 +79,13 @@ void PointSystem::SetUpBuffers()
 
 	glGenBuffers(1, &vertexBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector3), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector3F), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
 
 	glGenBuffers(1, &colorBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
 	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(1);
 
@@ -100,11 +99,11 @@ void PointSystem::UpdateBuffers()
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3), positions);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3F), positions);
 
 	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4), colors);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), colors);
 }
 
 

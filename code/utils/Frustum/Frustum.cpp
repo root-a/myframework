@@ -33,12 +33,12 @@ void FrustumManager::ExtractPlanes(const Matrix4& VP)
 	planes[5] = col4 - col3; 
 }
 
-bool FrustumManager::isBoundingSphereInView(Vector3 position, float radius)
+bool FrustumManager::isBoundingSphereInView(Vector3 position, double radius)
 {
 	for (Vector4& plane : planes) {
 		Vector3 vect3 = plane.get_xyz();
 		Vector3 normal = vect3.vectNormalize();
-		float d = plane.vect[3] / vect3.vectLengt();
+		double d = plane.w / vect3.vectLengt();
 		if (position.dotAKAscalar(normal) + d + radius <= 0) {
 			return false;
 		}

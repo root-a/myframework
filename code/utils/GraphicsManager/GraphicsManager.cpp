@@ -53,7 +53,7 @@ bool GraphicsManager::LoadOBJs(const char * path)
 		tempOBJ->LoadAndIndexOBJ(lineHeader);
 		tempOBJ->ID = objID;
 		tempOBJ->name = lineHeader;
-		int sep = tempOBJ->name.find_last_of("\\/");
+		size_t sep = tempOBJ->name.find_last_of("\\/");
 
 		if (sep != std::string::npos)
 			tempOBJ->name = tempOBJ->name.substr(sep + 1, tempOBJ->name.size() - sep - 1);
@@ -393,6 +393,17 @@ GLuint GraphicsManager::LoadDDS(const char *imagepath){
 
 	}
 
+	
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+	glGenerateMipmap(GL_TEXTURE_2D);
+	
+	float aniso = 16.0f;
+	glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
+	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
+	
 	free(buffer);
 
 	return textureID;
@@ -496,21 +507,21 @@ Mesh* GraphicsManager::LoadOBJToVBO(OBJ* object, Mesh* mesh)
 	// 1rst attribute buffer : vertices
 	glGenBuffers(1, &mesh->vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mesh->vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, object->indexed_vertices.size() * sizeof(Vector3), &object->indexed_vertices[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, object->indexed_vertices.size() * sizeof(Vector3F), &object->indexed_vertices[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(0);
 
 	// 2nd attribute buffer : UVs
 	glGenBuffers(1, &mesh->uvbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mesh->uvbuffer);
-	glBufferData(GL_ARRAY_BUFFER, object->indexed_uvs.size() * sizeof(Vector2), &object->indexed_uvs[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, object->indexed_uvs.size() * sizeof(Vector2F), &object->indexed_uvs[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(1);
 
 	// 3rd attribute buffer : normals
 	glGenBuffers(1, &mesh->normalbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mesh->normalbuffer);
-	glBufferData(GL_ARRAY_BUFFER, object->indexed_normals.size() * sizeof(Vector3), &object->indexed_normals[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, object->indexed_normals.size() * sizeof(Vector3F), &object->indexed_normals[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(2);
 
@@ -518,7 +529,7 @@ Mesh* GraphicsManager::LoadOBJToVBO(OBJ* object, Mesh* mesh)
 	glGenBuffers(1, &mesh->elementbuffer);
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->elementbuffer);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, object->indices.size() * sizeof(unsigned int), &object->indices[0], GL_STATIC_DRAW);
-	mesh->indicesSize = object->indices.size();
+	mesh->indicesSize = (unsigned int)object->indices.size();
 
 	//Unbind the VAO now that the VBOs have been set up
 	glBindVertexArray(0);

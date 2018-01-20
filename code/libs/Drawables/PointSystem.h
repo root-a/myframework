@@ -11,13 +11,13 @@ class FastPoint
 public:
 	FastPoint()
 	{
-		color = mwm::Vector4(0.f, 3.f, 3.f, 0.1f);
+		color = mwm::Vector4F(0.f, 3.f, 3.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 	};
 	~FastPoint(){};
 	LineNode node;
-	mwm::Vector4 color;
+	mwm::Vector4F color;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -39,6 +39,7 @@ protected:
 private:
 	bool draw;
 	bool drawAlways;
+	
 };
 
 class PointSystem : public Component
@@ -57,7 +58,7 @@ public:
 	int UpdateContainer();
 	void Update();
 
-	static const mwm::Vector3 vertices[1];
+	static const mwm::Vector3F vertices[1];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
@@ -65,8 +66,8 @@ public:
 	int LastUsed;
 	int ActiveCount;
 	int MaxCount;
-	mwm::Vector3* positions;
-	mwm::Vector4* colors;
+	mwm::Vector3F* positions;
+	mwm::Vector4F* colors;
 	FastPoint* pointsContainer;
 
 

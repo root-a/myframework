@@ -5,36 +5,28 @@
 namespace mwm
 {
 /*! \fn Vector4 constructor*/
-Vector4::Vector4(float x, float y, float z, float w)
+Vector4::Vector4(double x, double y, double z, double w)
 {
-	vect[0] = x;
-	vect[1] = y;
-	vect[2] = z;
-	vect[3] = w;
+	this->x = x;
+	this->y = y;
+	this->z = z;
+	this->w = w;
 }
 
 Vector4::Vector4(const Vector2& v1, const Vector2& v2)
 {
-	vect[0] = v1.x;
-	vect[1] = v1.y;
-	vect[2] = v2.x;
-	vect[3] = v2.y;
+	this->x = v1.x;
+	this->y = v1.y;
+	this->z = v2.x;
+	this->w = v2.y;
 }
 
-Vector4::Vector4(const Vector3& v1, float w)
+Vector4::Vector4(const Vector3& v1, double w)
 {
-	vect[0] = v1.x;
-	vect[1] = v1.y;
-	vect[2] = v1.z;
-	vect[3] = w;
-}
-
-Vector4::Vector4(double x /*= 0*/, double y /*= 0*/, double z /*= 0*/, double w /*= 0*/)
-{
-	vect[0] = (float)x;
-	vect[1] = (float)y;
-	vect[2] = (float)z;
-	vect[3] = (float)w;
+	this->x = v1.x;
+	this->y = v1.y;
+	this->z = v1.z;
+	this->w = w;
 }
 
 Vector4::~Vector4()
@@ -42,95 +34,67 @@ Vector4::~Vector4()
 }
 
 /*! \fn add vectors amd return new one*/
-Vector4 Vector4::operator+ (const Vector4& rightVector) const
+Vector4 Vector4::operator+ (const Vector4& right) const
 {
-	return Vector4(this->vect[0] + rightVector.vect[0], this->vect[1] + rightVector.vect[1], this->vect[2] + rightVector.vect[2], this->vect[3] + rightVector.vect[3]);
+	return Vector4(x + right.x, y + right.y, z + right.z, w + right.w);
 }
 
 /*! \fn substract vectors and return new one*/
-Vector4 Vector4::operator- (const Vector4& rightVector) const
+Vector4 Vector4::operator- (const Vector4& right) const
 {
 
-	return Vector4(this->vect[0] - rightVector.vect[0], this->vect[1] - rightVector.vect[1], this->vect[2] - rightVector.vect[2], this->vect[3] - rightVector.vect[3]);
+	return Vector4(x - right.x, y - right.y, z - right.z, w - right.w);
 }
 
 /*! \fn dot product returns scalar*/
-float Vector4::dotAKAscalar(const Vector4& rightVector) const
+double Vector4::dotAKAscalar(const Vector4& right) const
 {
-	float x = this->vect[0] * rightVector.vect[0];
-	float y = this->vect[1] * rightVector.vect[1];
-	float z = this->vect[2] * rightVector.vect[2];
-	float w = this->vect[3] * rightVector.vect[3];
-	return x + y + z + w;
+	return x * right.x + y * right.y + z * right.z + w * right.w;
 }
 
 /*! \fn function returning length of instanced vector*/
-float Vector4::vectLengt() const
+double Vector4::vectLengt() const
 {
-	float x = this->vect[0];
-	float y = this->vect[1];
-	float z = this->vect[2];
-	float w = this->vect[3];
 	return sqrt(x*x + y*y + z*z + w*w);
 }
 
-float Vector4::squareMag() const
+double Vector4::squareMag() const
 {
-	float x = this->vect[0];
-	float y = this->vect[1];
-	float z = this->vect[2];
-	float w = this->vect[3];
-	return (x*x + y*y + z*z + w*w);
+	return x*x + y*y + z*z + w*w;
 }
 
 /*! \fn vector*num returns new matrix*/
-Vector4 Vector4::operator* (const float& rightFloat) const
+Vector4 Vector4::operator* (const double& right) const
 {
-	float x = this->vect[0] * rightFloat;
-	float y = this->vect[1] * rightFloat;
-	float z = this->vect[2] * rightFloat;
-	float w = this->vect[3] * rightFloat;
-	return Vector4(x, y, z, w);
+	return Vector4(x * right, y * right, z * right, w * right);
 }
 
 /*! \fn num*vector returns new matrix*/
-Vector4 operator* (const float& leftFloat, const Vector4& rightVector)
+Vector4 operator* (const double& left, const Vector4& right)
 {
-	float x = rightVector.vect[0] * leftFloat;
-	float y = rightVector.vect[1] * leftFloat;
-	float z = rightVector.vect[2] * leftFloat;
-	float w = rightVector.vect[3] * leftFloat;
-	return Vector4(x, y, z, w);
+	return Vector4(right.x * left, right.y * left, right.z * left, right.w * left);
 }
 
 /*! \fn vector/num returns new matrix*/
-Vector4 Vector4::operator/ (const float& rightFloat) const
+Vector4 Vector4::operator/ (const double& right) const
 {
-	float x = this->vect[0] / rightFloat;
-	float y = this->vect[1] / rightFloat;
-	float z = this->vect[2] / rightFloat;
-	float w = this->vect[3] / rightFloat;
-	return Vector4(x, y, z, w);
+	return Vector4(x / right, y / right, z / right, w / right);
 }
 
 Vector3 Vector4::get_xyz() const
 {
-	return Vector3(this->vect[0], this->vect[1], this->vect[2]);
+	return Vector3(x, y, z);
 }
 
 /*! \fn function returning new normalized vector*/
 Vector4 Vector4::vectNormalize() const
 {
-	float vLength = this->vectLengt();
-	float x = this->vect[0] / vLength;
-	float y = this->vect[1] / vLength;
-	float z = this->vect[2] / vLength;
-	float w = this->vect[3] / vLength;
-	return Vector4(x, y, z, w);
+	double length = sqrt(x*x + y*y + z*z + w*w);
+	return Vector4(x / length, y / length, z / length, w / length);
 }
 
 /*! \fn operator[] overload for indexing */
-float& Vector4::operator[] (int index)
+double& Vector4::operator[] (int index)
 {
 	return this->vect[index];
 }

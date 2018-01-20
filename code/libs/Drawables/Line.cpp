@@ -11,9 +11,9 @@ Line::Line(){
 	SetUpBuffers();
 }
 
-const Vector3 Line::vertices[] = {
-	Vector3(0.f, 0.f, 0.f),
-	Vector3(0.f, 0.f, 1.f)
+const Vector3F Line::vertices[] = {
+	Vector3F(0.f, 0.f, 0.f),
+	Vector3F(0.f, 0.f, 1.f)
 };
 
 
@@ -28,7 +28,7 @@ void Line::SetUpBuffers()
 	// 1rst attribute buffer : vertices
 	glGenBuffers(1, &mesh->vertexbuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, mesh->vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(Vector3), &vertices[0], GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, 2 * sizeof(Vector3F), &vertices[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(0);
 
@@ -39,9 +39,6 @@ void Line::SetUpBuffers()
 void Line::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Projection, const GLuint shader, float width)
 {
 	Matrix4F MVP = (Model*View*Projection).toFloat();
-	//GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	//GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
-	//glUseProgram(wireframeShader);
 	MatrixHandle = glGetUniformLocation(shader, "MVP");
 	MaterialColorValueHandle = glGetUniformLocation(shader, "MaterialColorValue");
 
@@ -55,5 +52,4 @@ void Line::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Projec
 	// Draw the lines !
 	glDrawArrays(GL_LINES, 0, 2);
 	glLineWidth(1.f);
-	//glUseProgram(prevShader);
 }

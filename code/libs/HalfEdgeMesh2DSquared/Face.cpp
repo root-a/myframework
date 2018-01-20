@@ -20,15 +20,15 @@ Vector2 Face::getMidPointAverage()
 	Edge* currentEdge = this->edge;
 	//Looping through every edge in the current node
 	int edgecount = 0;
-	float x = 0.0f;
-	float y = 0.0f;
+	double x = 0.0;
+	double y = 0.0;
 
 	do
 	{
 		edgecount+=1;
 
-		x += currentEdge->vertex->pos.vect[0];
-		y += currentEdge->vertex->pos.vect[1];
+		x += currentEdge->vertex->pos.x;
+		y += currentEdge->vertex->pos.y;
 
 		currentEdge = currentEdge->next;
 
@@ -41,8 +41,8 @@ Vector2 Face::getMidPointAverage()
 
 Vector2 Face::getMidPointMiniMaxi()
 {
-	Vector2 mini(99999.0f, 99999.0f);
-	Vector2 maxi(-99999.0f, -99999.0f);
+	Vector2 mini(DBL_MAX, DBL_MAX);
+	Vector2 maxi(DBL_MIN, DBL_MIN);
 
 	Edge* currentEdge = this->edge;
 	do

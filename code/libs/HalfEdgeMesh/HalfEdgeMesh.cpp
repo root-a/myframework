@@ -159,7 +159,7 @@ void HalfEdgeMesh::CalculateOldPosition()
 		Edge* halfedge = vertices.at(i)->edge;
 
 		//Sum of all neighbour vertices
-		Vector3 neighbourSum;
+		Vector3F neighbourSum;
 		//Amount of neighbors around the vertex
 		float n = 0;
 
@@ -203,14 +203,14 @@ void HalfEdgeMesh::CalculateMidpointPosition()
 			Vertex* v3 = halfedge->next->next->vertex;
 			Vertex* v4 = halfedge->pair->next->next->vertex;
 
-			Vector3 vertexPosSum = 3 * (v1->pos + v2->pos) + v3->pos + v4->pos;
+			Vector3F vertexPosSum = 3.f * (v1->pos + v2->pos) + v3->pos + v4->pos;
 
 			//we only calculate midpoint and assign it to the edge and it's pair
 			//we are not performing any splitting or reconnections here
 			Vertex* midpoint = vertexPool.PoolPartyAlloc();
-			Vector3 calculatedPosition = vertexPosSum / 8.0f;
-			Vector2 calculatedUVs = (v1->tex + v2->tex) / 2.0f;
-			Vector3 calculatedNormal = (v1->normal + v2->normal + v3->normal + v4->normal) / 4.0f;
+			Vector3F calculatedPosition = vertexPosSum / 8.0f;
+			Vector2F calculatedUVs = (v1->tex + v2->tex) / 2.0f;
+			Vector3F calculatedNormal = (v1->normal + v2->normal + v3->normal + v4->normal) / 4.0f;
 			midpoint->pos = calculatedPosition; // there is no reason to set this as we copy newPos to pos later on
 			midpoint->tex = calculatedUVs;
 			midpoint->normal = calculatedNormal.vectNormalize();

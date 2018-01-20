@@ -16,19 +16,19 @@ public:
 	Material* mat;
 	Mesh* mesh;
 	unsigned int ID;
-	float radius;
+	
 	void Update();
 	void AddComponent(Component* newComponent);
 	void ClearComponents();
 	void AssignMaterial(Material* mat);
 	void AssignMesh(Mesh* mesh);
 	
-	void setRadius(float radius);	
 	mwm::Vector3 GetMeshDimensions();
 
 	void SetPosition(const mwm::Vector3& vector);
 	void SetScale(const mwm::Vector3& vector);
 
+	double radius;
 	void CalculateRadius();
 
 	void Translate(const mwm::Vector3& vector);

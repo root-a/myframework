@@ -5,19 +5,26 @@ class Camera
 public:
 	Camera(const mwm::Vector3& initPos, int windowWidth, int windowHeight);
 	~Camera();
-	void Update(float deltaTime);
+	void Update(double deltaTime);
 
 	void CalculateViewMatrix();
 
+	void UpdateProjection();
+
 	void ComputeVectors();
 
-	void UpdatePosition(float deltaTime);
+	void UpdatePosition(double deltaTime);
 
 	void UpdateOrientation(double mouseX, double mouseY);
 
 	void UpdateSize(int width, int height);
 
-	mwm::Matrix4& getViewMatrix();
+	void SetFoV(double newFov);
+	
+	void SetNearPlane(double newNearPlane);
+	
+	void SetFarPlane(double newFarPlane);
+
 	mwm::Vector3 getDirection();
 	mwm::Vector3 getUp();
 	mwm::Vector3 getRight();
@@ -36,26 +43,28 @@ public:
 	bool holdingDown;
 
 	mwm::Matrix4 ProjectionMatrix;
-private:
 	mwm::Matrix4 ViewMatrix;
+private:
 	
 	mwm::Vector3 direction;
 	mwm::Vector3 up;
 	mwm::Vector3 right;
-	mwm::Vector3 initialPosition;
+	mwm::Vector3 position;
 
 	int windowWidth;
 	int windowHeight;
-	float windowMidX;
-	float windowMidY;
+	double windowMidX;
+	double windowMidY;
 
 	// Initial horizontal angle : toward -Z
-	float horizontalAngle;
+	double horizontalAngle;
 	// Initial vertical angle : none
-	float verticalAngle;
-	// Initial Field of View
-	float initialFoV;
+	double verticalAngle;
 
-	float speed;
-	float mouseSpeed;
+	double speed;
+	double mouseSpeed;
+
+	double fov;
+	double near;
+	double far;
 };

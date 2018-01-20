@@ -3,22 +3,16 @@
 #include "Vector3.h"
 namespace mwm
 {
-Vector2::Vector2(float x, float y)
+Vector2::Vector2(double x, double y)
 {
-	vect[0] = x;
-	vect[1] = y;
+	this->x = x;
+	this->y = y;
 }
 
 Vector2::Vector2(const Vector2& vec)
 {
-	vect[0] = vec.x;
-	vect[1] = vec.y;
-}
-
-Vector2::Vector2(double x, double y)
-{
-	vect[0] = (float)x;
-	vect[1] = (float)y;
+	this->x = vec.x;
+	this->y = vec.y;
 }
 
 Vector2::~Vector2()
@@ -26,74 +20,62 @@ Vector2::~Vector2()
 }
 
 /*! \fn add vectors amd return new one*/
-Vector2 Vector2::operator+ (const Vector2& rightVector) const
+Vector2 Vector2::operator+ (const Vector2& right) const
 {
-	return Vector2(this->vect[0] + rightVector.vect[0], this->vect[1] + rightVector.vect[1]);
+	return Vector2(x + right.x, y + right.y);
 }
 
 /*! \fn substract vectors and return new one*/
-Vector2 Vector2::operator- (const Vector2& rightVector) const
+Vector2 Vector2::operator- (const Vector2& right) const
 {
 
-	return Vector2(this->vect[0] - rightVector.vect[0], this->vect[1] - rightVector.vect[1]);
+	return Vector2(x - right.x, y - right.y);
 }
 /*! \fn dot product returns scalar*/
-float Vector2::dotAKAscalar(const Vector2& rightVector) const
+double Vector2::dotAKAscalar(const Vector2& right) const
 {
-	float x = this->vect[0] * rightVector.vect[0];
-	float y = this->vect[1] * rightVector.vect[1];
-	return x + y;
+	return x * right.x + y * right.y;
 }
 
 /*! \fn function returning length of instanced vector*/
-float Vector2::vectLengt() const
+double Vector2::vectLengt() const
 {
-	float x = this->vect[0];
-	float y = this->vect[1];
 	return sqrt(x*x + y*y);
 }
 /*! \fn function returning new normalized vector*/
 Vector2 Vector2::vectNormalize() const
 {
-	float vLength = this->vectLengt();
-	float x = this->vect[0] / vLength;
-	float y = this->vect[1] / vLength;
-	return Vector2(x, y);
+	double length = sqrt(x*x + y*y);
+	return Vector2(x / length, y / length);
 }
 
 /*! \fn function to convert 2D vector to 3D vector*/
-Vector3 Vector2::vec2TOvec3(Vector2 _2Dvector, float z)
+Vector3 Vector2::vec2TOvec3(Vector2 vector, double z)
 {
-	return Vector3(_2Dvector.vect[0], _2Dvector.vect[1], z);
+	return Vector3(vector.x, vector.y, z);
 }
 
 /*! \fn vector*num returns new matrix*/
-Vector2 Vector2::operator* (const float& rightFloat) const
+Vector2 Vector2::operator* (const double& right) const
 {
-	float u = this->vect[0] * rightFloat;
-	float v = this->vect[1] * rightFloat;
-	return Vector2(u, v);
+	return Vector2(x * right, y * right);
 }
 
 /*! \fn num*vector returns new matrix*/
-Vector2 operator* (const float& leftFloat, const Vector2& rightVector)
+Vector2 operator* (const double& left, const Vector2& right)
 {
-	float u = rightVector.vect[0] * leftFloat;
-	float v = rightVector.vect[1] * leftFloat;
-	return Vector2(u, v);
+	return Vector2(right.x * left, right.y * left);
 }
 
 /*! \fn vector/num returns new matrix*/
-Vector2 Vector2::operator/ (const float& rightFloat) const
+Vector2 Vector2::operator/ (const double& right) const
 {
-	float u = this->vect[0] / rightFloat;
-	float v = this->vect[1] / rightFloat;
-	return Vector2(u, v);
+	return Vector2(x / right, y / right);
 }
 
 bool Vector2::operator==(const Vector2& v)const
 {
-	if (vect[0] != v.vect[0] || vect[1] != v.vect[1]) return false;
+	if (x != v.x || y != v.y) return false;
 	else return true;
 }
 }

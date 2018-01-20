@@ -7,14 +7,16 @@ using namespace mwm;
 Camera::Camera(const mwm::Vector3& initPos, int windowW, int windowH)
 {
 	// Initial horizontal angle : toward -Z
-	horizontalAngle = 3.14f;
+	horizontalAngle = 3.14;
 	// Initial vertical angle : none
-	verticalAngle = 0.0f;
+	verticalAngle = 0.0;
 	// Initial Field of View
-	initialFoV = 45.0f;
+	fov = 45.0;
+	near = 0.1;
+	far = 100;
 
-	speed = 10.0f; // 3 units / second
-	mouseSpeed = 0.002f;
+	speed = 100.0;
+	mouseSpeed = 0.002;
 
 	holdingForward = false;
 	holdingBackward = false;
@@ -23,7 +25,7 @@ Camera::Camera(const mwm::Vector3& initPos, int windowW, int windowH)
 	holdingUp = false;
 	holdingDown = false;
 
-	initialPosition = initPos;
+	position = initPos;
 
 	UpdateSize(windowW, windowH);
 	UpdateOrientation(windowMidX, windowMidY + 100);
@@ -31,10 +33,6 @@ Camera::Camera(const mwm::Vector3& initPos, int windowW, int windowH)
 
 Camera::~Camera()
 {
-}
-
-Matrix4& Camera::getViewMatrix(){
-	return ViewMatrix;
 }
 
 Vector3 Camera::getDirection()
@@ -49,7 +47,7 @@ Vector3 Camera::getUp()
 
 Vector3 Camera::GetInitPos()
 {
-    return initialPosition;
+    return position;
 }
 
 Vector3 Camera::GetPosition() //no scaling of view
@@ -68,19 +66,19 @@ Vector3 Camera::GetPosition2() //if scaled view
 	return cameraPos;
 }
 
-void Camera::Update(float deltaTime){
+void Camera::Update(double deltaTime){
 
 	UpdatePosition(deltaTime);
 
-	CalculateViewMatrix();		
+	CalculateViewMatrix();
 }
 
 void Camera::UpdateOrientation(double mouseX, double mouseY)
 {
 	// Compute new orientation
 
-	horizontalAngle += mouseSpeed * (windowMidX - (float)mouseX);
-	verticalAngle += mouseSpeed * (windowMidY - (float)mouseY);
+	horizontalAngle += mouseSpeed * (windowMidX - mouseX);
+	verticalAngle += mouseSpeed * (windowMidY - mouseY);
 
 	//if monitoring camera
 	/*
@@ -94,29 +92,29 @@ void Camera::UpdateOrientation(double mouseX, double mouseY)
 	ComputeVectors();
 }
 
-void Camera::UpdatePosition(float deltaTime)
+void Camera::UpdatePosition(double deltaTime)
 {
 	// Move forward
 	if (holdingForward){
-		initialPosition = initialPosition + (direction * deltaTime * speed);
+		position = position + (direction * deltaTime * speed);
 	}
 	// Move backward
 	if (holdingBackward){
-		initialPosition = initialPosition - (direction * deltaTime * speed);
+		position = position - (direction * deltaTime * speed);
 	}
 	// Strafe right
 	if (holdingRight){
-		initialPosition = initialPosition + (right * deltaTime * speed);
+		position = position + (right * deltaTime * speed);
 	}
 	// Strafe left
 	if (holdingLeft){
-		initialPosition = initialPosition - (right * deltaTime * speed);
+		position = position - (right * deltaTime * speed);
 	}
 	if (holdingUp){
-		initialPosition = initialPosition + (up * deltaTime * speed);
+		position = position + (up * deltaTime * speed);
 	}
 	if (holdingDown){
-		initialPosition = initialPosition - (up * deltaTime * speed);
+		position = position - (up * deltaTime * speed);
 	}
 }
 
@@ -124,8 +122,27 @@ void Camera::UpdateSize(int width, int height)
 {
 	windowWidth = width;
 	windowHeight = height;
-	windowMidX = windowWidth / 2.0f;
-	windowMidY = windowHeight / 2.0f;
+	windowMidX = windowWidth / 2.0;
+	windowMidY = windowHeight / 2.0;
+	UpdateProjection();
+}
+
+void Camera::SetFoV(double newFov)
+{
+	fov = newFov;
+	UpdateProjection();
+}
+
+void Camera::SetNearPlane(double newNearPlane)
+{
+	near = newNearPlane;
+	UpdateProjection();
+}
+
+void Camera::SetFarPlane(double newFarPlane)
+{
+	far = newFarPlane;
+	UpdateProjection();
 }
 
 void Camera::ComputeVectors()
@@ -139,9 +156,9 @@ void Camera::ComputeVectors()
 
 	// Right vector
 	right = Vector3(
-		sin(horizontalAngle - 3.14f / 2.0f),
-		0.f,
-		cos(horizontalAngle - 3.14f / 2.0f)
+		sin(horizontalAngle - 3.14 / 2.0),
+		0.0,
+		cos(horizontalAngle - 3.14 / 2.0)
 		);
 
 	// Up vector
@@ -154,8 +171,8 @@ void Camera::CalculateViewMatrix()
 	//if (cameraType == 1 || cameraType == 2)
 	//{
 		ViewMatrix = Matrix4::lookAt(
-			initialPosition,           // Camera is here
-			initialPosition + direction, // and looks here : at the same position, plus "direction"
+			position,           // Camera is here
+			position + direction, // and looks here : at the same position, plus "direction"
 			up                  // Head is up (set to 0,-1,0 to look upside-down)
 			);
 		/*if (cameraType == 2)
@@ -173,13 +190,18 @@ void Camera::CalculateViewMatrix()
 	}*/
 }
 
+void Camera::UpdateProjection()
+{
+	ProjectionMatrix = Matrix4::OpenGLPersp(fov, (double)windowWidth/(double)windowHeight, near, far);
+}
+
 void Camera::SetPosition(mwm::Vector3& pos)
 {
 	//proper way to set position would be to get the position from matrix via inverse
 	//then new position - camera pos -> vector with direction to new position 
 	//then we translate the initial position with that vector -> initialPosition += new vector with dir
 	//this would be required if one did change the camera matrix directly rather than changing the position variable 
-	initialPosition = pos;
+	position = pos;
 }
 
 mwm::Vector3 Camera::getRight()
