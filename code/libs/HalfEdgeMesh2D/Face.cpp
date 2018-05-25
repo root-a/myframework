@@ -8,7 +8,8 @@ using namespace mwm;
 Face::Face()
 {
 	edge = nullptr;
-	joined = false;
+	previousFace = nullptr;
+	id = -1;
 }
 
 Face::~Face()

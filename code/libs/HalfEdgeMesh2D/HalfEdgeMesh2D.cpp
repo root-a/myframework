@@ -6,6 +6,7 @@
 #include "Face.h"
 #include <fstream>
 #include <string>
+#include "Optimization.h"
 
 using namespace cop4530;
 using namespace mwm;
@@ -65,8 +66,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	allFaces.reserve(height*width);
 	Face* emptyFace = facePool.PoolPartyAlloc();
 
-	file1.close();
 
+	file1.close();
+	int faceID = 0;
 	for (int y = 0; y < height; y++)
 	{
 		if (map[y*width] == '/' || map[y*width] == ';' || map[y*width] == '#') continue; /* ignore comment line */
@@ -79,7 +81,12 @@ void HalfEdgeMesh2D::Construct(const char * path)
 			}
 			else
 			{
-				
+				Face* leftTriangle = facePool.PoolPartyAlloc();
+				leftTriangle->id = faceID;
+				faceID++;
+				Face* rightTriangle = facePool.PoolPartyAlloc();
+				rightTriangle->id = faceID;
+				faceID++;
 				//connecting
 					
 				//let's get vertices we wanna work with
@@ -94,50 +101,50 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				vertice4->pos = Vector2((float)(x + 1), (float)(y + 1));
 
 				//create new edges
-				Edge* newEdge1 = edgePool.PoolPartyAlloc();
-				Edge* newEdge2 = edgePool.PoolPartyAlloc();
-				Edge* newEdge3 = edgePool.PoolPartyAlloc();
+				Edge* leftEdge = edgePool.PoolPartyAlloc();
+				Edge* topEdge = edgePool.PoolPartyAlloc();
+				Edge* innerRightEdge = edgePool.PoolPartyAlloc();
 
 				//connect vertices to edges
-				newEdge1->vertex = vertice1;
-				newEdge2->vertex = vertice2;
-				newEdge3->vertex = vertice3;
+				leftEdge->vertex = vertice1;
+				topEdge->vertex = vertice2;
+				innerRightEdge->vertex = vertice3;
 
 				//connect edges with next
-				newEdge1->next = newEdge2;
-				newEdge2->next = newEdge3;
-				newEdge3->next = newEdge1;
+				leftEdge->next = topEdge;
+				topEdge->next = innerRightEdge;
+				innerRightEdge->next = leftEdge;
 
 				//connect edges with previous
-				newEdge1->prev = newEdge3;
-				newEdge2->prev = newEdge1;
-				newEdge3->prev = newEdge2;
+				leftEdge->prev = innerRightEdge;
+				topEdge->prev = leftEdge;
+				innerRightEdge->prev = topEdge;
 
-				edges.push_back(newEdge1);
-				edges.push_back(newEdge2);
-				edges.push_back(newEdge3);
+				edges.push_back(leftEdge);
+				edges.push_back(topEdge);
+				edges.push_back(innerRightEdge);
 				
-				Edge* newEdge4 = edgePool.PoolPartyAlloc();
-				Edge* newEdge5 = edgePool.PoolPartyAlloc();
-				Edge* newEdge6 = edgePool.PoolPartyAlloc();
+				Edge* rightEdge = edgePool.PoolPartyAlloc();
+				Edge* bottomEdge = edgePool.PoolPartyAlloc();
+				Edge* innerLeftEdge = edgePool.PoolPartyAlloc();
 
 				//connect vertices to edges
-				newEdge4->vertex = vertice3;
-				newEdge5->vertex = vertice4;
-				newEdge6->vertex = vertice1;
+				rightEdge->vertex = vertice3;
+				bottomEdge->vertex = vertice4;
+				innerLeftEdge->vertex = vertice1;
 
 				//connect edges with next
-				newEdge4->next = newEdge5;
-				newEdge5->next = newEdge6;
-				newEdge6->next = newEdge4;
+				rightEdge->next = bottomEdge;
+				bottomEdge->next = innerLeftEdge;
+				innerLeftEdge->next = rightEdge;
 
 				//connect edges with previous
-				newEdge4->prev = newEdge6;
-				newEdge5->prev = newEdge4;
-				newEdge6->prev = newEdge5;
+				rightEdge->prev = innerLeftEdge;
+				bottomEdge->prev = rightEdge;
+				innerLeftEdge->prev = bottomEdge;
 
-				newEdge6->pair = newEdge3;
-				newEdge3->pair = newEdge6;
+				innerLeftEdge->pair = innerRightEdge;
+				innerRightEdge->pair = innerLeftEdge;
 
 				
 				//is not at x boundaries?
@@ -147,9 +154,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 					if (map[currentCell-1] != 'X')
 					{
 						//pair with the last added face (the one to the right)
-						Edge* lastFaceEdge = faces.back()->edge;
-						lastFaceEdge->pair = newEdge1;
-						newEdge1->pair = lastFaceEdge;
+						Edge* lastFaceRightEdge = faces.back()->edge->next;
+						lastFaceRightEdge->pair = leftEdge;
+						leftEdge->pair = lastFaceRightEdge;
 					}
 				}
 				
@@ -161,53 +168,50 @@ void HalfEdgeMesh2D::Construct(const char * path)
 					if (map[cellAbove] != 'X')
 					{
 						//pair with the cell above
-						Edge* aboveFaceEdge = allFaces[cellAbove]->edge->next;
-						aboveFaceEdge->pair = newEdge2;
-						newEdge2->pair = aboveFaceEdge;
+						Edge* aboveFaceBottomEdge = allFaces[cellAbove]->edge->prev;
+						aboveFaceBottomEdge->pair = topEdge;
+						topEdge->pair = aboveFaceBottomEdge;
 					}
 				}
 				
-				edges.push_back(newEdge4);
-				edges.push_back(newEdge5);
-				edges.push_back(newEdge6);
+				edges.push_back(rightEdge);
+				edges.push_back(bottomEdge);
+				edges.push_back(innerLeftEdge);
 
 				vertices.push_back(vertice1);
 				vertices.push_back(vertice2);
 				vertices.push_back(vertice3);
 				vertices.push_back(vertice4);
 
-				Face* newFace = facePool.PoolPartyAlloc();
-				Face* newFace2 = facePool.PoolPartyAlloc();
-				newFace->edge = newEdge1;
-				newFace2->edge = newEdge4;
-
-				newEdge1->face = newFace;
-				newEdge1->next->face = newFace;
-				newEdge1->next->next->face = newFace;
-
-				newEdge4->face = newFace2;
-				newEdge4->next->face = newFace2;
-				newEdge4->next->next->face = newFace2;
-
-				faces.push_back(newFace);
-				faces.push_back(newFace2);
-				allFaces.push_back(newFace2);
 				
+				leftTriangle->edge = innerRightEdge;
+				rightTriangle->edge = innerLeftEdge;
+
+				leftEdge->face = leftTriangle;
+				leftEdge->next->face = leftTriangle;
+				leftEdge->next->next->face = leftTriangle;
+
+				rightEdge->face = rightTriangle;
+				rightEdge->next->face = rightTriangle;
+				rightEdge->next->next->face = rightTriangle;
+
+				faces.push_back(leftTriangle);
+				faces.push_back(rightTriangle);
+				allFaces.push_back(rightTriangle);
 				if (map[currentCell] == 'S')
 				{
-					startFace = newFace;
+					startFace = leftTriangle;
 					//startFacePos = newFace->edge->vertex->pos;
-					startFacePos = newFace->getMidPointAverage();
+					startFacePos = leftTriangle->getMidPointAverage();
 				}
 				if (map[currentCell] == 'G')
 				{
-					goals.push_back(newFace2);
-					goalsPos.push_back(newFace2->getMidPointAverage());
-					endFace = newFace2;
+					goals.push_back(rightTriangle);
+					goalsPos.push_back(rightTriangle->getMidPointAverage());
+					endFace = rightTriangle;
 					//endFacePos = newFace2->edge->vertex->pos;
-					endFacePos = newFace2->getMidPointAverage();
+					endFacePos = rightTriangle->getMidPointAverage();
 				}
-				
 			}
 		}
 	}
@@ -223,195 +227,22 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	*/
 }
 
-Face* HalfEdgeMesh2D::findNode(Vector2 point)
+Face* HalfEdgeMesh2D::findNode(const Vector2& point)
 {
-	for (int i = 0; i < faces.size(); i++)
-	{
-		if (this->isPointInNode(point, faces.at(i)))
-		{
-			return faces.at(i);
-		}
-	}
-	return NULL;
+	return Optimization::findNode(point, faces);
 }
 
-bool HalfEdgeMesh2D::isPointInNode(Vector2 point, Face* node)
+bool HalfEdgeMesh2D::isPointInNode(const Vector2& point, Face* node)
 {
-	Edge* currentEdge = node->edge;
-	//Looping through every edge in the current node
-	do
-	{
-		Vector2 vectorOfEdge = (currentEdge->next->vertex->pos - currentEdge->vertex->pos).vectNormalize();
-		Vector2 vectorToPoint = point-currentEdge->vertex->pos;
-		if (vectorToPoint.vect[0] != 0 && vectorToPoint.vect[1] != 0)
-		{
-			vectorToPoint = vectorToPoint.vectNormalize();
-		}
-		//clockwise as halfedgemesh is clockwise
-		Vector2 sideVectorToEdge = Vector2(vectorOfEdge.vect[1], -vectorOfEdge.vect[0]).vectNormalize();
-
-		if (sideVectorToEdge.dotAKAscalar(vectorToPoint) > 0)
-		{
-			return false;
-		}
-
-		currentEdge = currentEdge->next;
-
-	} while (currentEdge != node->edge);
-	return true;
+	return Optimization::isPointInNode(point, node);
 }
 
 void HalfEdgeMesh2D::quadrangulate()
 {
-	std::list<Face*> toOptimize;
-	Vector<Face*> optimized;
-	for (int i = 0; i < faces.size(); i++)
-	{
-		toOptimize.push_back(faces.at(i));
-	}
-	
-	while (!toOptimize.empty()) 
-	{
-		Face* face = toOptimize.front();
-		toOptimize.pop_front();
-		if (!face->joined) 
-		{
-			if (tryToJoin(face)){
-				toOptimize.push_back(face);
-			}
-			else
-				optimized.push_back(face);
-		}
-	}
-	faces = optimized;
+	Optimization::quadrangulate(faces);
 }
 
 void HalfEdgeMesh2D::optimizeMesh()
 {
-	std::list<Face*> toOptimize;
-	Vector<Face*> optimized;
-	for (int i = 0; i < faces.size(); i++)
-	{
-		toOptimize.push_back(faces.at(i));
-	}
-
-	while (!toOptimize.empty())
-	{
-		Face* face = toOptimize.front();
-		toOptimize.pop_front();
-
-		if (!face->joined)
-		{
-			if (tryToJoin2(face)){
-				toOptimize.push_back(face);
-			}
-			else
-				optimized.push_back(face);
-		}
-	}
-
-	faces = optimized;
-}
-
-
-bool HalfEdgeMesh2D::tryToJoin(Face* face)
-{
-	Edge* currentEdge = face->edge;
-	do {
-		Edge* pair = currentEdge->pair;
-		if (pair && turnsRight(currentEdge->prev, pair->next) && turnsRight(pair->prev, currentEdge->next)) {
-			pair->face->joined = true;
-			moveEdgesToFace(pair, face);
-
-			currentEdge->prev->next = pair->next;
-			pair->next->prev = currentEdge->prev;
-
-			pair->prev->next = currentEdge->next;
-			currentEdge->next->prev = pair->prev;
-
-			if (currentEdge == face->edge)
-				face->edge = currentEdge->prev;
-			joinSharedEdges(face);
-			return true;
-		}
-		currentEdge = currentEdge->next;
-	} while (currentEdge != face->edge);
-
-	return false;
-}
-
-bool HalfEdgeMesh2D::tryToJoin2(Face* face)
-{
-	Edge* currentEdge = face->edge;
-	do {
-		Edge* pair = currentEdge->pair;
-		if (pair && turnsRightOrParallel(currentEdge->prev, pair->next) && turnsRightOrParallel(pair->prev, currentEdge->next)) {
-			pair->face->joined = true;
-			moveEdgesToFace(pair, face);
-
-			currentEdge->prev->next = pair->next;
-			pair->next->prev = currentEdge->prev;
-
-			pair->prev->next = currentEdge->next;
-			currentEdge->next->prev = pair->prev;
-
-			if (currentEdge == face->edge)
-				face->edge = currentEdge->prev;
-			joinSharedEdges(face);
-			return true;
-		}
-		currentEdge = currentEdge->next;
-	} while (currentEdge != face->edge);
-
-	return false;
-}
-
-bool HalfEdgeMesh2D::turnsRight(Edge* e1, Edge* e2)
-{
-	Vector2 vectorOfEdge1 = e1->next->vertex->pos - e1->vertex->pos;
-	Vector2 vectorOfEdge2 = e2->next->vertex->pos - e2->vertex->pos;
-	
-	Vector2 sideVectorToEdge = Vector2(vectorOfEdge1.vect[1], -vectorOfEdge1.vect[0]);
-	return sideVectorToEdge.dotAKAscalar(vectorOfEdge2) < 0;
-}
-
-bool HalfEdgeMesh2D::turnsRightOrParallel(Edge* e1, Edge* e2)
-{
-	Vector2 vectorOfEdge1 = e1->next->vertex->pos - e1->vertex->pos;
-	Vector2 vectorOfEdge2 = e2->next->vertex->pos - e2->vertex->pos;
-
-	Vector2 sideVectorToEdge = Vector2(vectorOfEdge1.vect[1], -vectorOfEdge1.vect[0]);
-	return sideVectorToEdge.dotAKAscalar(vectorOfEdge2) <= 0;
-}
-
-void HalfEdgeMesh2D::moveEdgesToFace(Edge* startEdge, Face* destFace)
-{
-	Edge* currentEdge = startEdge;
-	do
-	{
-		currentEdge->face = destFace;
-
-		currentEdge = currentEdge->next;
-	} while (currentEdge != startEdge);
-}
-
-void HalfEdgeMesh2D::joinSharedEdges(Face* testedFace)
-{
-	Edge* currentEdge = testedFace->edge;
-	do {
-		Edge* pair = currentEdge->next->pair;
-		if (pair && currentEdge->pair == pair->next) {
-			if (currentEdge->next == testedFace->edge)
-				testedFace->edge = currentEdge->next->next;
-			if (pair->next == pair->face->edge)
-				pair->face->edge = pair;
-			currentEdge->next = currentEdge->next->next;
-			currentEdge->next->prev = currentEdge;
-			pair->next = pair->next->next;
-			pair->next->prev = pair;
-			currentEdge->pair = pair;
-			pair->pair = currentEdge;
-		}
-		currentEdge = currentEdge->next;
-	} while (currentEdge != testedFace->edge);
+	Optimization::optimizeMesh(faces);
 }

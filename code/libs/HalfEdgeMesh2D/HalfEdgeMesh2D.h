@@ -3,6 +3,7 @@
 #include "MyMathLib.h"
 #include "Vector.h"
 #include "PoolParty.h"
+#include <unordered_map>
 
 class Vertex;
 class Edge;
@@ -30,16 +31,12 @@ public:
 	Face* endFace;
 	mwm::Vector2 startFacePos;
 	mwm::Vector2 endFacePos;
-	Face* findNode(mwm::Vector2 position);
-	bool isPointInNode(mwm::Vector2 point, Face* node);
+
+	Face* findNode(const mwm::Vector2& position);
+	bool isPointInNode(const mwm::Vector2& point, Face* node);
 	void quadrangulate();
 	void optimizeMesh();
-	bool tryToJoin(Face*);
-	bool tryToJoin2(Face*);
-	void moveEdgesToFace(Edge* edgeOfAnotherFace, Face* currentFace);
-	void joinSharedEdges(Face*);
-	bool turnsRight(Edge*, Edge*);
-	bool turnsRightOrParallel(Edge*, Edge*);
+
 private:
 	
 	

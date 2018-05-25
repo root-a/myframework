@@ -252,7 +252,7 @@ void PhysicsManager::GenerateContacts(Vector3& MTV, const double& penetration, V
 	}
 	else if (axisNumRes < 6)
 	{
-		GenerateContactPointToFace2(-1.f*toCentre, MTV, penetration, twoObj, oneObj, axisNumRes - 3);
+		GenerateContactPointToFace2(-1.0*toCentre, MTV, penetration, twoObj, oneObj, axisNumRes - 3);
 	}
 	else
 	{
@@ -387,9 +387,9 @@ void PhysicsManager::GenerateContactPointToFace2(
 	//we get 3
 	//3 - 1 = 2 -> above plane
 
-	Vector3 normTest(0.f,1.f,0.f);
-	Vector3 pointOnPlane(4.f,0.f,2.f); //(4,0,2) has dist 0 while (4,1,2) has dist 1 and (4,-1,2) has -1 dist
-	Vector3 pointTest(0.f, -3.f, 0.f);
+	Vector3 normTest(0.0,1.0,0.0);
+	Vector3 pointOnPlane(4.0,0.0,2.0); //(4,0,2) has dist 0 while (4,1,2) has dist 1 and (4,-1,2) has -1 dist
+	Vector3 pointTest(0.0, -3.0, 0.0);
 	double signedDist = normTest.dotAKAscalar(pointTest);
 	double signedDist2 = normTest.dotAKAscalar(pointOnPlane);
 	
@@ -399,8 +399,8 @@ void PhysicsManager::GenerateContactPointToFace2(
 	CalcFaceVertices(oneObj->object->node.position, reference_face, mtv, oneObj->obb.model, oneObj->obb.halfExtent);
 
 	//size_t vertCount = 0;
-	Vector3 normal1Neg = -1.f*normal1;
-	Vector3 normal2Neg = -1.f*normal2;
+	Vector3 normal1Neg = -1.0*normal1;
+	Vector3 normal2Neg = -1.0*normal2;
 
 	clipPolygon.clear();
 
@@ -707,10 +707,10 @@ inline void PhysicsManager::ClaculateIncidentAxis(Vector3& incident_axis, const 
 			incident_tracker = most_neg;
 			incident_axis = two.getAxis(i);
 		}
-		most_neg = (-1.f * two.getAxis(i)).dotAKAscalar(smallestAxis);
+		most_neg = (-1.0 * two.getAxis(i)).dotAKAscalar(smallestAxis);
 		if (most_neg < incident_tracker){
 			incident_tracker = most_neg;
-			incident_axis = -1.f * two.getAxis(i);
+			incident_axis = -1.0 * two.getAxis(i);
 		}
 	}
 }
@@ -762,7 +762,7 @@ void PhysicsManager::DrawSidePlanes(const Vector3& normal1, const Vector3& norma
 	//let's draw calculated planes with normals at plane points
 	DebugDraw::Instance()->line.mat->SetColor(1, 0, 0); //red
 	DebugDraw::Instance()->point.mat->SetColor(1, 0, 1);
-	DebugDraw::Instance()->DrawPlaneN(-1.f*normal1, vertexOnPlane1);
+	DebugDraw::Instance()->DrawPlaneN(-1.0*normal1, vertexOnPlane1);
 
 	DebugDraw::Instance()->line.mat->SetColor(0, 1, 0); //green
 	DebugDraw::Instance()->point.mat->SetColor(1, 0, 1);
@@ -770,7 +770,7 @@ void PhysicsManager::DrawSidePlanes(const Vector3& normal1, const Vector3& norma
 
 	DebugDraw::Instance()->line.mat->SetColor(0, 0, 1); //blue
 	DebugDraw::Instance()->point.mat->SetColor(1, 0, 1);
-	DebugDraw::Instance()->DrawPlaneN(-1.f*normal2, vertexOnPlane3);
+	DebugDraw::Instance()->DrawPlaneN(-1.0*normal2, vertexOnPlane3);
 
 	DebugDraw::Instance()->line.mat->SetColor(1, 1, 0); //yellow
 	DebugDraw::Instance()->point.mat->SetColor(1, 0, 1);
