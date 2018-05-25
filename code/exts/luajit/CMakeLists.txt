@@ -25,10 +25,19 @@ set(myluajit_SRC
 	luaJIT.c
 )
 #LINK_DIRECTORIES(${CMAKE_CURRENT_SOURCE_DIR}/lib)
-FIND_LIBRARY(lua51Lib lua51 HINT lib/)
-FIND_LIBRARY(luaJitLib luajit HINT lib/)
-FIND_LIBRARY(buildvmLib buildvm HINT lib/)
-FIND_LIBRARY(miniluaLib minilua HINT lib/)
+if("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+    message(STATUS "Target is 64 bits")
+    FIND_LIBRARY(lua51Lib lua51 HINT lib64/)
+    FIND_LIBRARY(luaJitLib luajit HINT lib64/)
+    FIND_LIBRARY(buildvmLib buildvm HINT lib64/)
+    FIND_LIBRARY(miniluaLib minilua HINT lib64/)
+else("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
+    message(STATUS "Target is 32 bits")
+    FIND_LIBRARY(lua51Lib lua51 HINT lib32/)
+    FIND_LIBRARY(luaJitLib luajit HINT lib32/)
+    FIND_LIBRARY(buildvmLib buildvm HINT lib32/)
+    FIND_LIBRARY(miniluaLib minilua HINT lib32/)
+endif("${CMAKE_SIZEOF_VOID_P}" EQUAL "8")
 
 ADD_LIBRARY(luajit STATIC ${myluajit_SRC} ${myluajit_HEAD})
 
