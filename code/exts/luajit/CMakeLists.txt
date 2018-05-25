@@ -4,7 +4,6 @@
 
 PROJECT(luajit)
 INCLUDE_DIRECTORIES("include/")
-INCLUDE_DIRECTORIES("lib/")
 
 #FILE(GLOB luaJIT_headers "src/*.h")
 #FILE(GLOB luaJIT_sources "src/*.c")
