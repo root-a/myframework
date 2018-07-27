@@ -4,6 +4,8 @@ namespace mwm
 class Vector4F;
 class Vector3F;
 class Matrix3F;
+class QuaternionF;
+
 struct loc;
 
 class Matrix4F
@@ -30,13 +32,18 @@ public:
 	Vector3F getScale() const;
 	Vector3F getPosition() const;
 	Vector3F getUp() const;
-	Vector3F getRight() const;
-	Vector3F getForwardNegZ() const;
-	Vector3F getBackPosZ() const;
+	Vector3F getInvUp() const;
+	Vector3F getLeft() const;
+	Vector3F getInvLeft() const;
+	Vector3F getBack() const;
+	Vector3F getInvBack() const;
+	Vector3F getForward() const;
+	Vector3F getInvForward() const;
 	Vector3F getAxis(int axis) const;
 	Vector3F getAxisNormalized(int axis) const;
 
 	Vector3F extractScale() const;
+	QuaternionF toQuaternion() const;
 
 	void setUp(const Vector3F& axis);
 	void setRight(const Vector3F& axis);

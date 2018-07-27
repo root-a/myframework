@@ -38,7 +38,7 @@ void Object::AssignMaterial(Material* mat)
 void Object::AssignMesh(Mesh* mesh)
 {
 	this->mesh = mesh;
-	SetMeshOffset(mesh->obj->CenterOfMass()*-1.0);
+	this->node.meshCenter = mesh->obj->center_of_mesh;
 	CalculateRadius();
 }
 
@@ -50,6 +50,11 @@ Vector3 Object::extractScale()
 Vector3 Object::getScale()
 {
 	return this->node.totalScale;
+}
+
+mwm::Vector3 Object::GetLocalScale()
+{
+	return this->node.localScale;
 }
 
 void Object::SetPosition(const Vector3& vector )
@@ -75,7 +80,6 @@ void Object::SetScale(const Vector3& vector )
 	this->node.totalScale = this->node.localScale * parentScale;
 
 	CalculateRadius();
-	if (RigidBody* body = GetComponent<RigidBody>()) body->UpdateHExtentsAndMass();
 }
 
 void Object::Translate(const Vector3& vector)
@@ -93,24 +97,24 @@ void Object::SetOrientation(const Quaternion& q)
 	this->node.orientation = q;
 }
 
-Quaternion Object::GetOrientation()
+Quaternion Object::GetLocalOrientation()
 {
 	return this->node.orientation;
 }
 
-void Object::SetMeshOffset(const Vector3& offset)
+mwm::Matrix3 Object::GetWorldRotation3()
 {
-	meshOffset = offset;
+	return this->node.TopDownTransform.extractRotation3();
 }
 
-Matrix4 Object::CalculateOffsettedModel() const
+mwm::Matrix4 Object::GetWorldRotation()
 {
-	//apply transformation matrix from node
-	//we do physics around the center of the object
-	//and in cases when pivot point is not in the center of the object 
-	//we have to apply the offset for the graphics to match their physical position 
-	Matrix4 offsetMatrix = Matrix4::translate(meshOffset);
-	return offsetMatrix*this->node.TopDownTransform;
+	return this->node.TopDownTransform.extractRotation();
+}
+
+mwm::Quaternion Object::GetWorldOrientation()
+{
+	return this->node.TopDownTransform.extractRotation3().toQuaternion();
 }
 
 void Object::AddComponent(Component* newComponent)
@@ -135,8 +139,7 @@ void Object::CalculateRadius()
 		Vector3 halfExtents = (mesh->obj->dimensions*node.totalScale)*0.5;
 		if (mesh->obj->name.compare("sphere") == 0)
 		{
-			//radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere
-			radius = halfExtents.x;
+			radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere //picking max component in case sphere was not scaled uniformly
 		}
 		else
 		{

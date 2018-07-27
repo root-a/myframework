@@ -26,10 +26,10 @@ public:
 	void LoadAndIndexOBJ(char* path);
 	
 	mwm::Vector3 GetDimensions();
-	mwm::Vector3 CenterOfMass();
+	mwm::Vector3 CenterOfOMesh();
 	
 	mwm::Vector3 dimensions;
-	mwm::Vector3 center_of_mass;
+	mwm::Vector3 center_of_mesh;
 
 	void CalculateDimensions();
 private:

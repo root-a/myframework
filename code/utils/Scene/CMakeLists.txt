@@ -13,7 +13,7 @@ SET(files_scene
 SOURCE_GROUP("scene" FILES ${files_scene})
 
 ADD_LIBRARY(scene STATIC ${files_scene})
-TARGET_LINK_LIBRARIES(scene graphics_storage physics_manager)
+TARGET_LINK_LIBRARIES(scene graphics_storage physics_manager light)
 SET_TARGET_PROPERTIES(scene PROPERTIES LINKER_LANGUAGE CXX)
 SET_TARGET_PROPERTIES(scene PROPERTIES FOLDER "MyUtils")
 TARGET_INCLUDE_DIRECTORIES(scene PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

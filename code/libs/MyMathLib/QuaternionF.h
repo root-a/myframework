@@ -36,6 +36,15 @@ public:
 	Matrix4F ConvertToMatrix() const;
 	Matrix3F ConvertToMatrix3F() const;
 
+	Vector3F getUp() const;
+	Vector3F getInvUp() const;
+	Vector3F getLeft() const;
+	Vector3F getInvLeft() const;
+	Vector3F getBack() const;
+	Vector3F getInvBack() const;
+	Vector3F getForward() const;
+	Vector3F getInvForward() const;
+
 	/// Overloaded access operator for Vector
 	float& operator[](unsigned int index);
 };

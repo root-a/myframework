@@ -5,23 +5,16 @@
 #include "Vector3F.h"
 namespace mwm
 {
-Vector3::Vector3(double x, double y, double z)
+Vector3::Vector3(double x, double y, double z) : x(x), y(y), z(z) {}
+
+Vector3::Vector3(const Vector2& vec, double zIn)
 {
-	this->x = x;
-	this->y = y;
-	this->z = z;
+	x = vec.x;
+	y = vec.y;
+	z = zIn;
 }
 
-Vector3::Vector3(const Vector2& vec, double z)
-{
-	this->x = vec.x;
-	this->y = vec.y;
-	this->z = z;
-}
-
-Vector3::~Vector3()
-{
-}
+Vector3::~Vector3() {}
 
 /*! \fn add vectors amd return new one*/
 Vector3 Vector3::operator+ (const Vector3& right) const
@@ -144,7 +137,7 @@ bool Vector3::operator==(const Vector3& v)const
 /*! \fn operator[] overload for indexing */
 double& Vector3::operator[] (int index)
 {
-	return this->vect[index];
+	return vect[index];
 }
 
 Vector3F Vector3::toFloat() const

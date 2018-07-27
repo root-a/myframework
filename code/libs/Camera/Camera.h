@@ -3,7 +3,7 @@
 class Camera
 {
 public:
-	Camera(const mwm::Vector3& initPos, int windowWidth, int windowHeight);
+	Camera(const mwm::Vector3& initPos, int windowWidth, int windowHeight, double newNearPlane = 0.1, double newFarPlane = 100.0, double newFov = 45.0);
 	~Camera();
 	void Update(double deltaTime);
 
@@ -25,6 +25,10 @@ public:
 	
 	void SetFarPlane(double newFarPlane);
 
+	void SetFarNearFov(double newFov, double newNearPlane, double newFarPlane);
+
+	mwm::Vector3 ConvertMousePosToWorldDir(double mousePosX, double mousePosY);
+
 	mwm::Vector3 getDirection();
 	mwm::Vector3 getUp();
 	mwm::Vector3 getRight();
@@ -44,22 +48,18 @@ public:
 
 	mwm::Matrix4 ProjectionMatrix;
 	mwm::Matrix4 ViewMatrix;
+	int windowWidth;
+	int windowHeight;
+	double windowMidX;
+	double windowMidY;
 private:
 	
 	mwm::Vector3 direction;
 	mwm::Vector3 up;
 	mwm::Vector3 right;
 	mwm::Vector3 position;
-
-	int windowWidth;
-	int windowHeight;
-	double windowMidX;
-	double windowMidY;
-
-	// Initial horizontal angle : toward -Z
-	double horizontalAngle;
-	// Initial vertical angle : none
 	double verticalAngle;
+	double horizontalAngle;
 
 	double speed;
 	double mouseSpeed;

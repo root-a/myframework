@@ -1,12 +1,13 @@
 #include "Material.h"
+#include "Texture.h"
 
 using namespace mwm;
 
 Material::Material()
 {
-	ambientIntensity = 0.25f;
+	metallic = 1.f;
 
-	specularIntensity = 0.3f;
+	specularIntensity = 0.25f;
 
 	diffuseIntensity = 1.f;
 
@@ -24,18 +25,18 @@ Material::~Material()
 {
 }
 
-void Material::AssignTexture(Texture2D *texture)
+void Material::AssignTexture(Texture *newTexture)
 {
-	this->texture2D = texture;
+	this->texture = newTexture;
 }
 void Material::SetDiffuseIntensity(float d)
 {
 	this->diffuseIntensity = d;
 }
 
-void Material::SetAmbientIntensity(float a)
+void Material::SetMetallic(float m)
 {
-	this->ambientIntensity = a;
+	this->metallic = m;
 }
 
 void Material::SetSpecularIntensity(float spec)

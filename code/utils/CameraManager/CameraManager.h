@@ -10,10 +10,8 @@ public:
 	void AddCamera(const char* name, Camera* cam);
 	Camera* GetCurrentCamera();
 	void SetCurrentCamera(const char* name);
-	void Update();
+	void Update(double deltaTime);
 	mwm::Matrix4 ViewProjection;
-	mwm::Vector3 up;
-	mwm::Vector3 right;
 private:
 	
 	CameraManager();

@@ -3,21 +3,15 @@
 #include "Vector3F.h"
 namespace mwm
 {
-Vector2F::Vector2F(float x, float y)
-{
-	this->x = x;
-	this->y = y;
-}
+Vector2F::Vector2F(float x, float y) : x(x), y(y) {}
 
 Vector2F::Vector2F(const Vector2F& vec)
 {
-	this->x = vec.x;
-	this->y = vec.y;
+	x = vec.x;
+	y = vec.y;
 }
 
-Vector2F::~Vector2F()
-{
-}
+Vector2F::~Vector2F() {}
 
 /*! \fn add vectors amd return new one*/
 Vector2F Vector2F::operator+ (const Vector2F& right) const

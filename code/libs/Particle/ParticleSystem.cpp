@@ -3,7 +3,7 @@
 #include "Gl/glew.h"
 #include "Particle.h"
 #include "Object.h"
-#include "Time.h"
+#include "Times.h"
 #include "CameraManager.h"
 #include "Camera.h"
 #include "ShaderManager.h"
@@ -159,7 +159,7 @@ void ParticleSystem::UpdateBuffers()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4), g_particule_color_data);
 }
 
-void ParticleSystem::Draw(const Matrix4& ViewProjection, GLuint currentShaderID, const Vector3F& cameraUp, const Vector3F& cameraRight)
+void ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, const Vector3F& cameraUp, const Vector3F& cameraRight)
 {
 	UpdateBuffers();
 
@@ -177,7 +177,7 @@ void ParticleSystem::Draw(const Matrix4& ViewProjection, GLuint currentShaderID,
 	glUniform3fv(CameraRightHandle, 1, &cameraRight.x);
 	glUniform3fv(CameraUpHandle, 1, & cameraUp.x);
 
-	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
+	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection[0][0]);
 
 	// Bind our texture in Texture Unit 0
 	glActiveTexture(GL_TEXTURE0);
@@ -245,8 +245,8 @@ void ParticleSystem::SetSize(float size)
 
 void ParticleSystem::Update()
 {
-	GenerateNewParticles(Time::deltaTime);
-	aliveParticles = UpdateParticles(Time::deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
+	GenerateNewParticles(Times::Instance()->deltaTime);
+	aliveParticles = UpdateParticles(Times::Instance()->deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
 	SortParticles();
 }
 

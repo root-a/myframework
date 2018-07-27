@@ -3,6 +3,7 @@
 #include "Matrix3F.h"
 #include "Vector3F.h"
 #include "mLoc.h"
+#include "QuaternionF.h"
 
 namespace mwm
 {
@@ -14,7 +15,7 @@ Matrix3F::Matrix3F(const Matrix3F& matrix)
 /*! \fn in constructor matrix values are set to 0 with memset*/
 Matrix3F::Matrix3F()
 {
-	memset(this->_matrix, 0, sizeof this->_matrix);
+	memset(_matrix, 0, sizeof _matrix);
 }
 
 Matrix3F::~Matrix3F()
@@ -36,19 +37,19 @@ Matrix3F Matrix3F::identityMatrix()
 /*! \fn operator[] overload for indexing */
 float* Matrix3F::operator[] (int index)
 {
-	return this->_matrix[index];
+	return _matrix[index];
 }
 
 /*! \fn operator[] overload for indexing */
 float Matrix3F::operator[](loc const& mLoc)
 {
-	return this->_matrix[mLoc.x][mLoc.y];
+	return _matrix[mLoc.x][mLoc.y];
 }
 
 /*! \fn operator() overload for indexing*/
 float Matrix3F::operator() (int row, int col)
 {
-	return this->_matrix[row][col];
+	return _matrix[row][col];
 }
 
 /*! \fn transpose matrix returns new matrix*/
@@ -60,7 +61,7 @@ Matrix3F Matrix3F::operator~ ()
 		for (int c = 0; c < 3; c++)
 		{
 			//cout << first._matrix[r][c] << " result är:" <<  result._matrix[r][c] << endl;
-			realTemp._matrix[r][c] = this->_matrix[c][r];
+			realTemp._matrix[r][c] = _matrix[c][r];
 		}
 	}
 	return realTemp;
@@ -73,7 +74,7 @@ Matrix3F Matrix3F::operator+(const Matrix3F& right)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			realTemp._matrix[r][c] = this->_matrix[r][c] + right._matrix[r][c];
+			realTemp._matrix[r][c] = _matrix[r][c] + right._matrix[r][c];
 		}
 	}
 	return realTemp;
@@ -101,7 +102,7 @@ Matrix3F Matrix3F::operator* (const float& right)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			temp._matrix[i][c] = this->_matrix[i][c] * right;
+			temp._matrix[i][c] = _matrix[i][c] * right;
 
 		}
 	}
@@ -121,7 +122,7 @@ Matrix3F Matrix3F::operator* (const Matrix3F& right) // matrix multi
 		{
 			for (int k = 0; k < 3; k++)
 			{
-				temp._matrix[r][c] = temp._matrix[r][c] + this->_matrix[r][k] * right._matrix[k][c];
+				temp._matrix[r][c] = temp._matrix[r][c] + _matrix[r][k] * right._matrix[k][c];
 
 			}
 		}
@@ -136,9 +137,9 @@ Vector3F Matrix3F::operator* (const Vector3F& right) // matrix multi
 	float vy = right.y;
 	float vz = right.z;
 
-	float _x = this->_matrix[0][0] * vx + this->_matrix[1][0] * vy + this->_matrix[2][0] * vz;
-	float _y = this->_matrix[0][1] * vx + this->_matrix[1][1] * vy + this->_matrix[2][1] * vz;
-	float _z = this->_matrix[0][2] * vx + this->_matrix[1][2] * vy + this->_matrix[2][2] * vz;
+	float _x = _matrix[0][0] * vx + _matrix[1][0] * vy + _matrix[2][0] * vz;
+	float _y = _matrix[0][1] * vx + _matrix[1][1] * vy + _matrix[2][1] * vz;
+	float _z = _matrix[0][2] * vx + _matrix[1][2] * vy + _matrix[2][2] * vz;
 	return Vector3F(_x, _y, _z);
 }
 
@@ -149,7 +150,7 @@ Matrix3F& Matrix3F::operator= (const Matrix3F& right)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			this->_matrix[r][c] = right._matrix[r][c];
+			_matrix[r][c] = right._matrix[r][c];
 
 		}
 	}
@@ -164,7 +165,7 @@ bool Matrix3F::operator== (const Matrix3F& right)
 	{
 		for (int c = 0; c < 3; c++)
 		{
-			if (this->_matrix[r][c] != right._matrix[r][c])
+			if (_matrix[r][c] != right._matrix[r][c])
 			{
 				return false;
 			}
@@ -310,16 +311,16 @@ Matrix3F Matrix3F::inverse() const
 {
 	//find determinant
 	float a, b, c, d, e, f, g, h, i;
-	a = this->_matrix[0][0]; 	b = this->_matrix[0][1]; 	c = this->_matrix[0][2];
-	d = this->_matrix[1][0]; 	e = this->_matrix[1][1]; 	f = this->_matrix[1][2];
-	g = this->_matrix[2][0]; 	h = this->_matrix[2][1]; 	i = this->_matrix[2][2];
+	a = _matrix[0][0]; 	b = _matrix[0][1]; 	c = _matrix[0][2];
+	d = _matrix[1][0]; 	e = _matrix[1][1]; 	f = _matrix[1][2];
+	g = _matrix[2][0]; 	h = _matrix[2][1]; 	i = _matrix[2][2];
 
 	//double det = a*e*i + b*f*g + c*d*h - c*e*g - b*d*i - a*f*h; //or a(ei-fh)-b(id-fg)+c(dh-eg)
-	float det = Matrix3F::det(a, b, c, d, e, f, g, h, i);
+	float det = a * (e*i - f * h) - b * (i*d - f * g) + c * (d*h - e * g);
 	//cout << det << endl;
 	Matrix3F temp;
 	//matrix of minor, transpose and change signs in one
-	temp._matrix[0][0] = (e*i - f*h);	temp._matrix[0][1] = -(b*i - c*h);	temp._matrix[0][2] = (b*f - c*e);				// + - +
+	temp._matrix[0][0] = (e*i - f*h);	temp._matrix[0][1] = -(b*i - c*h);	temp._matrix[0][2] = (b*f - c*e);			// + - +
 	temp._matrix[1][0] = -(d*i - f*g);	temp._matrix[1][1] = (a*i - c*g);	temp._matrix[1][2] = -(a*f - c*d);			// - + -
 	temp._matrix[2][0] = (d*h - e*g);	temp._matrix[2][1] = -(a*h - b*g);	temp._matrix[2][2] = (a*e - b*d);			// + - +
 
@@ -347,9 +348,14 @@ Matrix3F Matrix3F::CuboidInertiaTensor(float mass, Vector3F dimensions)
 	return I;
 }
 
-Vector3F Matrix3F::getRight() const
+Vector3F Matrix3F::getLeft() const
 {
 	return Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
+}
+
+Vector3F Matrix3F::getInvLeft() const
+{
+	return Vector3F(_matrix[0][0], _matrix[1][0], _matrix[2][0]).vectNormalize();
 }
 
 Vector3F Matrix3F::getUp() const
@@ -357,14 +363,29 @@ Vector3F Matrix3F::getUp() const
 	return Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
 }
 
-Vector3F Matrix3F::getForwardNegZ() const
+Vector3F Matrix3F::getInvUp() const
+{
+	return Vector3F(_matrix[0][1], _matrix[1][1], _matrix[2][1]).vectNormalize();
+}
+
+Vector3F Matrix3F::getBack() const
 {
 	return Vector3F(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
 }
 
-Vector3F Matrix3F::getBackPosZ() const
+Vector3F Matrix3F::getInvBack() const
+{
+	return Vector3F(_matrix[0][2] * -1.f, _matrix[1][2] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
+}
+
+Vector3F Matrix3F::getForward() const
 {
 	return Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
+}
+
+Vector3F Matrix3F::getInvForward() const
+{
+	return Vector3F(_matrix[0][2], _matrix[1][2], _matrix[2][2]).vectNormalize();
 }
 
 void Matrix3F::setUp(const Vector3F& axis)
@@ -430,5 +451,43 @@ Vector3F Matrix3F::extractScale() const
 	float scaleY = Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
 	float scaleZ = Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
 	return Vector3F(scaleX, scaleY, scaleZ);
+}
+
+QuaternionF Matrix3F::toQuaternion() const
+{
+	float tr = _matrix[0][0] + _matrix[1][1] + _matrix[2][2];
+	QuaternionF temp;
+	if (tr > 0) {
+		float S = sqrt(tr + 1.0) * 2; // S=4*qw
+		temp.w = 0.25 * S;
+		temp.x = (_matrix[1][2] - _matrix[2][1]) / S;
+		temp.y = (_matrix[2][0] - _matrix[0][2]) / S;
+		temp.z = (_matrix[0][1] - _matrix[1][0]) / S;
+	}
+
+	else if ((_matrix[0][0] > _matrix[1][1])&(_matrix[0][0] > _matrix[2][2])) {
+		float S = sqrt(1.0 + _matrix[0][0] - _matrix[1][1] - _matrix[2][2]) * 2; // S=4*qx
+		temp.w = (_matrix[1][2] - _matrix[2][1]) / S;
+		temp.x = 0.25 * S;
+		temp.y = (_matrix[1][0] + _matrix[0][1]) / S;
+		temp.z = (_matrix[2][0] + _matrix[0][2]) / S;
+	}
+
+	else if (_matrix[1][1] > _matrix[2][2]) {
+		float S = sqrt(1.0 + _matrix[1][1] - _matrix[0][0] - _matrix[2][2]) * 2; // S=4*qy
+		temp.w = (_matrix[2][0] - _matrix[0][2]) / S;
+		temp.x = (_matrix[1][0] + _matrix[0][1]) / S;
+		temp.y = 0.25 * S;
+		temp.z = (_matrix[2][1] + _matrix[1][2]) / S;
+	}
+
+	else {
+		float S = sqrt(1.0 + _matrix[2][2] - _matrix[0][0] - _matrix[1][1]) * 2; // S=4*qz
+		temp.w = (_matrix[0][1] - _matrix[1][0]) / S;
+		temp.x = (_matrix[2][0] + _matrix[0][2]) / S;
+		temp.y = (_matrix[2][1] + _matrix[1][2]) / S;
+		temp.z = 0.25 * S;
+	}
+	return temp;
 }
 }

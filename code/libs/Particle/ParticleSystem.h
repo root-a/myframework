@@ -18,7 +18,7 @@ public:
 	int UpdateParticles(double deltaTime, const mwm::Vector3& camPos);
 	void SortParticles();
 	void UpdateBuffers();
-	void Draw(const mwm::Matrix4& ViewProjection, GLuint currentShaderID, const mwm::Vector3F& cameraUp, const mwm::Vector3F& cameraRight);
+	void Draw(mwm::Matrix4F& ViewProjection, GLuint currentShaderID, const mwm::Vector3F& cameraUp, const mwm::Vector3F& cameraRight);
 	void SetTexture(GLuint textureID);
 	void SetEmissionRate(int emissionRate);
 	void SetColor(const mwm::Vector4F& color);
@@ -42,8 +42,6 @@ public:
 	GLuint CameraUpHandle;
 	GLuint ViewProjectionHandle;
 	GLuint TextureSamplerHandle;
-	void* operator new(size_t i) { return _mm_malloc(i, 16); }
-	void operator delete(void* p) { _mm_free(p); }
 
 protected:
 private:

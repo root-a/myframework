@@ -4,23 +4,16 @@
 
 namespace mwm
 {
-Vector3F::Vector3F(float x, float y, float z)
+Vector3F::Vector3F(float x, float y, float z) : x(x), y(y), z(z) {}
+
+Vector3F::Vector3F(const Vector2F& vec, float zIn)
 {
-	this->x = x;
-	this->y = y;
-	this->z = z;
+	x = vec.x;
+	y = vec.y;
+	z = zIn;
 }
 
-Vector3F::Vector3F(const Vector2F& vec, float z)
-{
-	this->x = vec.x;
-	this->y = vec.y;
-	this->z = z;
-}
-
-Vector3F::~Vector3F()
-{
-}
+Vector3F::~Vector3F() {}
 
 /*! \fn add vectors amd return new one*/
 Vector3F Vector3F::operator+ (const Vector3F& right) const
@@ -141,6 +134,6 @@ bool Vector3F::operator==(const Vector3F& v)const
 /*! \fn operator[] overload for indexing */
 float& Vector3F::operator[] (int index)
 {
-	return this->vect[index];
+	return vect[index];
 }
 }

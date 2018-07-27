@@ -4,6 +4,8 @@ namespace mwm
 class Vector3;
 class Matrix3F;
 struct loc;
+class Quaternion;
+
 /*! class for constructing matrix*/
 class Matrix3
 
@@ -31,12 +33,18 @@ public:
 	Matrix3 inverse() const; //!< calculates inverse of matrix4x4 and returns as new one
 	Matrix3F toFloat(); //!< just converts double matrix to float matrix
 	Vector3 getUp() const;
-	Vector3 getRight() const;
-	Vector3 getForwardNegZ() const;
-	Vector3 getBackPosZ() const;
+	Vector3 getInvUp() const;
+	Vector3 getLeft() const;
+	Vector3 getInvLeft() const;
+	Vector3 getBack() const;
+	Vector3 getInvBack() const;
+	Vector3 getForward() const;
+	Vector3 getInvForward() const;
 	Vector3 getAxis(int axis) const;
 	Vector3 getAxisNormalized(int axis) const;
 	Vector3 extractScale() const;
+	Vector3 getScale() const;
+	Quaternion toQuaternion() const;
 
 	void setUp(const Vector3& axis);
 	void setRight(const Vector3& axis);
@@ -47,9 +55,8 @@ public:
 	void setSkewSymmetric(const Vector3& vector);
 	static Matrix3 CuboidInertiaTensor(double mass, Vector3& dimensions);
 	static double det(double a, double b, double c, double d, double e, double f, double g, double h, double i); //!< calculates determinant of 3x3 matrix
-	static Matrix3 perspective(const double &near, const double &far, const double &fov); //!< function returning perspective projection specified with given parameters
-	static Matrix3 orthographic(const double &near, const double &far, const double &left, const double &right, const double &top, const double &bottom); //!< function returninng orthographic projection specified with given parameters
 	static Matrix3 translate(double x, double y, double z); //!< returns translation matrix with specified translation values
+	static Matrix3 translate(const Vector3 & right);
 	static Matrix3 scale(double x, double y, double z); //!< function returning new scale matrix with specified scale values
 	static Matrix3 scale(const Vector3& rightVect); //!< function returning new scale matrix with specified scale values
 	static Matrix3 rotateX(double angle); //!< function returning rotation matrix with specified rotation angle along X axis

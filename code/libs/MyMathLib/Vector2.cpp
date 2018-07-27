@@ -3,16 +3,12 @@
 #include "Vector3.h"
 namespace mwm
 {
-Vector2::Vector2(double x, double y)
-{
-	this->x = x;
-	this->y = y;
-}
+Vector2::Vector2(double x, double y) : x(x), y(y) {}
 
 Vector2::Vector2(const Vector2& vec)
 {
-	this->x = vec.x;
-	this->y = vec.y;
+	x = vec.x;
+	y = vec.y;
 }
 
 Vector2::~Vector2()
@@ -73,7 +69,7 @@ Vector2 Vector2::operator/ (const double& right) const
 	return Vector2(x / right, y / right);
 }
 
-bool Vector2::operator==(const Vector2& v)const
+bool Vector2::operator==(const Vector2& v) const
 {
 	if (x != v.x || y != v.y) return false;
 	else return true;

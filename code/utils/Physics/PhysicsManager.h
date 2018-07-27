@@ -78,6 +78,11 @@ public:
 	void Clear();
 	double satTime;
 	double pruneAndSweepTime;
+	double intersectionTestTime;
+	double generateContactsTime;
+	double processContactTime;
+	double positionalCorrectionTime;
+	int iterCount;
 	std::vector<Contact> contacts;
 	std::vector<mwm::Vector3> clipPolygon;
 	std::vector<mwm::Vector3> newClipPolygon;
@@ -92,7 +97,7 @@ private:
 	PhysicsManager& operator=(const PhysicsManager&);
 	void ProcessContact(const Contact& contact, mwm::Vector3&vel1, mwm::Vector3& ang_vel1, mwm::Vector3&vel2, mwm::Vector3& ang_vel2, double dtInv);
 	void CalcFaceVertices(const mwm::Vector3& pos, mwm::Vector3* vertices, const mwm::Vector3& axis, const mwm::Matrix3& model, const mwm::Vector3& halfExtents, bool counterClockwise = true);
-	void GenerateContactPointToFace2(mwm::Vector3 &toCentre, mwm::Vector3& smallestAxis, double smallestPen, RigidBody* oneObj, RigidBody* twoObj, int typeOfCollision);
+	
 
 	size_t DrawPlaneClipContacts(std::vector<mwm::Vector3> &contacts, const mwm::Vector3& normal, size_t vertCount, const mwm::Vector3F& normalColor);
 
@@ -106,7 +111,7 @@ private:
 
 	void CreateSidePlanesOffsetsAndNormals(const mwm::Vector3& onePosition, int typeOfCollision, mwm::Vector3 &normal1, const mwm::Matrix3 &one, mwm::Vector3 &normal2, double &neg_offset1, mwm::Vector3 oneHalfSize, double &pos_offset1, double &neg_offset2, double &pos_offset2);
 
-	void ClipFaceToSidePlane(const mwm::Vector3& normal, double plane_offset);
+	void ClipFaceToSidePlane(std::vector<mwm::Vector3>& clipPolygon, std::vector<mwm::Vector3>& newClipPolygon, const mwm::Vector3& normal, double plane_offset);
 	void DrawCollisionNormal(Contact& contact);
 	void DrawReferenceNormal(Contact& contact, int typeOfCollision);
 	void DrawSidePlanes(const mwm::Vector3& normal1, const mwm::Vector3& normal2, const mwm::Vector3& onePosition, int index1, int index2, const mwm::Vector3& oneHalfSize);
@@ -122,7 +127,7 @@ private:
 
 	void DrawReferenceAndIncidentFace(mwm::Vector3 * reference_face, mwm::Vector3 * incident_face);
 
-	void GenerateContactPointToFace(RigidBody* one, RigidBody* two, const mwm::Vector3 &toCentre, int axisNum, float smallestPen);
+	void GenerateContactPointToFace(mwm::Vector3 &toCentre, mwm::Vector3& smallestAxis, double smallestPen, RigidBody* oneObj, RigidBody* twoObj, int typeOfCollision);
 	void GenerateContactEdgeToEdge(const mwm::Vector3 &toCentre, mwm::Vector3& smallestAxis, double smallestPen, RigidBody* oneObj, RigidBody* twoObj, int axisNumRes, int& bestSingleAxis);
 	mwm::Vector3 contactPoint(const mwm::Vector3 &pOne, const mwm::Vector3 &dOne, double oneSize, const mwm::Vector3 &pTwo, const mwm::Vector3 &dTwo, double twoSize, bool useOne) const;
 
@@ -132,7 +137,7 @@ inline bool PhysicsManager::overlapOnAxis(const RigidBody* oneObj, const RigidBo
 {
 	if (axis.squareMag() < 0.0001) return true;
 
-	mwm::Vector3 axisn = axis.vectNormalize();
+	mwm::Vector3& axisn = axis.vectNormalize();
 
 	double penetration = penetrationOnAxis(oneObj, twoObj, axisn, toCentre);
 
@@ -149,8 +154,8 @@ inline bool PhysicsManager::overlapOnAxis(const RigidBody* oneObj, const RigidBo
 inline double PhysicsManager::penetrationOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const mwm::Vector3 &axis, const mwm::Vector3 &toCentre)
 {
 	// Project the half-size of one onto axis
-	double oneProject = transformToAxis(oneObj->obb.model, axis, oneObj->obb.halfExtent);
-	double twoProject = transformToAxis(twoObj->obb.model, axis, twoObj->obb.halfExtent);
+	double oneProject = transformToAxis(oneObj->obb.rot, axis, oneObj->obb.halfExtent);
+	double twoProject = transformToAxis(twoObj->obb.rot, axis, twoObj->obb.halfExtent);
 
 	// Project this onto the axis
 	double distance = abs(toCentre.dotAKAscalar(axis));

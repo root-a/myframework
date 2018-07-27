@@ -8,7 +8,6 @@
 #include "Mesh.h"
 #include "ShaderManager.h"
 #include "Render.h"
-
 using namespace mwm;
 
 DebugDraw::DebugDraw()
@@ -68,7 +67,7 @@ void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
 	shape->SetPosition(pos);
 	shape->SetScale(Vector3(0.5f, 0.5f, 0.5f));
 	shape->node.UpdateNodeTransform(Node());
-	Render::draw(shape, *View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
+	Render::Instance()->drawSingle(shape, *View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
 }
 
 void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float width)
@@ -214,4 +213,20 @@ void DebugDraw::DrawQuad()
 
 	// Draw the triangles !
 	glDrawElements(GL_TRIANGLES, plane.mesh->indicesSize, GL_UNSIGNED_SHORT, (void*)0); // mode, count, type, element array buffer offset
+}
+
+void DebugDraw::DrawMap(int posX, int posY, int width, int height, unsigned int textureHandle, int windowWidth, int windowHeight)
+{
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(posX, posY, width, height);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_SCISSOR_TEST);
+	glViewport(posX, posY, width, height);
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, textureHandle);
+	DrawQuad();
+
+	glBindTexture(GL_TEXTURE_2D, 0);
+	glViewport(0, 0, windowWidth, windowHeight);
 }

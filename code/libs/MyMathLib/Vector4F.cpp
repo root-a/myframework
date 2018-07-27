@@ -5,28 +5,22 @@
 namespace mwm
 {
 /*! \fn Vector4F constructor*/
-Vector4F::Vector4F(float x, float y, float z, float w)
-{
-	this->x = x;
-	this->y = y;
-	this->z = z;
-	this->w = w;
-}
+Vector4F::Vector4F(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 
 Vector4F::Vector4F(const Vector2F& v1, const Vector2F& v2)
 {
-	this->x = v1.x;
-	this->y = v1.y;
-	this->z = v2.x;
-	this->w = v2.y;
+	x = v1.x;
+	y = v1.y;
+	z = v2.x;
+	w = v2.y;
 }
 
-Vector4F::Vector4F(const Vector3F& v1, float w)
+Vector4F::Vector4F(const Vector3F& v1, float wIn)
 {
-	this->x = v1.x;
-	this->y = v1.y;
-	this->z = v1.z;
-	this->w = w;
+	x = v1.x;
+	y = v1.y;
+	z = v1.z;
+	w = wIn;
 }
 
 Vector4F::~Vector4F()
@@ -95,6 +89,6 @@ Vector4F Vector4F::vectNormalize() const
 /*! \fn operator[] overload for indexing */
 float& Vector4F::operator[] (int index)
 {
-	return this->vect[index];
+	return vect[index];
 }
 }

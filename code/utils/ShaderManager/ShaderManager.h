@@ -2,7 +2,7 @@
 // Created by marwac-9 on 9/17/15.
 //
 #include <string>
-#include <map>
+#include <unordered_map>
 
 class ShaderManager
 {
@@ -13,7 +13,7 @@ public:
     void SetCurrentShader(GLuint);
 	void DeleteShaders();
 	void AddShader(const char* shaderName, GLuint shader);
-	std::map<std::string, GLuint> shaderIDs;
+	std::unordered_map<std::string, GLuint> shaderIDs;
 private:
     ShaderManager();
     ~ShaderManager();

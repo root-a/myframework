@@ -10,7 +10,7 @@ class Object;
 class RigidBody : public Component
 {
 public:
-	RigidBody(Object* parent);
+	RigidBody(Object* owner);
 	~RigidBody();
 	
 	void SetAwake(const bool awake = true);
@@ -24,7 +24,8 @@ public:
 	void Update();
 	double mass;
 	double massInverse;
-	double damping;
+	double linearDamping;
+	double angularDamping;
 	mwm::Vector3 accum_force;
 	mwm::Vector3 accum_torque;
 	mwm::Matrix3 inverse_inertia_tensor;
@@ -34,7 +35,6 @@ public:
 	mwm::Vector3 acceleration;
 	mwm::Vector3 angular_acc;
 
-	mwm::Matrix3 extentsM;
 	mwm::AABB aabb;
 	mwm::OBB obb;
 	

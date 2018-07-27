@@ -6,6 +6,10 @@
 #include "PhysicsManager.h"
 #include "Mesh.h"
 #include "OBJ.h"
+#include "DirectionalLight.h"
+#include "SpotLight.h"
+#include "PointLight.h"
+
 using namespace mwm;
 
 Scene::Scene()
@@ -26,6 +30,17 @@ Scene* Scene::Instance()
 	return &instance;
 }
 
+Object* Scene::addChild()
+{
+	Object* child = new Object();
+	SceneObject->node.addChild(&child->node);
+
+	child->ID = idCounter;
+	idCounter++;
+
+	return child;
+}
+
 Object* Scene::addChildTo(Object* parentObject)
 {
 	Object* child = new Object();
@@ -39,8 +54,9 @@ Object* Scene::addChildTo(Object* parentObject)
 
 void Scene::addRandomObject(const Vector3& pos)
 {
-	Object* newChild = Scene::addChildTo(SceneObject);
+	Object* newChild = Scene::addChild();
 	pickingList[newChild->ID] = newChild;
+	renderList.push_back(newChild);
 
 	int index = rand() % (GraphicsStorage::meshes.size());
 	float rS = (float)(rand() % 5);
@@ -59,10 +75,21 @@ void Scene::addRandomObject(const Vector3& pos)
 	newChild->AssignMaterial(newMaterial);
 }
 
-Object* Scene::addObjectToScene(const char* name, const Vector3& pos)
+void Scene::registerForPicking(Object * object)
 {
-	Object* newChild = Scene::addChildTo(SceneObject);
+	pickingList[object->ID] = object;
+}
+
+void Scene::unregisterForPicking(Object * object)
+{
+	pickingList.erase(object->ID);
+}
+
+Object* Scene::addObject(const char* name, const Vector3& pos)
+{
+	Object* newChild = Scene::addChild();
 	pickingList[newChild->ID] = newChild;
+	renderList.push_back(newChild);
 
 	newChild->SetPosition(pos);
 	newChild->AssignMesh(GraphicsStorage::meshes[name]);
@@ -77,6 +104,7 @@ Object* Scene::addObjectTo(Object* parent, const char* name /*= "cube"*/, const 
 {
 	Object* newChild = Scene::addChildTo(parent);
 	pickingList[newChild->ID] = newChild;
+	renderList.push_back(newChild);
 
 	newChild->SetPosition(pos);
 	newChild->AssignMesh(GraphicsStorage::meshes[name]);
@@ -100,14 +128,14 @@ void Scene::addRandomlyObjects(const char* name, int num, int min, int max)
 {
 	for (int i = 0; i < num; i++)
 	{
-		Object* obj = addObjectToScene(name, generateRandomIntervallVectorCubic(min, max));
+		Object* obj = addObject(name, generateRandomIntervallVectorCubic(min, max));
 	}
 }
 
 
 Object* Scene::addPhysicObject(const char* name, const Vector3& pos)
 {
-	Object* object = addObjectToScene(name, pos);
+	Object* object = addObject(name, pos);
 	RigidBody* body = new RigidBody(object);
 	object->AddComponent(body);
 	PhysicsManager::Instance()->RegisterRigidBody(body);
@@ -125,10 +153,12 @@ void Scene::addRandomlyPhysicObjects(const char* name, int num, int min, int max
 
 void Scene::Clear()
 {
-	for (auto& obj : pickingList)
+	for (auto& obj : renderList)
 	{
-		delete obj.second;
+		delete obj;
 	}
+	renderList.clear();
+
 	pickingList.clear();
 
 	SceneObject->node.children.clear();
@@ -140,21 +170,34 @@ void Scene::Clear()
 	}
 	pointLights.clear();
 
+	for (auto& obj : spotLights)
+	{
+		delete obj;
+	}
+	spotLights.clear();
+
 	for (auto& obj : directionalLights)
 	{
 		delete obj;
 	}
 	directionalLights.clear();
 
+	directionalLightComponents.clear();
+	spotLightComponents.clear();
+	pointLightComponents.clear();
+
 	SceneObject->ClearComponents(); //just clear components
 }
 
-Object* Scene::addPointLight(const Vector3& position, const Vector3F& color)
+Object* Scene::addPointLight(bool castShadow, const Vector3& position, const Vector3F& color)
 {
-	Object* newChild = Scene::addChildTo(SceneObject);
-	
-	newChild->SetPosition(position);
+	Object* newChild = Scene::addChild();
+	PointLight * pointLightComp = new PointLight();
+	if (castShadow) pointLightComp->GenerateShadowMapBuffer(1024, 1024);
+	newChild->AddComponent(pointLightComp);
+	pointLightComponents.push_back(pointLightComp);
 
+	newChild->SetPosition(position);
 	Material* newMaterial = new Material();
 	newMaterial->SetColor(color); 
 	newChild->AssignMesh(GraphicsStorage::meshes["sphere"]);
@@ -165,10 +208,89 @@ Object* Scene::addPointLight(const Vector3& position, const Vector3F& color)
 	return newChild;
 }
 
-Object* Scene::addDirectionalLight(const Vector3F& direction, const Vector3F& color /*= Vector3(1, 1, 1)*/)
+Object * Scene::addPointLightTo(Object * parent, bool castShadow, const mwm::Vector3 & position, const mwm::Vector3F & color)
 {
-	Object* newChild = Scene::addChildTo(SceneObject);
+	Object* newChild = Scene::addChildTo(parent);
+	PointLight * pointLightComp = new PointLight();
+	if (castShadow) pointLightComp->GenerateShadowMapBuffer(1024, 1024);
+	newChild->AddComponent(pointLightComp);
+	pointLightComponents.push_back(pointLightComp);
 
+	newChild->SetPosition(position);
+	Material* newMaterial = new Material();
+	newMaterial->SetColor(color);
+	newChild->AssignMesh(GraphicsStorage::meshes["sphere"]);
+	GraphicsStorage::materials.push_back(newMaterial);
+	newChild->AssignMaterial(newMaterial);
+	newChild->SetScale(Vector3(4.0, 4.0, 4.0));
+	pointLights.push_back(newChild);
+	return newChild;
+}
+
+Object * Scene::addSpotLight(bool castShadow, const mwm::Vector3 & position, const mwm::Vector3F & color)
+{
+	Object* newChild = Scene::addChild();
+	SpotLight * spotLightComp = new SpotLight(newChild);
+	if (castShadow) spotLightComp->GenerateShadowMapBuffer(256,256);
+	newChild->AddComponent(spotLightComp);
+	spotLightComponents.push_back(spotLightComp);
+
+	newChild->SetPosition(position);
+	Material* newMaterial = new Material();
+	newMaterial->SetColor(color);
+	newChild->AssignMesh(GraphicsStorage::meshes["cone"]);
+	GraphicsStorage::materials.push_back(newMaterial);
+	newChild->AssignMaterial(newMaterial);
+	newChild->SetScale(Vector3(4.0, 4.0, 4.0));
+	spotLights.push_back(newChild);
+	return newChild;
+}
+
+Object * Scene::addSpotLightTo(Object * parent, bool castShadow, const mwm::Vector3 & position, const mwm::Vector3F & color)
+{
+	Object* newChild = Scene::addChildTo(parent);
+	SpotLight * spotLightComp = new SpotLight(newChild);
+	if (castShadow) spotLightComp->GenerateShadowMapBuffer(256, 256);
+	newChild->AddComponent(spotLightComp);
+	spotLightComponents.push_back(spotLightComp);
+
+	newChild->SetPosition(position);
+	Material* newMaterial = new Material();
+	newMaterial->SetColor(color);
+	newChild->AssignMesh(GraphicsStorage::meshes["cone"]);
+	GraphicsStorage::materials.push_back(newMaterial);
+	newChild->AssignMaterial(newMaterial);
+	newChild->SetScale(Vector3(4.0, 4.0, 4.0));
+	spotLights.push_back(newChild);
+	return newChild;
+}
+
+Object* Scene::addDirectionalLight(bool castShadow, const Vector3F& color /*= Vector3(1, 1, 1)*/)
+{
+	Object* newChild = Scene::addChild();
+	DirectionalLight* dirLightComp = new DirectionalLight();
+	dirLightComp->hasShadowMap = castShadow;
+	newChild->AddComponent(dirLightComp);
+	directionalLightComponents.push_back(dirLightComp);
+
+	Material* newMaterial = new Material();
+	newMaterial->SetColor(color);
+	newChild->AssignMesh(GraphicsStorage::meshes["plane"]);
+	GraphicsStorage::materials.push_back(newMaterial);
+	newChild->AssignMaterial(newMaterial);
+
+	directionalLights.push_back(newChild);
+
+	return newChild;
+}
+
+Object * Scene::addDirectionalLightTo(Object * parent, bool castShadow, const mwm::Vector3F & color)
+{
+	Object* newChild = Scene::addChildTo(parent);
+	DirectionalLight* dirLightComp = new DirectionalLight();
+	dirLightComp->hasShadowMap = castShadow;
+	newChild->AddComponent(dirLightComp);
+	directionalLightComponents.push_back(dirLightComp);
 	Material* newMaterial = new Material();
 	newMaterial->SetColor(color);
 	newChild->AssignMesh(GraphicsStorage::meshes["plane"]);
@@ -182,7 +304,7 @@ Object* Scene::addDirectionalLight(const Vector3F& direction, const Vector3F& co
 
 void Scene::addRandomPointLight(int min, int max)
 {
-	addPointLight(generateRandomIntervallVectorCubic(min, max), generateRandomIntervallVectorCubic(0, 255).toFloat()/255.f);
+	addPointLight(false, generateRandomIntervallVectorCubic(min, max), generateRandomIntervallVectorCubic(0, 255).toFloat()/255.f);
 }
 
 Vector3 Scene::generateRandomIntervallVectorCubic(int min, int max)
@@ -235,13 +357,19 @@ void Scene::addRandomlyPointLights(int num, int min, int max)
 
 void Scene::Update()
 {
-	SceneObject->node.UpdateNodeTransform(SceneObject->node);
+	SceneObject->node.UpdateNodeTransform(SceneObject->node); //update scenegraph
+
+	//update components:
 	SceneObject->Update();
-	for (auto& obj : pickingList)
+	for (auto& obj : renderList)
 	{
-		obj.second->Update();
+		obj->Update();
 	}
 	for (auto& obj : pointLights)
+	{
+		obj->Update();
+	}
+	for (auto& obj : spotLights)
 	{
 		obj->Update();
 	}

@@ -21,7 +21,7 @@ public:
 	float dotAKAscalar(const Vector2F& right) const;
 	float vectLengt() const;
 	Vector2F vectNormalize() const;
-	Vector3F vec2TOvec3(Vector2F vector, float z = 0);
+	static Vector3F vec2TOvec3(Vector2F vector, float z = 0);
 
 	Vector2F operator* (const float& right) const;
 	friend Vector2F operator* (const float& left, const Vector2F& right);

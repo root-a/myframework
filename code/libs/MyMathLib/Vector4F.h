@@ -1,12 +1,9 @@
 #pragma once
-#include <emmintrin.h>
-#include <xmmintrin.h>
-#include <smmintrin.h>
 namespace mwm
 {
 class Vector2F;
 class Vector3F;
-/*! class for constructing 4D vector*/
+
 class Vector4F
 {
 public:
@@ -14,7 +11,6 @@ public:
 	{
 		struct{ float x, y, z, w; };
 		float vect[4];
-		__m128 v;
 	};
 
 
@@ -35,7 +31,6 @@ public:
 
 	Vector3F get_xyz() const;
 	float& operator[] (int index);
-
 protected:
 };
 }

@@ -3,6 +3,8 @@ namespace mwm
 {
 class Vector3F;
 struct loc;
+class QuaternionF;
+
 class Matrix3F
 {
 public:
@@ -27,12 +29,17 @@ public:
 
 	Matrix3F inverse() const; //!< calculates inverse of matrix4x4 and returns as new one
 	Vector3F getUp() const;
-	Vector3F getRight() const;
-	Vector3F getForwardNegZ() const;
-	Vector3F getBackPosZ() const;
+	Vector3F getInvUp() const;
+	Vector3F getLeft() const;
+	Vector3F getInvLeft() const;
+	Vector3F getBack() const;
+	Vector3F getInvBack() const;
+	Vector3F getForward() const;
+	Vector3F getInvForward() const;
 	Vector3F getAxis(int axis) const;
 	Vector3F getAxisNormalized(int axis) const;
 	Vector3F extractScale() const;
+	QuaternionF toQuaternion() const;
 
 	void setUp(const Vector3F& axis);
 	void setRight(const Vector3F& axis);

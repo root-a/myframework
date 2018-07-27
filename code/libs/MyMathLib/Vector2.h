@@ -21,7 +21,7 @@ public:
 	double dotAKAscalar(const Vector2& right) const;
 	double vectLengt() const;
 	Vector2 vectNormalize() const;
-	Vector3 vec2TOvec3(Vector2 vector, double z = 0);
+	static Vector3 vec2TOvec3(Vector2 vector, double z = 0);
 
 	Vector2 operator* (const double& right) const;
 	friend Vector2 operator* (const double& left, const Vector2& right);

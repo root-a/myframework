@@ -3,8 +3,8 @@
 #include "GraphicsStorage.h"
 #include "OBJ.h"
 #include "Mesh.h"
-#include "Texture2D.h"
 #include "Material.h"
+#include "Texture.h"
 #include <string>
 #include <vector>
 #include <fstream>
@@ -156,8 +156,8 @@ bool GraphicsManager::LoadTextures(const char * path)
 			break; // EOF = End Of File. Quit the loop.
 		}
 		
-		Texture2D* texture2D = LoadTexture(texturePath);
-		GraphicsStorage::textures.push_back(texture2D);
+		Texture* texture = LoadTexture(texturePath);
+		GraphicsStorage::textures.push_back(texture);
 	}
 	fclose(file);
 	return true;
@@ -203,7 +203,7 @@ bool GraphicsManager::LoadCubeMaps(const char* path)
 		if (texturesPaths.size() == 6)
 		{
 			printf("Loading cubemap: %s\n", cubemapDirectory);
-			Texture2D* cubeMap = GenerateCubeMap(texturesPaths);
+			Texture* cubeMap = GenerateCubeMap(texturesPaths);
 			GraphicsStorage::cubemaps.push_back(cubeMap);
 		}
 		fclose(texturesFile);
@@ -241,7 +241,7 @@ bool GraphicsManager::LoadMaterials(const char * path) {
 	return true;
 }
 
-GLuint GraphicsManager::LoadBMP(const char *imagepath){
+Texture* GraphicsManager::LoadBMP(const char *imagepath){
 
 	printf("Reading image %s\n", imagepath);
 
@@ -298,16 +298,15 @@ GLuint GraphicsManager::LoadBMP(const char *imagepath){
 	fclose(file);
 
 	// Create one OpenGL texture
-	GLuint textureID = CreateTexture(width,height,false,data);
+	Texture* texture = CreateTexture(width,height,false,data);
 
 	// OpenGL has now copied the data. Free our own version
 	delete[] data;
 
-	// Return the ID of the texture we just created
-	return textureID;
+	return texture;
 }
 
-GLuint GraphicsManager::LoadDDS(const char *imagepath){
+Texture* GraphicsManager::LoadDDS(const char *imagepath){
 
 	unsigned char header[124];
 
@@ -365,6 +364,8 @@ GLuint GraphicsManager::LoadDDS(const char *imagepath){
 		return 0;
 	}
 
+	Texture* texture = new Texture(GL_TEXTURE_2D, 0, format, width, height, GL_RGBA, GL_UNSIGNED_BYTE, buffer, GL_COLOR_ATTACHMENT0);
+
 	// Create one OpenGL texture
 	GLuint textureID;
 	glGenTextures(1, &textureID);
@@ -406,16 +407,22 @@ GLuint GraphicsManager::LoadDDS(const char *imagepath){
 	
 	free(buffer);
 
-	return textureID;
+	texture->handle = textureID;
+	return texture;
 
 
 }
 
-GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * fragment_file_path){
+GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * fragment_file_path, const char* geometry_file_path){
 
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 	GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
+	GLuint GeometryShaderID = -1;
+	if (geometry_file_path != nullptr)
+	{
+		GeometryShaderID = glCreateShader(GL_GEOMETRY_SHADER);
+	}
 
 	// Read the Vertex Shader code from the file
 	std::string VertexShaderCode;
@@ -436,6 +443,20 @@ GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * 
 		while (getline(FragmentShaderStream, Line))
 			FragmentShaderCode += "\n" + Line;
 		FragmentShaderStream.close();
+	}
+
+	// Read the Geometry Shader code from the file
+	std::string GeometryShaderCode;
+	if (geometry_file_path != nullptr)
+	{
+		std::ifstream GeometryShaderStream(geometry_file_path, std::ios::in);
+		if (GeometryShaderStream.is_open())
+		{
+			std::string Line = "";
+			while (getline(GeometryShaderStream, Line))
+				GeometryShaderCode += "\n" + Line;
+			GeometryShaderStream.close();
+		}
 	}
 
 	GLint Result = GL_FALSE;
@@ -474,10 +495,33 @@ GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * 
 		fprintf(stdout, "%s\n", &FragmentShaderErrorMessage[0]);
 	}
 
+	if (geometry_file_path != nullptr)
+	{
+		// Compile Geometry Shader
+		printf("Compiling shader : %s\n", geometry_file_path);
+		char const * GeometrySourcePointer = GeometryShaderCode.c_str();
+		glShaderSource(GeometryShaderID, 1, &GeometrySourcePointer, NULL);
+		glCompileShader(GeometryShaderID);
+
+		// Check Geometry Shader
+		glGetShaderiv(GeometryShaderID, GL_COMPILE_STATUS, &Result);
+		glGetShaderiv(GeometryShaderID, GL_INFO_LOG_LENGTH, &InfoLogLength);
+		if (InfoLogLength > 0)
+		{
+			std::vector<char> GeometryShaderErrorMessage(InfoLogLength);
+			glGetShaderInfoLog(GeometryShaderID, InfoLogLength, NULL, &GeometryShaderErrorMessage[0]);
+			fprintf(stdout, "%s\n", &GeometryShaderErrorMessage[0]);
+		}
+	}
+
 	// Link the program
 	fprintf(stdout, "Linking program\n");
 	GLuint ProgramID = glCreateProgram();
 	glAttachShader(ProgramID, VertexShaderID);
+	if (geometry_file_path != nullptr)
+	{
+		glAttachShader(ProgramID, GeometryShaderID);
+	}
 	glAttachShader(ProgramID, FragmentShaderID);
 	glLinkProgram(ProgramID);
 
@@ -492,6 +536,10 @@ GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * 
 	}
 
 	glDeleteShader(VertexShaderID);
+	if (geometry_file_path != nullptr)
+	{
+		glDeleteShader(GeometryShaderID);
+	}
 	glDeleteShader(FragmentShaderID);
 
 	return ProgramID;
@@ -548,36 +596,25 @@ void GraphicsManager::LoadAllOBJsToVBO()
 	}
 }
 
-GLuint GraphicsManager::CreateTexture(int width, int height, bool isDepth, unsigned char* data) {
-    // Create one OpenGL texture
-    GLuint textureID;
-    glGenTextures(1, &textureID);
+Texture* GraphicsManager::CreateTexture(int width, int height, bool isDepth, unsigned char* data) {
 
-    // "Bind" the newly created texture : all future texture functions will modify this texture
-    glBindTexture(GL_TEXTURE_2D, textureID);
-
-    // Give the image to OpenGL
-    glTexImage2D(GL_TEXTURE_2D, 0, isDepth ? GL_DEPTH_COMPONENT : GL_RGBA8, width, height, 0, isDepth ? GL_DEPTH_COMPONENT : GL_RGBA8, isDepth ? GL_FLOAT : GL_UNSIGNED_BYTE, data ? data : NULL); // GL_RGB -> GL_RGBA8
-
-    // OpenGL has now copied the data. Free our own version
-
-
+	Texture* texture = new Texture(GL_TEXTURE_2D, 0, isDepth ? GL_DEPTH_COMPONENT : GL_RGBA8, width, height, isDepth ? GL_DEPTH_COMPONENT : GL_RGBA8, isDepth ? GL_FLOAT : GL_UNSIGNED_BYTE, data ? data : NULL, GL_COLOR_ATTACHMENT0);
+	
     // Poor filtering, or ...
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	//texture->AddTextureParameterI(GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	//texture->AddTextureParameterI(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
     // ... nice trilinear filtering.
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glGenerateMipmap(GL_TEXTURE_2D);
+	texture->AddTextureParameterI(GL_TEXTURE_WRAP_S, GL_REPEAT);
+	texture->AddTextureParameterI(GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-    //unbind texture
-    //glBindTexture(GL_TEXTURE_2D, 0);
-    glDisable(GL_TEXTURE_2D);
-    // Return the ID of the texture we just created
-    return textureID;
+	texture->AddTextureParameterI(GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	texture->AddTextureParameterI(GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+
+	texture->Generate();
+	glGenerateMipmap(GL_TEXTURE_2D);
+
+    return texture;
 }
 
 void GraphicsManager::LoadAllAssets()
@@ -611,18 +648,13 @@ unsigned char * GraphicsManager::LoadImage(const char* path, int* x, int* y, int
 	return stbi_load(path, x, y, numOfElements, forcedNumOfEle);
 }
 
-Texture2D* GraphicsManager::LoadTexture(char* path)
+Texture* GraphicsManager::LoadTexture(char* path)
 {
-	Texture2D* tex = new Texture2D();
-	// Load the texture
-	tex->TextureID = LoadDDS(path);
-
-	return tex;
+	return LoadDDS(path);
 }
 
-Texture2D* GraphicsManager::GenerateCubeMap(const std::vector<std::string>& textures)
+Texture* GraphicsManager::GenerateCubeMap(const std::vector<std::string>& textures)
 {
-	Texture2D* tex = new Texture2D();
 	// Load the texture
 	
 	GLuint cubeMapTextureID;
@@ -630,11 +662,12 @@ Texture2D* GraphicsManager::GenerateCubeMap(const std::vector<std::string>& text
 	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTextureID);
 
+	int x, y, numOfElements;
 	for (int i = 0; i < 6; i++)
 	{
-		int x, y, numOfElements;
 		unsigned char* data = GraphicsManager::LoadImage(textures.at(i).c_str(), &x, &y, &numOfElements, 0);
 		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, x, y, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		stbi_image_free(data);
 	}
 
 	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
@@ -645,7 +678,7 @@ Texture2D* GraphicsManager::GenerateCubeMap(const std::vector<std::string>& text
 
 	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 
-	tex->TextureID = cubeMapTextureID;
-
+	Texture* tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, GL_RGB, x, y, GL_RGB, GL_UNSIGNED_BYTE, NULL, GL_COLOR_ATTACHMENT0);
+	tex->handle = cubeMapTextureID;
 	return tex;
 }

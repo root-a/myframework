@@ -36,13 +36,13 @@ void PhysicsManager::ProcessContact(const Contact& contact, Vector3&vel1, Vector
 	RigidBody* ent2 = contact.two;
 
 	const double e = std::min(ent1->restitution, ent2->restitution);//0.0f; //restitution, if set to 0 then the object we collide with will absorb most of the impact and won't move much, if set to 1 both objects will fly their way
-	Vector3 rA = contact.contactPoint - ent1->object->node.position;
-	Vector3 rB = contact.contactPoint - ent2->object->node.position;
-	Vector3 kA = rA.crossProd(contact.contactNormal);
-	Vector3 kB = rB.crossProd(contact.contactNormal);
+	Vector3& rA = contact.contactPoint - ent1->object->node.centeredPosition;
+	Vector3& rB = contact.contactPoint - ent2->object->node.centeredPosition;
+	Vector3& kA = rA.crossProd(contact.contactNormal);
+	Vector3& kB = rB.crossProd(contact.contactNormal);
 
-	Vector3 uA = ent1->inverse_inertia_tensor_world*kA;
-	Vector3 uB = ent2->inverse_inertia_tensor_world*kB;
+	Vector3& uA = ent1->inverse_inertia_tensor_world*kA;
+	Vector3& uB = ent2->inverse_inertia_tensor_world*kB;
 
 	// Precompute normal mass, tangent mass, and bias.
 
@@ -61,14 +61,14 @@ void PhysicsManager::ProcessContact(const Contact& contact, Vector3&vel1, Vector
 	//but the denominator or normal mass will be too low 
 
 	// Relative velocity at contact
-	Vector3 relativeVel = (ent2->velocity + ent2->angular_velocity.crossProd(rB)) - (ent1->velocity + ent1->angular_velocity.crossProd(rA));
+	Vector3& relativeVel = (ent2->velocity + ent2->angular_velocity.crossProd(rB)) - (ent1->velocity + ent1->angular_velocity.crossProd(rA));
 	double numer = -(1.0 + e)*relativeVel.dotAKAscalar(contact.contactNormal) +bias;
 	//double denom = ent1->massInverse + ent2->massInverse + (ent1->inverse_inertia_tensor_world*kA.crossProd(rA) + ent2->inverse_inertia_tensor_world*kB.crossProd(rB)).dotAKAscalar(contactNormal);
 	//double f = numer / denom;
 	double f = numer / normalMass;
 	f = std::max(f, 0.0);
 
-	Vector3 impulse = f*contact.contactNormal;
+	Vector3& impulse = f*contact.contactNormal;
 	//printf("\nimpulse: %f", f);
 	
 	vel1 -= impulse*ent1->massInverse;
@@ -112,21 +112,26 @@ void PhysicsManager::SortAxis(std::vector<ObjectPoint*>& axisList, axis axis)
 
 			if (currentObject->isMin && !objToSwap->isMin) //penetration
 			{
-				if (!objToSwap->body->isKinematic || !currentObject->body->isKinematic)
-				{
-					if (CheckBoundingBoxes(objToSwap->body, currentObject->body))
+				//OverlapPair op = OverlapPair(objToSwap->body, currentObject->body);
+				//auto search = fullOverlaps.find(op);
+				//if (search == fullOverlaps.end()) {
+					if (!objToSwap->body->isKinematic || !currentObject->body->isKinematic)
 					{
-						fullOverlaps.insert(OverlapPair(objToSwap->body, currentObject->body));
+						if (CheckBoundingBoxes(objToSwap->body, currentObject->body))
+						{
+							//fullOverlaps.insert(op);
+							fullOverlaps.insert(OverlapPair(objToSwap->body, currentObject->body));
+						}
 					}
-				}
+				//}
 			}
 
 			else if (!currentObject->isMin && objToSwap->isMin) //separation
 			{
 				fullOverlaps.erase(OverlapPair(objToSwap->body, currentObject->body));
-				satOverlaps.erase(OverlapPair(objToSwap->body, currentObject->body));
-				currentObject->body->aabb.color = defAabbColor;
-				objToSwap->body->aabb.color = defAabbColor;
+				//satOverlaps.erase(OverlapPair(objToSwap->body, currentObject->body));
+				//currentObject->body->aabb.color = defAabbColor;
+				//objToSwap->body->aabb.color = defAabbColor;
 			}
 
 			axisList[i + 1] = objToSwap;
@@ -138,8 +143,8 @@ void PhysicsManager::SortAxis(std::vector<ObjectPoint*>& axisList, axis axis)
 
 bool PhysicsManager::CheckBoundingBoxes(RigidBody* body1, RigidBody* body2)
 {
-	MinMax box1 = body1->obb.mm;
-	MinMax box2 = body2->obb.mm;
+	MinMax& box1 = body1->obb.mm;
+	MinMax& box2 = body2->obb.mm;
 
 	return ((
 		((box1.max.z >= box2.min.z) && (box1.min.z <= box2.max.z)) &&
@@ -188,7 +193,7 @@ void  PhysicsManager::SortAndSweep()
 	SortAxis(xAxis, x);
 	SortAxis(yAxis, y);
 	SortAxis(zAxis, z);
-	//printf("\nBroad: number of overlaps: %d", fullOverlaps.size());
+	//printf("\nBroad: number of overlaps: %d\n", fullOverlaps.size());
 }
 
 #define TEST_OVERLAP(axis, index) overlapOnAxis(oneObj, twoObj, (axis), (index), axisNumRes, toCentre, smallestPenetration, smallestAxis)
@@ -196,15 +201,15 @@ bool PhysicsManager::IntersectionTest(const RigidBody* oneObj, const RigidBody* 
 {
 	smallestPenetration = FLT_MAX;
 	// Find the vector between the two centres
-	toCentre = twoObj->object->node.position - oneObj->object->node.position;
+	toCentre = twoObj->object->node.centeredPosition - oneObj->object->node.centeredPosition;
+	
+	Vector3& oneRight = oneObj->obb.rot.getAxis(0);
+	Vector3& oneUp = oneObj->obb.rot.getAxis(1);
+	Vector3& oneBack = oneObj->obb.rot.getAxis(2);
 
-	Vector3 oneRight = oneObj->obb.model.getAxis(0);
-	Vector3 oneUp = oneObj->obb.model.getAxis(1);
-	Vector3 oneBack = oneObj->obb.model.getAxis(2);
-
-	Vector3 twoRight = twoObj->obb.model.getAxis(0);
-	Vector3 twoUp = twoObj->obb.model.getAxis(1);
-	Vector3 twoBack = twoObj->obb.model.getAxis(2);
+	Vector3& twoRight = twoObj->obb.rot.getAxis(0);
+	Vector3& twoUp = twoObj->obb.rot.getAxis(1);
+	Vector3& twoBack = twoObj->obb.rot.getAxis(2);
 
 	// Check on box one's axes first
 	if (TEST_OVERLAP(oneRight, 0) &&
@@ -240,7 +245,7 @@ bool PhysicsManager::IntersectionTest(const RigidBody* oneObj, const RigidBody* 
 	else
 	{
 		return false;
-	}	
+	}
 }
 #undef TEST_OVERLAP
 
@@ -248,11 +253,11 @@ void PhysicsManager::GenerateContacts(Vector3& MTV, const double& penetration, V
 {
 	if (axisNumRes < 3)
 	{
-		GenerateContactPointToFace2(toCentre, MTV, penetration, oneObj, twoObj, axisNumRes);
+		GenerateContactPointToFace(toCentre, MTV, penetration, oneObj, twoObj, axisNumRes);
 	}
 	else if (axisNumRes < 6)
 	{
-		GenerateContactPointToFace2(-1.0*toCentre, MTV, penetration, twoObj, oneObj, axisNumRes - 3);
+		GenerateContactPointToFace(-1.0*toCentre, MTV, penetration, twoObj, oneObj, axisNumRes - 3);
 	}
 	else
 	{
@@ -270,16 +275,30 @@ void PhysicsManager::NarrowTestSAT(double dtInv)
 	//therefore i need to handle removal of the non colliding obbs by sat here too
 
 	//printf("\nnumber of AABB overlaps: %d", fullOverlaps.size());
-	for (auto & pair : fullOverlaps)
+	std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+	std::chrono::duration<double> elapsed_seconds;
+	iterCount = fullOverlaps.size();
+	for (auto& pair : fullOverlaps)
 	{
 		Vector3 MTV;
 		double smallestPen = DBL_MAX;
 		Vector3 toCentre;
 		int axisNumRes = -1;
 		int bestSingleAxis;
-		Vector3 oneHalfSize = pair.rbody1->obb.halfExtent;
-		Vector3 twoHalfSize = pair.rbody2->obb.halfExtent;
-		if (IntersectionTest(pair.rbody1, pair.rbody2, smallestPen, MTV, toCentre, axisNumRes, bestSingleAxis))
+		Vector3& oneHalfSize = pair.rbody1->obb.halfExtent;
+		Vector3& twoHalfSize = pair.rbody2->obb.halfExtent;
+
+		
+
+		start = std::chrono::high_resolution_clock::now();
+		bool intersection = IntersectionTest(pair.rbody1, pair.rbody2, smallestPen, MTV, toCentre, axisNumRes, bestSingleAxis);
+		end = std::chrono::high_resolution_clock::now();
+
+		elapsed_seconds = end - start;
+		intersectionTestTime = elapsed_seconds.count();
+
+
+		if (intersection)
 		{
 			if (!pair.rbody1->isKinematic && !pair.rbody2->isKinematic)
 			{
@@ -288,16 +307,23 @@ void PhysicsManager::NarrowTestSAT(double dtInv)
 			}
 			
 			//generate contacts based on the result
-			
+			start = std::chrono::high_resolution_clock::now();
 			GenerateContacts(MTV, smallestPen, toCentre, pair.rbody1, pair.rbody2, axisNumRes, bestSingleAxis);
-			satOverlaps.insert(pair);
+			end = std::chrono::high_resolution_clock::now();
+
+			elapsed_seconds = end - start;
+			generateContactsTime = elapsed_seconds.count();
+			
+			//satOverlaps.insert(pair);
 			Vector3 changeInVel1;
 			Vector3 changeInAng_Vel1;
 			Vector3 changeInVel2;
 			Vector3 changeInAng_Vel2;
 
+			start = std::chrono::high_resolution_clock::now();
 			for (auto& contact : contacts)
 			{
+				iterCount++;
 				/*
 				if (DebugDraw::Instance()->debug)
 				{
@@ -309,6 +335,11 @@ void PhysicsManager::NarrowTestSAT(double dtInv)
 				*/
 				ProcessContact(contact, changeInVel1, changeInAng_Vel1, changeInVel2, changeInAng_Vel2, dtInv);
 			}
+			end = std::chrono::high_resolution_clock::now();
+			elapsed_seconds = end - start;
+			processContactTime = elapsed_seconds.count();
+
+			start = std::chrono::high_resolution_clock::now();
 			
 			if (contacts.size() > 0) //if we have at least one contact then we add the cumulated change in velocity to both objects
 			{
@@ -327,18 +358,22 @@ void PhysicsManager::NarrowTestSAT(double dtInv)
 
 				contacts.clear();
 			}
+			end = std::chrono::high_resolution_clock::now();
+
+			elapsed_seconds = end - start;
+			positionalCorrectionTime = elapsed_seconds.count();
 		}
 		else
 		{
-			pair.rbody1->aabb.color = defAabbColor;
-			pair.rbody2->aabb.color = defAabbColor;
-			satOverlaps.erase(pair);
+			//pair.rbody1->aabb.color = defAabbColor;
+			//pair.rbody2->aabb.color = defAabbColor;
+			//satOverlaps.erase(pair);
 		}
 	}
 	//printf("\nnumber of SAT overlaps: %d", satOverlaps.size());
 }
 
-void PhysicsManager::GenerateContactPointToFace2(
+void PhysicsManager::GenerateContactPointToFace(
 	Vector3 &toCentre,
 	Vector3& mtv,
 	double smallestPen,
@@ -348,11 +383,11 @@ void PhysicsManager::GenerateContactPointToFace2(
 	Vector3 normal1, normal2;
 	double neg_offset1, pos_offset1, neg_offset2, pos_offset2;
 
-	CreateSidePlanesOffsetsAndNormals(oneObj->object->node.position, typeOfCollision, normal1, oneObj->obb.model, normal2, neg_offset1, oneObj->obb.halfExtent, pos_offset1, neg_offset2, pos_offset2);
+	CreateSidePlanesOffsetsAndNormals(oneObj->object->node.centeredPosition, typeOfCollision, normal1, oneObj->obb.rot, normal2, neg_offset1, oneObj->obb.halfExtent, pos_offset1, neg_offset2, pos_offset2);
 	
 	FlipMTVTest(mtv, toCentre); //this will calculate correct reference normal pointing from box one to box two just like for edge to edge
 	Vector3 incident_axis; //correct incident axis is not the mtv it's the most opposite axis to the mtv(in fact reference normal) of the object that collided with face 
-	ClaculateIncidentAxis(incident_axis, twoObj->obb.model, mtv);
+	ClaculateIncidentAxis(incident_axis, twoObj->obb.rot, mtv);
 
 	//plane is 
 	//normal and point on plane
@@ -387,20 +422,20 @@ void PhysicsManager::GenerateContactPointToFace2(
 	//we get 3
 	//3 - 1 = 2 -> above plane
 
-	Vector3 normTest(0.0,1.0,0.0);
-	Vector3 pointOnPlane(4.0,0.0,2.0); //(4,0,2) has dist 0 while (4,1,2) has dist 1 and (4,-1,2) has -1 dist
-	Vector3 pointTest(0.0, -3.0, 0.0);
-	double signedDist = normTest.dotAKAscalar(pointTest);
-	double signedDist2 = normTest.dotAKAscalar(pointOnPlane);
+	//Vector3 normTest(0.0,1.0,0.0);
+	//Vector3 pointOnPlane(4.0,0.0,2.0); //(4,0,2) has dist 0 while (4,1,2) has dist 1 and (4,-1,2) has -1 dist
+	//Vector3 pointTest(0.0, -3.0, 0.0);
+	//double signedDist = normTest.dotAKAscalar(pointTest);
+	//double signedDist2 = normTest.dotAKAscalar(pointOnPlane);
 	
 	Vector3 incident_face[4];
 	Vector3 reference_face[4];
-	CalcFaceVertices(twoObj->object->node.position, incident_face, incident_axis, twoObj->obb.model, twoObj->obb.halfExtent);
-	CalcFaceVertices(oneObj->object->node.position, reference_face, mtv, oneObj->obb.model, oneObj->obb.halfExtent);
+	CalcFaceVertices(twoObj->object->node.centeredPosition, incident_face, incident_axis, twoObj->obb.rot, twoObj->obb.halfExtent);
+	CalcFaceVertices(oneObj->object->node.centeredPosition, reference_face, mtv, oneObj->obb.rot, oneObj->obb.halfExtent);
 
 	//size_t vertCount = 0;
-	Vector3 normal1Neg = -1.0*normal1;
-	Vector3 normal2Neg = -1.0*normal2;
+	Vector3& normal1Neg = -1.0*normal1;
+	Vector3& normal2Neg = -1.0*normal2;
 
 	clipPolygon.clear();
 
@@ -410,17 +445,17 @@ void PhysicsManager::GenerateContactPointToFace2(
 	clipPolygon.push_back(incident_face[3]);
 
 	//incident face is sent then
-	ClipFaceToSidePlane(normal1Neg, neg_offset1); //red
+	ClipFaceToSidePlane(clipPolygon, newClipPolygon, normal1Neg, neg_offset1); //red
 	//if (DebugDraw::Instance()->debug) vertCount = DrawPlaneClipContacts(contacts, -1.f*normal1, vertCount, Vector3(1, 0, 0));
-	ClipFaceToSidePlane(normal1, pos_offset1); //green
+	ClipFaceToSidePlane(newClipPolygon, clipPolygon, normal1, pos_offset1); //green
 	//if (DebugDraw::Instance()->debug) vertCount = DrawPlaneClipContacts(contacts, normal1, vertCount, Vector3(0, 1, 0));
-	ClipFaceToSidePlane(normal2Neg, neg_offset2); //blue
+	ClipFaceToSidePlane(clipPolygon, newClipPolygon, normal2Neg, neg_offset2); //blue
 	//if (DebugDraw::Instance()->debug) vertCount = DrawPlaneClipContacts(contacts, -1.f*normal2, vertCount, Vector3(0, 0, 1));
-	ClipFaceToSidePlane(normal2, pos_offset2); //yellow
+	ClipFaceToSidePlane(newClipPolygon, clipPolygon, normal2, pos_offset2); //yellow
 	//if (DebugDraw::Instance()->debug) vertCount = DrawPlaneClipContacts(contacts, normal2, vertCount, Vector3(1, 1, 0));
 
 	//ref normal is mtv
-	double refPlaneOffset = oneObj->object->node.position.dotAKAscalar(mtv);
+	double refPlaneOffset = oneObj->object->node.centeredPosition.dotAKAscalar(mtv);
 	refPlaneOffset = refPlaneOffset + oneObj->obb.halfExtent[typeOfCollision];
 
 	//slower more logical way
@@ -431,40 +466,6 @@ void PhysicsManager::GenerateContactPointToFace2(
 	//if (DebugDraw::Instance()->debug) DrawFaceDebug(contact_points_out, reference_face, incident_face, typeOfCollision);
 }
 
-void PhysicsManager::GenerateContactPointToFace(RigidBody* oneObj, RigidBody* twoObj, const Vector3 &toCentre, int axisNum,	float smallestPen)
-{
-	// This method is called when we know that a vertex from
-	// box two is in contact with box one.
-
-	Contact contact;
-
-	// We know which axis the collision is on (i.e. best),
-	// but we need to work out which of the two faces on
-	// this axis.
-	Vector3 mtv = oneObj->obb.model.getAxis(axisNum);
-	double toCentreDist = mtv.dotAKAscalar(toCentre);
-	if (toCentreDist > 0) //have turned sign!
-	{
-		mtv = mtv * -1.0f;
-	}
-
-	// Work out which vertex of box two we're colliding with.
-	// Using toCentre doesn't work!
-	Vector3 vertex = twoObj->obb.halfExtent;
-	if (twoObj->obb.model.getAxis(0).dotAKAscalar(mtv) < 0) vertex.x = -vertex.x;
-	if (twoObj->obb.model.getAxis(1).dotAKAscalar(mtv) < 0) vertex.y = -vertex.y;
-	if (twoObj->obb.model.getAxis(2).dotAKAscalar(mtv) < 0) vertex.z = -vertex.z;
-
-	// Create the contact data
-	contact.contactNormal = mtv;
-	contact.penetration = smallestPen;
-	contact.contactPoint = twoObj->obb.model * vertex + twoObj->object->node.position;
-	contact.one = oneObj;
-	contact.two = twoObj;
-
-	contacts.push_back(contact);
-}
-
 void PhysicsManager::GenerateContactEdgeToEdge(const Vector3 &toCentre, Vector3& mtv, double smallestPen, RigidBody* oneObj, RigidBody* twoObj, int axisNumRes, int& bestSingleAxis)
 {
 	// We've got an edge-edge contact. Find out which axes
@@ -472,8 +473,8 @@ void PhysicsManager::GenerateContactEdgeToEdge(const Vector3 &toCentre, Vector3&
 	axisNumRes -= 6;
 	unsigned oneAxisIndex = axisNumRes / 3;
 	unsigned twoAxisIndex = axisNumRes % 3;
-	Vector3 oneAxis = oneObj->obb.model.getAxis(oneAxisIndex);
-	Vector3 twoAxis = twoObj->obb.model.getAxis(twoAxisIndex);
+	Vector3& oneAxis = oneObj->obb.rot.getAxis(oneAxisIndex);
+	Vector3& twoAxis = twoObj->obb.rot.getAxis(twoAxisIndex);
 
 	// The axis should point from box one to box two.
 	double toCentreDist = mtv.dotAKAscalar(toCentre);
@@ -493,22 +494,22 @@ void PhysicsManager::GenerateContactEdgeToEdge(const Vector3 &toCentre, Vector3&
 	for (int i = 0; i < 3; i++)
 	{
 		if (i == oneAxisIndex) ptOnOneEdge[i] = 0;
-		else if (oneObj->obb.model.getAxis(i).dotAKAscalar(mtv) > 0) ptOnOneEdge[i] = -ptOnOneEdge[i];
+		else if (oneObj->obb.rot.getAxis(i).dotAKAscalar(mtv) > 0) ptOnOneEdge[i] = -ptOnOneEdge[i];
 
 		if (i == twoAxisIndex) ptOnTwoEdge[i] = 0;
-		else if (twoObj->obb.model.getAxis(i).dotAKAscalar(mtv) < 0) ptOnTwoEdge[i] = -ptOnTwoEdge[i];
+		else if (twoObj->obb.rot.getAxis(i).dotAKAscalar(mtv) < 0) ptOnTwoEdge[i] = -ptOnTwoEdge[i];
 	}
 
 	// Move them into world coordinates (they are already oriented
 	// correctly, since they have been derived from the axes).
-	ptOnOneEdge = oneObj->obb.model * ptOnOneEdge + oneObj->object->node.position;
-	ptOnTwoEdge = twoObj->obb.model * ptOnTwoEdge + twoObj->object->node.position;
+	ptOnOneEdge = oneObj->obb.rot * ptOnOneEdge + oneObj->object->node.centeredPosition;
+	ptOnTwoEdge = twoObj->obb.rot * ptOnTwoEdge + twoObj->object->node.centeredPosition;
 
 	// So we have a point and a direction for the colliding edges.
 	// We need to find out point of closest approach of the two
 	// line-segments.
 
-	Vector3 vertex = contactPoint(
+	Vector3& vertex = contactPoint(
 		ptOnOneEdge, oneAxis, oneObj->obb.halfExtent[oneAxisIndex],
 		ptOnTwoEdge, twoAxis, twoObj->obb.halfExtent[twoAxisIndex],
 		bestSingleAxis > 2
@@ -530,7 +531,7 @@ void PhysicsManager::PositionalCorrection(RigidBody* one, RigidBody* two, double
 	const double percent = 0.2; // usually 20% to 80%
 	const double slop = 0.01; // usually 0.01 to 0.1
 	//Vector3 correction = (std::max(penetration - slop, 0.0f) / (one->massInverse + two->massInverse)) * normal;
-	Vector3 correction = (std::max(penetration - slop, 0.0) / (one->massInverse + two->massInverse)) * percent * normal;
+	Vector3& correction = (std::max(penetration - slop, 0.0) / (one->massInverse + two->massInverse)) * percent * normal;
 	one->object->Translate(-1.0 * one->massInverse * correction);
 	two->object->Translate(two->massInverse * correction);
 }
@@ -547,9 +548,9 @@ void PhysicsManager::PositionalImpulseCorrection(RigidBody* one, RigidBody* two,
 
 void PhysicsManager::CalcFaceVertices(const Vector3& pos, Vector3* vertices, const Vector3& axis, const Matrix3& model, const Vector3& halfExtents, bool counterClockwise)
 {
-	Vector3 xAxis = model.getAxis(0);
-	Vector3 yAxis = model.getAxis(1);
-	Vector3 zAxis = model.getAxis(2);
+	Vector3& xAxis = model.getAxis(0);
+	Vector3& yAxis = model.getAxis(1);
+	Vector3& zAxis = model.getAxis(2);
 	Vector3 referencePos;
 	Vector3 u;
 	Vector3 v;
@@ -590,13 +591,14 @@ void PhysicsManager::CalcFaceVertices(const Vector3& pos, Vector3* vertices, con
 	}
 }
 
-void PhysicsManager::ClipFaceToSidePlane(const Vector3& normal, double plane_offset)
+void PhysicsManager::ClipFaceToSidePlane(vector<Vector3>& clipPolygon, std::vector<mwm::Vector3>& newClipPolygon, const Vector3& normal, double plane_offset)
 {
 	Vector3 Vertex1 = clipPolygon.back();
 	double Distance1 = Vertex1.dotAKAscalar(normal) - plane_offset;//rnDistance(Plane, Vertex1.Position);
 	newClipPolygon.clear();
 	for (auto & Vertex2 : clipPolygon)
 	{
+		iterCount++;
 		double Distance2 = Vertex2.dotAKAscalar(normal) - plane_offset;//rnDistance(Plane, Vertex2.Position);
 
 		if (Distance1 <= 0.0 && Distance2 <= 0.0)
@@ -608,7 +610,7 @@ void PhysicsManager::ClipFaceToSidePlane(const Vector3& normal, double plane_off
 		{
 			// Vertex1 is behind the plane, vertex2 is in front -> intersection point
 			double Fraction = Distance1 / (Distance1 - Distance2);
-			Vector3 newVertex = Vertex1 + Fraction * (Vertex2 - Vertex1);
+			Vector3& newVertex = Vertex1 + Fraction * (Vertex2 - Vertex1);
 
 			// Keep intersection point 
 			newClipPolygon.push_back(newVertex);
@@ -617,7 +619,7 @@ void PhysicsManager::ClipFaceToSidePlane(const Vector3& normal, double plane_off
 		{
 			// Vertex2 is behind the plane, vertex1 is in front -> intersection point
 			double Fraction = Distance1 / (Distance1 - Distance2);
-			Vector3 newVertex1 = Vertex1 + Fraction * (Vertex2 - Vertex1);
+			Vector3& newVertex1 = Vertex1 + Fraction * (Vertex2 - Vertex1);
 
 			// Keep intersection point 
 			newClipPolygon.push_back(newVertex1);
@@ -630,7 +632,6 @@ void PhysicsManager::ClipFaceToSidePlane(const Vector3& normal, double plane_off
 		Vertex1 = Vertex2;
 		Distance1 = Distance2;
 	}
-	clipPolygon = newClipPolygon;
 }
 
 inline void PhysicsManager::CreateSidePlanesOffsetsAndNormals(const Vector3& onePosition, int typeOfCollision, Vector3 &normal1, const Matrix3 &one, Vector3 &normal2, double &neg_offset1, Vector3 oneHalfSize, double &pos_offset1, double &neg_offset2, double &pos_offset2)
@@ -702,6 +703,7 @@ inline void PhysicsManager::ClaculateIncidentAxis(Vector3& incident_axis, const 
 	//get incident face vertices by dotting all axis with mtv
 	for (int i = 0; i < 3; i++)
 	{
+		iterCount++;
 		double most_neg = two.getAxis(i).dotAKAscalar(smallestAxis);
 		if (most_neg < incident_tracker){
 			incident_tracker = most_neg;
@@ -721,13 +723,14 @@ inline void PhysicsManager::FilterContactsAgainstReferenceFace(const Vector3& re
 	//this is to clean up contacts 
 	for (auto & contactPoint : clipPolygon)
 	{
+		iterCount++;
 		//float Distance1 = Vector3::Dot(contacts[i], -1 * refNormal) - neg_offsett;
 		//if (Distance1 <= 0){
 		//	//keep point
 		//	contact_points_out.push_back(contacts[i]);
 		//}
 		double Distance2 = pos_offsett - contactPoint.dotAKAscalar(refNormal);
-		if (Distance2 >= 0){
+		if (Distance2 >= 0.0){
 			//keep point
 			Contact contact;
 			contact.contactPoint = contactPoint;
@@ -799,13 +802,13 @@ void PhysicsManager::DrawCollisionNormal(Contact& contact)
 	//collision normal
 	DebugDraw::Instance()->line.mat->SetColor(0, 0, 0); //black 
 	DebugDraw::Instance()->point.mat->SetColor(0, 0, 0);
-	DebugDraw::Instance()->DrawNormal(contact.contactNormal, contact.two->object->node.position); //draw mtv after flip
+	DebugDraw::Instance()->DrawNormal(contact.contactNormal, contact.two->object->node.centeredPosition); //draw mtv after flip
 }
 
 void PhysicsManager::DrawReferenceNormal(Contact& contact, int typeOfCollision)
 {
 	//reference normal
-	Vector3 centerPointOfRefFace = contact.one->object->node.position + contact.contactNormal*contact.one->obb.halfExtent[typeOfCollision];
+	Vector3 centerPointOfRefFace = contact.one->object->node.centeredPosition + contact.contactNormal*contact.one->obb.halfExtent[typeOfCollision];
 	DebugDraw::Instance()->point.mat->SetColor(1, 1, 1); //white
 	DebugDraw::Instance()->line.mat->SetColor(1, 1, 1);
 	DebugDraw::Instance()->DrawNormal(contact.contactNormal, centerPointOfRefFace); //draw reference normal

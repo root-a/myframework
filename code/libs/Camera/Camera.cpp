@@ -1,19 +1,19 @@
 #include "cmath"
 #include "MyMathLib.h"
 #include "Camera.h"
-
+#include <stdio.h>
 using namespace mwm;
 
-Camera::Camera(const mwm::Vector3& initPos, int windowW, int windowH)
+Camera::Camera(const mwm::Vector3& initPos, int windowW, int windowH, double newNearPlane, double newFarPlane, double newFov)
 {
 	// Initial horizontal angle : toward -Z
 	horizontalAngle = 3.14;
 	// Initial vertical angle : none
 	verticalAngle = 0.0;
 	// Initial Field of View
-	fov = 45.0;
-	near = 0.1;
-	far = 100;
+	fov = newFov;
+	near = newNearPlane;
+	far = newFarPlane;
 
 	speed = 100.0;
 	mouseSpeed = 0.002;
@@ -70,7 +70,11 @@ void Camera::Update(double deltaTime){
 
 	UpdatePosition(deltaTime);
 
+	ComputeVectors();
+
 	CalculateViewMatrix();
+
+	UpdateProjection();
 }
 
 void Camera::UpdateOrientation(double mouseX, double mouseY)
@@ -79,17 +83,6 @@ void Camera::UpdateOrientation(double mouseX, double mouseY)
 
 	horizontalAngle += mouseSpeed * (windowMidX - mouseX);
 	verticalAngle += mouseSpeed * (windowMidY - mouseY);
-
-	//if monitoring camera
-	/*
-	if (cameraType == 3)
-	{
-		verticalAngle = 0.0f;
-		horizontalAngle = 3.14f;
-	}
-	*/
-
-	ComputeVectors();
 }
 
 void Camera::UpdatePosition(double deltaTime)
@@ -124,25 +117,44 @@ void Camera::UpdateSize(int width, int height)
 	windowHeight = height;
 	windowMidX = windowWidth / 2.0;
 	windowMidY = windowHeight / 2.0;
-	UpdateProjection();
 }
 
 void Camera::SetFoV(double newFov)
 {
 	fov = newFov;
-	UpdateProjection();
 }
 
 void Camera::SetNearPlane(double newNearPlane)
 {
 	near = newNearPlane;
-	UpdateProjection();
 }
 
 void Camera::SetFarPlane(double newFarPlane)
 {
 	far = newFarPlane;
-	UpdateProjection();
+}
+
+void Camera::SetFarNearFov(double newFov, double newNearPlane, double newFarPlane)
+{
+	fov = newFov;
+	near = newNearPlane;
+	far = newFarPlane;
+}
+
+Vector3 Camera::ConvertMousePosToWorldDir(double mousePosX, double mousePosY)
+{
+	Vector4 mouse_p0s = Vector4();
+	mouse_p0s.x = (mousePosX / (double)windowWidth)*2.0 - 1.0;
+	mouse_p0s.y = (((double)windowHeight - mousePosY) / (double)windowHeight)*2.0 - 1.0;
+	mouse_p0s.z = -1.0;
+	mouse_p0s.w = 1.0;
+
+	Vector4 my_mouse_in_world_space = ProjectionMatrix.inverse() * mouse_p0s;
+	my_mouse_in_world_space.z = -1;
+	my_mouse_in_world_space.w = 0;
+	my_mouse_in_world_space = ViewMatrix.inverse() * my_mouse_in_world_space;
+
+	return my_mouse_in_world_space.get_xyz().vectNormalize();
 }
 
 void Camera::ComputeVectors()
@@ -167,27 +179,12 @@ void Camera::ComputeVectors()
 
 void Camera::CalculateViewMatrix()
 {
-	// Camera matrix
-	//if (cameraType == 1 || cameraType == 2)
-	//{
-		ViewMatrix = Matrix4::lookAt(
-			position,           // Camera is here
-			position + direction, // and looks here : at the same position, plus "direction"
-			up                  // Head is up (set to 0,-1,0 to look upside-down)
-			);
-		/*if (cameraType == 2)
-		{
-			ViewMatrix = ViewMatrix*Matrix4::translate(0, 0, -10);// we move the camera out after creating the look at (rotation matrix)
-		}
-	}
-	if (cameraType == 3)
-	{
-		ViewMatrix = Matrix4::lookAt(
-			Vector3(0.f, 0.f, 6.f),           // Camera is here
-			initialPosition + direction, // and looks here : at the same position, plus "direction"
-			up                  // Head is up (set to 0,-1,0 to look upside-down)
-			);
-	}*/
+
+	ViewMatrix = Matrix4::lookAt(
+		position,           // Camera is here
+		position + direction, // and looks here : at the same position, plus "direction"
+		up                  // Head is up (set to 0,-1,0 to look upside-down)
+		);
 }
 
 void Camera::UpdateProjection()

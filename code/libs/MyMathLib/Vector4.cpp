@@ -5,33 +5,25 @@
 namespace mwm
 {
 /*! \fn Vector4 constructor*/
-Vector4::Vector4(double x, double y, double z, double w)
-{
-	this->x = x;
-	this->y = y;
-	this->z = z;
-	this->w = w;
-}
+Vector4::Vector4(double x, double y, double z, double w) : x(x), y(y), z(z), w(w) {}
 
 Vector4::Vector4(const Vector2& v1, const Vector2& v2)
 {
-	this->x = v1.x;
-	this->y = v1.y;
-	this->z = v2.x;
-	this->w = v2.y;
+	x = v1.x;
+	y = v1.y;
+	z = v2.x;
+	w = v2.y;
 }
 
-Vector4::Vector4(const Vector3& v1, double w)
+Vector4::Vector4(const Vector3& v1, double wIn)
 {
-	this->x = v1.x;
-	this->y = v1.y;
-	this->z = v1.z;
-	this->w = w;
+	x = v1.x;
+	y = v1.y;
+	z = v1.z;
+	w = wIn;
 }
 
-Vector4::~Vector4()
-{
-}
+Vector4::~Vector4() {}
 
 /*! \fn add vectors amd return new one*/
 Vector4 Vector4::operator+ (const Vector4& right) const
@@ -96,6 +88,6 @@ Vector4 Vector4::vectNormalize() const
 /*! \fn operator[] overload for indexing */
 double& Vector4::operator[] (int index)
 {
-	return this->vect[index];
+	return vect[index];
 }
 }

@@ -1,7 +1,7 @@
 #include "GraphicsStorage.h"
 #include "Material.h"
 #include "Mesh.h"
-#include "Texture2D.h"
+#include "Texture.h"
 #include "OBJ.h"
 #include <GL/glew.h>
 
@@ -40,7 +40,7 @@ void GraphicsStorage::ClearTextures()
 	textures.clear();
 }
 
-void GraphicsStorage::ClearCubeMaps()
+void GraphicsStorage::ClearCubemaps()
 {
 	for (auto& cubemap : cubemaps)
 	{
@@ -58,8 +58,8 @@ void GraphicsStorage::ClearOBJs()
 	objects.clear();
 }
 
-std::map<std::string, Mesh*> GraphicsStorage::meshes;
-std::vector<Texture2D*> GraphicsStorage::textures;
+std::unordered_map<std::string, Mesh*> GraphicsStorage::meshes;
+std::vector<Texture*> GraphicsStorage::textures;
 std::vector<Material*> GraphicsStorage::materials;
 std::vector<OBJ*> GraphicsStorage::objects;
-std::vector<Texture2D*> GraphicsStorage::cubemaps;
+std::vector<Texture*> GraphicsStorage::cubemaps;

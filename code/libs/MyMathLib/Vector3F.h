@@ -1,7 +1,4 @@
 #pragma once
-#include <emmintrin.h>
-#include <xmmintrin.h>
-#include <smmintrin.h>
 #include "Vector4F.h"
 namespace mwm
 {
@@ -37,9 +34,6 @@ public:
 	Vector3F operator/ (const float& right) const;
 	Vector3F operator/ (const Vector3F& right) const;
 
-	Vector3F normalizeSSE() const;
-	float vectLengthSSE() const;
-
 	void operator+=(const Vector3F& v);
 	void operator-=(const Vector3F& v);
 	void operator*=(const float& number);
@@ -49,24 +43,5 @@ public:
 protected:
 
 };
-
-inline Vector3F Vector3F::normalizeSSE() const
-{
-	__m128 tmp = _mm_set_ps(0, vect[2], vect[1], vect[0]);
-	__m128 length = _mm_sqrt_ss(_mm_dp_ps(tmp, tmp, 0x7F));
-	__m128 true_length = _mm_shuffle_ps(length, length, _MM_SHUFFLE(0, 0, 0, 0));
-
-	Vector4F normalized;
-	normalized.v = _mm_div_ps(tmp, true_length);
-	return Vector3F(normalized.x,normalized.y,normalized.z);
-}
-
-inline float Vector3F::vectLengthSSE() const
-{
-	__m128 tmp = _mm_set_ps(0, vect[2], vect[1], vect[0]);
-	Vector4F length;
-	length.v = _mm_sqrt_ss(_mm_dp_ps(tmp, tmp, 0x7F));
-	return length.x;
-}
 }
 

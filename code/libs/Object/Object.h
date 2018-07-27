@@ -34,18 +34,16 @@ public:
 	void Translate(const mwm::Vector3& vector);
 	void SetOrientation(const mwm::Quaternion& q);
 
-	mwm::Quaternion GetOrientation();
+	mwm::Matrix3 GetWorldRotation3();
+	mwm::Matrix4 GetWorldRotation();
+	mwm::Quaternion GetWorldOrientation();
+	mwm::Quaternion GetLocalOrientation();
 	mwm::Vector3 extractScale();
 	mwm::Vector3 getScale();
+	mwm::Vector3 GetLocalScale();
 	mwm::Vector3 GetWorldPosition() const;
 	mwm::Vector3 GetLocalPosition() const;
-	
-	void SetMeshOffset(const mwm::Vector3& offset);
-	
-	mwm::Matrix4 CalculateOffsettedModel() const;
 
-	mwm::Vector3 meshOffset;
-	mwm::Matrix4 depthMVP = mwm::Matrix4::identityMatrix();
 	template <typename T>
 	T* GetComponent()
 	{ 

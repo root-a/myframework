@@ -66,18 +66,18 @@ void BoundingBox::SetUpBuffers()
 
 }
 
-void BoundingBox::Draw(const mwm::Matrix4& Model, const mwm::Matrix4& View, const mwm::Matrix4& Projection, unsigned int wireframeShader)
+void BoundingBox::Draw(const mwm::Matrix4& Model, const mwm::Matrix4& ViewProjection, unsigned int shader)
 {
-	Matrix4F MVP = (Model*View*Projection).toFloat();
-	MatrixHandle = glGetUniformLocation(wireframeShader, "MVP");
-	MaterialColorValueHandle = glGetUniformLocation(wireframeShader, "MaterialColorValue");
+	Matrix4F MVP = (Model*ViewProjection).toFloat();
+	MatrixHandle = glGetUniformLocation(shader, "MVP");
+	MaterialColorValueHandle = glGetUniformLocation(shader, "MaterialColorValue");
 
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 	glUniform3fv(MaterialColorValueHandle, 1, &this->mat->color.x);
 
 	glBindVertexArray(this->mesh->vaoHandle);
 
-	glDrawElements(GL_LINES, 24, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_LINES, mesh->indicesSize, GL_UNSIGNED_SHORT, 0);
 }
 
 MinMax BoundingBox::CalcValuesInWorld(const Matrix3& modelM, const Vector3& position)
@@ -98,5 +98,26 @@ MinMax BoundingBox::CalcValuesInWorld(const Matrix3& modelM, const Vector3& posi
 	MinMax mm;
 	mm.max = maxValuesW + position;
 	mm.min = minValuesW + position;
+	return mm;
+}
+
+mwm::MinMax BoundingBox::CalcValuesInWorld(const mwm::Matrix4 & modelMatrix)
+{
+	Vector4 maxValuesW = modelMatrix * vertices[0];
+	Vector4 minValuesW = modelMatrix * vertices[0];
+	Vector4 currentVertex;
+	for (int i = 0; i < 8; ++i)
+	{
+		currentVertex = modelMatrix * vertices[i];
+		maxValuesW.x = std::max(maxValuesW.x, currentVertex.x);
+		minValuesW.x = std::min(minValuesW.x, currentVertex.x);
+		maxValuesW.y = std::max(maxValuesW.y, currentVertex.y);
+		minValuesW.y = std::min(minValuesW.y, currentVertex.y);
+		maxValuesW.z = std::max(maxValuesW.z, currentVertex.z);
+		minValuesW.z = std::min(minValuesW.z, currentVertex.z);
+	}
+	MinMax mm;
+	mm.max = Vector3(maxValuesW.x, maxValuesW.y, maxValuesW.z);
+	mm.min = Vector3(minValuesW.x, minValuesW.y, minValuesW.z);
 	return mm;
 }

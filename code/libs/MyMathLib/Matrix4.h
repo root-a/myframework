@@ -5,6 +5,8 @@ class Vector4;
 class Vector3;
 class Matrix4F;
 class Matrix3;
+class Quaternion;
+
 struct loc;
 
 class Matrix4
@@ -35,12 +37,19 @@ public:
 	Vector3 getScale() const;
 	Vector3 getPosition() const;
 	Vector3 getUp() const;
-	Vector3 getRight() const;
-	Vector3 getForwardNegZ() const;
-	Vector3 getBackPosZ() const;
+	Vector3 getInvUp() const;
+	Vector3 getLeft() const;
+	Vector3 getInvLeft() const;
+	Vector3 getBack() const;
+	Vector3 getInvBack() const;
+	Vector3 getForward() const;
+	Vector3 getInvForward() const;
 	Vector3 getAxis(int axis) const;
 	Vector3 getAxisNormalized(int axis) const;
 	Vector3 extractScale() const;
+	Matrix3 extractRotation3() const;
+	Matrix4 extractRotation() const;
+	Quaternion toQuaternion() const;
 
 	void setUp(const Vector3& axis);
 	void setRight(const Vector3& axis);

@@ -2,25 +2,26 @@
 #include <cmath> 
 #include "Object.h"
 #include "PhysicsManager.h"
-#include "Time.h"
+#include "Times.h"
 #include "BoundingBox.h"
 
 using namespace mwm;
 
-RigidBody::RigidBody(Object* parent)
+RigidBody::RigidBody(Object* owner)
 {
 	this->obb.color = Vector3F(0.f, 0.8f, 0.8f);
 	this->aabb.color = Vector3F(1.f, 0.54f, 0.f);
 	this->mass = 1.0;
 	this->massInverse = 1.0 / 1.0;
-	this->damping = 0.85;
+	this->angularDamping = 0.85;
+	this->linearDamping = 0.85;
 	this->isAwake = true;
 	this->isKinematic = false;
 	this->restitution = 0.0;
 	this->motion = 1.0; //make sure it does not sleep directly at start of simulation
 	this->canSleep = true;
 	this->sleepEpsilon = 0.2;
-	this->object = parent;
+	this->object = owner;
 	UpdateHExtentsAndMass();
 }
 
@@ -41,7 +42,7 @@ void RigidBody::IntegrateEuler(double timestep, const Vector3& gravity)
 	Vector3 changeInPos = this->velocity * timestep;
 	object->Translate(changeInPos);
 
-	this->velocity *= pow(damping, timestep);
+	this->velocity *= pow(linearDamping, timestep);
 
 
 	this->angular_velocity += angular_acc * timestep;
@@ -50,10 +51,10 @@ void RigidBody::IntegrateEuler(double timestep, const Vector3& gravity)
 	double angle = this->angular_velocity.vectLengt();
 	if (angle != 0){
 		Quaternion test(angle * timestep, axis);
-		object->SetOrientation((test*object->GetOrientation()).Normalized());
+		object->SetOrientation((test*object->GetLocalOrientation()).Normalized());
 	}
 
-	this->angular_velocity *= pow(damping, timestep);
+	this->angular_velocity *= pow(angularDamping, timestep);
 
 	this->accum_force = Vector3(0.0, 0.0, 0.0);
 	this->accum_torque = Vector3(0.0, 0.0, 0.0);
@@ -76,7 +77,7 @@ void RigidBody::IntegrateMid(double timestep, const Vector3& gravity)
 	Vector3 changeInPos = this->velocity*timestep;
 	object->Translate(changeInPos);
 
-	this->velocity *= pow(damping, timestep);
+	this->velocity *= pow(linearDamping, timestep);
 
 
 	Vector3 changeInAngVel = angular_acc * (timestep * 0.5); //half-step
@@ -88,10 +89,10 @@ void RigidBody::IntegrateMid(double timestep, const Vector3& gravity)
 	double angle = this->angular_velocity.vectLengt();
 	if (angle != 0){
 		Quaternion test(angle * timestep, axis);
-		object->SetOrientation((test*object->GetOrientation()).Normalized());
+		object->SetOrientation((test*object->GetLocalOrientation()).Normalized());
 	}
 
-	this->angular_velocity *= pow(damping, timestep);
+	this->angular_velocity *= pow(angularDamping, timestep);
 
 	this->accum_force = Vector3(0.0, 0.0, 0.0);
 	this->accum_torque = Vector3(0.0, 0.0, 0.0);
@@ -121,7 +122,7 @@ void RigidBody::IntegrateRunge(double timestep, const Vector3& gravity)
 	Vector3 changeInPos = (timestep / 6.0) * (dx1 + (dx2 + dx3) * 2.0 + dx4);
 	object->Translate(changeInPos);
 
-	this->velocity *= pow(damping, timestep);
+	this->velocity *= pow(linearDamping, timestep);
 	
 	Vector3 adv1 = angular_acc;
 	Vector3 adv2 = angular_acc + (timestep / 2.0) * adv1; //k2 ang
@@ -141,10 +142,10 @@ void RigidBody::IntegrateRunge(double timestep, const Vector3& gravity)
 	double angle = changeInRot.vectLengt();
 	if (angle != 0){
 		Quaternion test(angle, axis);
-		object->SetOrientation((test*object->GetOrientation()).Normalized());
+		object->SetOrientation((test*object->GetLocalOrientation()).Normalized());
 	}
 
-	this->angular_velocity *= pow(damping, timestep);
+	this->angular_velocity *= pow(angularDamping, timestep);
 
 	this->accum_force = Vector3(0.0, 0.0, 0.0);
 	this->accum_torque = Vector3(0.0, 0.0, 0.0);
@@ -219,17 +220,18 @@ void RigidBody::UpdateKineticEnergyStoreAndPutToSleep(double timestep)
 
 void RigidBody::UpdateBoundingBoxes()
 {
-	//OBB
-	obb.model = object->node.orientation.ConvertToMatrix3(); //don't let the model contain the scale
-	obb.mm = BoundingBox::CalcValuesInWorld(extentsM * obb.model, object->node.position);
+	obb.rot = object->node.CenteredTopDownTransform.extractRotation3(); //no scaling
 
-	//AABB
-	aabb.model = Matrix4::scale((obb.mm.max - obb.mm.min))*Matrix4::translate(object->node.position);
+	obb.model = Matrix4::scale(object->GetMeshDimensions())*object->node.CenteredTopDownTransform; //total matrix contain scale of the object which applies to the bounding box that is 1 unit large, we need to scale the bb up to so it matches the dimensions of the mesh it will surround
+	obb.mm = BoundingBox::CalcValuesInWorld(obb.model.ConvertToMatrix3(), object->node.centeredPosition); //we could just send the obb.model(4x4) but 3x3 + pos is faster
+	
+	Vector3 aaBBextents = obb.mm.max - obb.mm.min;
+	aabb.model = Matrix4::scale(aaBBextents)*Matrix4::translate(object->node.centeredPosition);
 }
 
 void RigidBody::UpdateInertiaTensor()
 {
-	inverse_inertia_tensor_world = obb.model * this->inverse_inertia_tensor * (~obb.model);
+	inverse_inertia_tensor_world = obb.rot * this->inverse_inertia_tensor * (~obb.rot);
 }
 
 void RigidBody::SetOBBHalfExtent(const Vector3& scale)
@@ -263,16 +265,15 @@ void RigidBody::SetCanSleep(const bool canSleep)
 
 void RigidBody::Update()
 {
-	IntegrateRunge(Time::timeStep, PhysicsManager::Instance()->gravity);
+	IntegrateRunge(Times::Instance()->timeStep, PhysicsManager::Instance()->gravity);
 	UpdateBoundingBoxes();
 	UpdateInertiaTensor();
+	UpdateHalfExtents();
 }
 
 void RigidBody::UpdateHalfExtents()
 {
-	Vector3 extents = object->GetMeshDimensions()*object->getScale();
-	extentsM = Matrix3::scale(extents);
-	obb.halfExtent = extents*0.5;
+	obb.halfExtent = object->GetMeshDimensions()*object->getScale()*0.5;
 }
 
 void RigidBody::UpdateHExtentsAndMass()

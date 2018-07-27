@@ -183,7 +183,7 @@ void OBJ::CalculateDimensions()
 	dimensions.y = maxValues.y - minValues.y;
 	dimensions.z = maxValues.z - minValues.z;
 	
-	this->center_of_mass = Vector3(minValues.x, minValues.y, minValues.z) + this->dimensions/2.0;
+	this->center_of_mesh = Vector3(minValues.x, minValues.y, minValues.z) + this->dimensions/2.0;
 
 }
 
@@ -192,7 +192,7 @@ Vector3 OBJ::GetDimensions()
 	return this->dimensions;
 }
 
-Vector3 OBJ::CenterOfMass()
+Vector3 OBJ::CenterOfOMesh()
 {
-	return this->center_of_mass;
+	return this->center_of_mesh;
 }

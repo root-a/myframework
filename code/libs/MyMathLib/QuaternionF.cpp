@@ -1,5 +1,5 @@
 #include <math.h>
-#include "quaternionF.h"
+#include "QuaternionF.h"
 #include "Vector3F.h"
 #include "Matrix4F.h"
 #include "Matrix3F.h"
@@ -8,30 +8,29 @@ namespace mwm
 {
 QuaternionF::QuaternionF()
 {
-	this->x = 0;
-	this->y = 0;
-	this->z = 0;
-	this->w = 1;
+	x = 0;
+	y = 0;
+	z = 0;
+	w = 1;
 }
 
 QuaternionF::QuaternionF(float angle, const Vector3F &axis)
 {
-	this->x = axis.x * sinf((angle) / 2.f);
-	this->y = axis.y * sinf((angle) / 2.f);
-	this->z = axis.z * sinf((angle) / 2.f);
-	this->w = cosf((angle) / 2.f);
+	float PI = 3.14159265f;
+	float dAngle = angle * PI / 180.f;
+	x = axis.x * sinf((dAngle) / 2.f);
+	y = axis.y * sinf((dAngle) / 2.f);
+	z = axis.z * sinf((dAngle) / 2.f);
+	w = cosf((dAngle) / 2.f);
 }
 
-QuaternionF::QuaternionF(const float x, const float y, const float z, const float w) : x(x), y(y), z(z), w(w)
-{}
+QuaternionF::QuaternionF(const float x, const float y, const float z, const float w) : x(x), y(y), z(z), w(w) {}
 
-QuaternionF::~QuaternionF(void)
-{
-}
+QuaternionF::~QuaternionF(void) {}
 
 void QuaternionF::InsertAt(unsigned int index, float value)
 {
-	this->quaternion[index] = value;
+	quaternion[index] = value;
 }
 
 QuaternionF QuaternionF::operator*(const QuaternionF& v) const
@@ -107,7 +106,7 @@ Matrix4F QuaternionF::ConvertToMatrix() const
 
 float& QuaternionF::operator[](unsigned int index)
 {
-	return this->quaternion[index];
+	return quaternion[index];
 }
 
 Matrix3F QuaternionF::ConvertToMatrix3F() const
@@ -126,6 +125,71 @@ Matrix3F QuaternionF::ConvertToMatrix3F() const
 	rotation[2][2] = 1.f - 2.f * x*x - 2.f * y*y;
 
 	return rotation;
+}
+
+Vector3F QuaternionF::getLeft() const
+{
+	float x1 = 1.f - 2.f * y*y - 2.f * z*z;
+	float y1 = (2.f * x * y) + (2.f * w * z);
+	float z1 = (2.f * x * z) - (2.f * w * y);
+	return Vector3F(x1, y1, z1).vectNormalize();
+}
+
+Vector3F QuaternionF::getInvLeft() const
+{
+	float x1 = 1.f - 2.f * y*y - 2.f * z*z;
+	float y1 = (2.f * x * y) - (2.f * w * z);
+	float z1 = (2.f * x * z) + (2.f * w * y);
+	return Vector3F(x1, y1, z1).vectNormalize();
+}
+
+Vector3F QuaternionF::getUp() const
+{
+
+	float x1 = (2.f * x * y) - (2.f * w * z);
+	float y1 = 1.f - 2.f * x*x - 2.f * z*z;
+	float z1 = (2.f * y * z) + (2.f * w * x);
+	return Vector3F(x1, y1, z1).vectNormalize();
+}
+
+Vector3F QuaternionF::getInvUp() const
+{
+	float x1 = (2.f * x * y) + (2.f * w * z);
+	float y1 = 1.f - 2.f * x*x - 2.f * z*z;
+	float z1 = (2.f * y * z) - (2.f * w * x);
+	return Vector3F(x1, y1, z1).vectNormalize();
+}
+
+Vector3F QuaternionF::getBack() const
+{
+	float x1 = (2.f * x * z) + (2.f * w * y);
+	float y1 = (2.f * y * z) - (2.f * w * x);
+	float z1 = 1.f - 2.f * x*x - 2.f * y*y;
+	return Vector3F(-x1, -y1, -z1).vectNormalize();
+}
+
+Vector3F QuaternionF::getInvBack() const
+{
+	float x1 = (2.f * x * z) - (2.f * w * y);
+	float y1 = (2.f * y * z) + (2.f * w * x);
+	float z1 = 1.f - 2.f * x*x - 2.f * y*y;
+	return Vector3F(-x1, -y1, -z1).vectNormalize();
+}
+
+Vector3F QuaternionF::getForward() const
+{
+	float x1 = (2.f * x * z) + (2.f * w * y);
+	float y1 = (2.f * y * z) - (2.f * w * x);
+	float z1 = 1.f - 2.f * x*x - 2.f * y*y;
+	return Vector3F(x1, y1, z1).vectNormalize();
+}
+
+Vector3F QuaternionF::getInvForward() const
+{
+	float x1 = (2.f * x * z) - (2.f * w * y);
+	float y1 = (2.f * y * z) + (2.f * w * x);
+	float z1 = 1.f - 2.f * x*x - 2.f * y*y;
+	return Vector3F(x1, y1, z1).vectNormalize();
 }
 
 }

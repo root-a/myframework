@@ -11,8 +11,9 @@ public:
 	
 	BoundingBox();
 	void SetUpBuffers();
-	void Draw(const mwm::Matrix4& Model, const mwm::Matrix4& View, const mwm::Matrix4& Projection, unsigned int wireframeShader);
+	void Draw(const mwm::Matrix4& Model, const mwm::Matrix4& ViewProjection, unsigned int wireframeShader);
 	static mwm::MinMax CalcValuesInWorld(const mwm::Matrix3& modelMatrix, const mwm::Vector3& position);
+	static mwm::MinMax CalcValuesInWorld(const mwm::Matrix4& modelMatrix);
 	Mesh* mesh;
 	Material* mat;
 	
