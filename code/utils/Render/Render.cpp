@@ -55,6 +55,9 @@ Render::drawGeometry(const std::vector<Object*>& objects, const FrameBuffer * ge
 	GLuint PickingObjectIndexHandle = glGetUniformLocation(geometryShader, "objectID");
 	GLuint Tiling = glGetUniformLocation(geometryShader, "tiling");
 	GLuint TextureSamplerHandle = glGetUniformLocation(geometryShader, "myTextureSampler");
+	glUniform1i(TextureSamplerHandle, 0);
+
+	glActiveTexture(GL_TEXTURE0);
 
 	int objectsRendered = 0;
 	for (auto& object : objects)
@@ -71,9 +74,7 @@ Render::drawGeometry(const std::vector<Object*>& objects, const FrameBuffer * ge
 			glUniform3fv(MaterialColorHandle, 1, &object->mat->color.x);			
 			glUniform1ui(PickingObjectIndexHandle, object->ID);
 			glUniform2f(Tiling, object->mat->tileX, object->mat->tileY);
-			glUniform1i(TextureSamplerHandle, 0);
-
-			glActiveTexture(GL_TEXTURE0);
+			
 			object->mat->texture->Bind();
 
 			glBindVertexArray(object->mesh->vaoHandle);
@@ -84,7 +85,7 @@ Render::drawGeometry(const std::vector<Object*>& objects, const FrameBuffer * ge
 		}
 	}
 
-	glActiveTexture(GL_TEXTURE0);
+	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
@@ -101,8 +102,11 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 	GLuint MaterialPropertiesHandle = glGetUniformLocation(currentShaderID, "MaterialProperties");
 	GLuint MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor");
 	GLuint PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
-	GLuint TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
 	GLuint tiling = glGetUniformLocation(currentShaderID, "tiling");
+	GLuint TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
+	glUniform1i(TextureSamplerHandle, 0);
+
+	glActiveTexture(GL_TEXTURE0);
 
 	for (auto& object : objects)
 	{
@@ -123,10 +127,8 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 
 			glUniform1ui(PickingObjectIndexHandle, object->ID);
 
-			glActiveTexture(GL_TEXTURE0);
 			object->mat->texture->Bind();
-			glUniform1i(TextureSamplerHandle, 0);
-
+			
 			glBindVertexArray(object->mesh->vaoHandle);
 
 			glDrawElements(GL_TRIANGLES, object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0);
@@ -167,11 +169,13 @@ void Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjecti
 	GLuint MaterialPropertiesHandle = glGetUniformLocation(currentShaderID, "MaterialProperties");
 	GLuint MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor");
 	GLuint PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
-	GLuint TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
-
 	GLuint tiling = glGetUniformLocation(currentShaderID, "tiling");
-	glUniform2f(tiling, object->mat->tileX, object->mat->tileY);
 
+	GLuint TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
+	glUniform1i(TextureSamplerHandle, 0);
+
+	
+	glUniform2f(tiling, object->mat->tileX, object->mat->tileY);
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 	glUniformMatrix4fv(ModelMatrixHandle, 1, GL_FALSE, &ModelMatrix[0][0]);
 
@@ -183,7 +187,7 @@ void Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjecti
 
 	glActiveTexture(GL_TEXTURE0);
 	object->mat->texture->Bind();
-	glUniform1i(TextureSamplerHandle, 0);
+	
 
 	glBindVertexArray(object->mesh->vaoHandle);
 
@@ -395,25 +399,6 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 	GLuint lightShaderWithShadows = ShaderManager::Instance()->shaderIDs["directionalLightShadow"];
 	GLuint depthShader = ShaderManager::Instance()->shaderIDs["depth"];
 	GLuint blurShader = ShaderManager::Instance()->shaderIDs["fastBlurShadow"];
-	
-	glUseProgram(lightShaderNoShadows);
-
-	GLuint screenSize = glGetUniformLocation(lightShaderNoShadows, "screenSize");
-	glUniform2f(screenSize, windowWidth, windowHeight);
-	GLuint CameraPos = glGetUniformLocation(lightShaderNoShadows, "CameraPos");
-	glUniform3fv(CameraPos, 1, &camPos.x);
-	if (onceD)
-	{
-		GLuint positionSampler = glGetUniformLocation(lightShaderNoShadows, "positionSampler");
-		glUniform1i(positionSampler, 0);
-		GLuint diffuseSampler = glGetUniformLocation(lightShaderNoShadows, "diffuseSampler");
-		glUniform1i(diffuseSampler, 1);
-		GLuint normalsSampler = glGetUniformLocation(lightShaderNoShadows, "normalsSampler");
-		glUniform1i(normalsSampler, 2);
-		GLuint metDiffIntShinSampler = glGetUniformLocation(lightShaderNoShadows, "metDiffIntShinSpecIntSampler");
-		glUniform1i(metDiffIntShinSampler, 3);
-	}
-
 
 	glActiveTexture(GL_TEXTURE0);
 	geometryTextures[0]->Bind();
@@ -426,8 +411,25 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 	
 	glActiveTexture(GL_TEXTURE3);
 	geometryTextures[3]->Bind();
-	
 
+	glUseProgram(lightShaderNoShadows);
+
+	GLuint screenSize = glGetUniformLocation(lightShaderNoShadows, "screenSize");
+	glUniform2f(screenSize, windowWidth, windowHeight);
+	GLuint CameraPos = glGetUniformLocation(lightShaderNoShadows, "CameraPos");
+	glUniform3fv(CameraPos, 1, &camPos.x);
+
+	if (onceD)
+	{
+		GLuint positionSampler = glGetUniformLocation(lightShaderNoShadows, "positionSampler");
+		glUniform1i(positionSampler, 0);
+		GLuint diffuseSampler = glGetUniformLocation(lightShaderNoShadows, "diffuseSampler");
+		glUniform1i(diffuseSampler, 1);
+		GLuint normalsSampler = glGetUniformLocation(lightShaderNoShadows, "normalsSampler");
+		glUniform1i(normalsSampler, 2);
+		GLuint metDiffIntShinSampler = glGetUniformLocation(lightShaderNoShadows, "metDiffIntShinSpecIntSampler");
+		glUniform1i(metDiffIntShinSampler, 3);
+	}
 
 	glUseProgram(lightShaderWithShadows);
 
@@ -455,25 +457,12 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 		onceD = false;
 	}
 
-	glActiveTexture(GL_TEXTURE0);
-	geometryTextures[0]->Bind();
-
-	glActiveTexture(GL_TEXTURE1);
-	geometryTextures[1]->Bind();
-
-	glActiveTexture(GL_TEXTURE2);
-	geometryTextures[2]->Bind();
-
-	glActiveTexture(GL_TEXTURE3);
-	geometryTextures[3]->Bind();
-
 
 	GLuint lightShader = lightShaderNoShadows;
 	for (auto& directionalLight : lights)
 	{
 		if (directionalLight->hasShadowMap)
 		{
-			lightShader = lightShaderWithShadows;
 			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, dirShadowMapBuffer->handle);
 
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
@@ -498,17 +487,18 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 				else
 					blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, directionalLight->blurLevel, directionalLight->blurIntensity, blurShader, windowWidth, windowHeight);
 
-				glUseProgram(lightShader);
 				glActiveTexture(GL_TEXTURE4);
 				blurredShadowMap->Bind();
 			}
 			else
 			{
-				glUseProgram(lightShader);
 				glActiveTexture(GL_TEXTURE4);
 				dirShadowMapTexture->Bind();
 			}
 
+			lightShader = lightShaderWithShadows;
+			glUseProgram(lightShader);
+			
 			glUniform1f(shadowFadeSize, directionalLight->shadowFadeRange);
 			glUniform1f(shadowDistance, directionalLight->radius);
 			glUniformMatrix4fv(DepthBiasMatrixHandle, 1, GL_FALSE, &directionalLight->BiasedLightMatrixVP[0][0]);
@@ -516,9 +506,8 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 		else
 		{
 			lightShader = lightShaderNoShadows;
+			glUseProgram(lightShader);
 		}
-
-		glUseProgram(lightShader);
 
 		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTheLightTO);
 
@@ -571,6 +560,18 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 	GLuint blurShader = ShaderManager::Instance()->shaderIDs["fastBlurShadow"];
 	GLuint stencilShader = ShaderManager::Instance()->shaderIDs["stencil"];
 
+	glActiveTexture(GL_TEXTURE0);
+	geometryTextures[0]->Bind();
+
+	glActiveTexture(GL_TEXTURE1);
+	geometryTextures[1]->Bind();
+
+	glActiveTexture(GL_TEXTURE2);
+	geometryTextures[2]->Bind();
+
+	glActiveTexture(GL_TEXTURE3);
+	geometryTextures[3]->Bind();
+
 	glUseProgram(lightShaderNoShadows);
 
 	GLuint screenSize = glGetUniformLocation(lightShaderNoShadows, "screenSize");
@@ -589,23 +590,8 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 		GLuint metDiffIntShinSampler = glGetUniformLocation(lightShaderNoShadows, "metDiffIntShinSpecIntSampler");
 		glUniform1i(metDiffIntShinSampler, 3);
 	}
-
-	glActiveTexture(GL_TEXTURE0);
-	geometryTextures[0]->Bind();
-
-	glActiveTexture(GL_TEXTURE1);
-	geometryTextures[1]->Bind();
-
-	glActiveTexture(GL_TEXTURE2);
-	geometryTextures[2]->Bind();
-	
-	glActiveTexture(GL_TEXTURE3);
-	geometryTextures[3]->Bind();
 	
 	glUseProgram(lightShaderWithShadows);
-
-	GLuint ShadowMapHandle = glGetUniformLocation(lightShaderWithShadows, "shadowMapSampler");
-	GLuint farPlaneForDepth = glGetUniformLocation(lightShaderWithShadows, "far_plane");
 
 	screenSize = glGetUniformLocation(lightShaderWithShadows, "screenSize");
 	glUniform2f(screenSize, windowWidth, windowHeight);
@@ -622,20 +608,10 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 		glUniform1i(normalsSampler, 2);
 		GLuint metDiffIntShinSampler = glGetUniformLocation(lightShaderWithShadows, "metDiffIntShinSpecIntSampler");
 		glUniform1i(metDiffIntShinSampler, 3);
+		GLuint ShadowMapHandle = glGetUniformLocation(lightShaderWithShadows, "shadowMapSampler");
+		glUniform1i(ShadowMapHandle, 4);
 		onceP = false;
 	}
-
-	glActiveTexture(GL_TEXTURE0);
-	geometryTextures[0]->Bind();
-
-	glActiveTexture(GL_TEXTURE1);
-	geometryTextures[1]->Bind();
-
-	glActiveTexture(GL_TEXTURE2);
-	geometryTextures[2]->Bind();
-
-	glActiveTexture(GL_TEXTURE3);
-	geometryTextures[3]->Bind();
 
 	GLuint lightShader = lightShaderNoShadows;
 
@@ -666,12 +642,9 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 				glClearColor(0, 0, 0, 1);
 
-				glUseProgram(lightShader);
+				//glUseProgram(lightShader);
 				glActiveTexture(GL_TEXTURE4);
 				light->shadowMapTexture->Bind();
-				
-				glUniform1i(ShadowMapHandle, 4);
-				glUniform1f(farPlaneForDepth, (float)light->object->radius);
 			}
 			
 			else
@@ -755,6 +728,9 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 			GLuint Ambient = glGetUniformLocation(lightShader, "ambient");
 			glUniform1f(Ambient, light->object->mat->specularIntensity);
 
+			GLuint farPlaneForDepth = glGetUniformLocation(lightShaderWithShadows, "far_plane");
+			glUniform1f(farPlaneForDepth, (float)light->object->radius);
+
 			glDrawElements(GL_TRIANGLES, light->object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0);
 
 			glCullFace(GL_BACK);
@@ -780,13 +756,25 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 	float windowHeight = (float)currentCamera->windowHeight;
 	Vector3F camPos = currentCamera->GetPosition2().toFloat();
 
+	glActiveTexture(GL_TEXTURE0); //we should activate the textures once, should not need any shader bound for that
+	geometryTextures[0]->Bind();
+
+	glActiveTexture(GL_TEXTURE1);
+	geometryTextures[1]->Bind();
+
+	glActiveTexture(GL_TEXTURE2);
+	geometryTextures[2]->Bind();
+
+	glActiveTexture(GL_TEXTURE3);
+	geometryTextures[3]->Bind();
+
 	GLuint lightShaderNoShadows = ShaderManager::Instance()->shaderIDs["spotLight"];
 	GLuint lightShaderWithShadows = ShaderManager::Instance()->shaderIDs["spotLightShadow"];
 	GLuint depthShader = ShaderManager::Instance()->shaderIDs["depth"];
 	GLuint blurShader = ShaderManager::Instance()->shaderIDs["fastBlurShadow"];
 	GLuint stencilShader = ShaderManager::Instance()->shaderIDs["stencil"];
 
-	glUseProgram(lightShaderNoShadows);
+	glUseProgram(lightShaderNoShadows); //we bind shader so we can set variables on it, not to get locations
 
 	GLuint screenSize = glGetUniformLocation(lightShaderNoShadows, "screenSize");
 	glUniform2f(screenSize, windowWidth, windowHeight);
@@ -805,22 +793,7 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 		glUniform1i(metDiffIntShinSampler, 3);
 	}
 
-	glActiveTexture(GL_TEXTURE0);
-	geometryTextures[0]->Bind();
-
-	glActiveTexture(GL_TEXTURE1);
-	geometryTextures[1]->Bind();
-
-	glActiveTexture(GL_TEXTURE2);
-	geometryTextures[2]->Bind();
-
-	glActiveTexture(GL_TEXTURE3);
-	geometryTextures[3]->Bind();
-
-	glUseProgram(lightShaderWithShadows);
-
-	GLuint ShadowMapHandle = glGetUniformLocation(lightShaderWithShadows, "shadowMapSampler");
-	GLuint DepthBiasMatrixHandle = glGetUniformLocation(lightShaderWithShadows, "DepthBiasMVP");
+	glUseProgram(lightShaderWithShadows); //we bind shader so we can set variables on it, not to get locations
 
 	screenSize = glGetUniformLocation(lightShaderWithShadows, "screenSize");
 	glUniform2f(screenSize, windowWidth, windowHeight);
@@ -837,20 +810,10 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 		glUniform1i(normalsSampler, 2);
 		GLuint metDiffIntShinSampler = glGetUniformLocation(lightShaderWithShadows, "metDiffIntShinSpecIntSampler");
 		glUniform1i(metDiffIntShinSampler, 3);
+		GLuint ShadowMapHandle = glGetUniformLocation(lightShaderWithShadows, "shadowMapSampler");
+		glUniform1i(ShadowMapHandle, 4);
 		onceS = false;
 	}
-
-	glActiveTexture(GL_TEXTURE0);
-	geometryTextures[0]->Bind();
-
-	glActiveTexture(GL_TEXTURE1);
-	geometryTextures[1]->Bind();
-
-	glActiveTexture(GL_TEXTURE2);
-	geometryTextures[2]->Bind();
-
-	glActiveTexture(GL_TEXTURE3);
-	geometryTextures[3]->Bind();
 
 	GLuint lightShader = lightShaderNoShadows;
 
@@ -889,26 +852,22 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 					else
 						blurredShadowMap = BlurTexture(light->shadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, light->blurLevel, light->blurIntensity, blurShader, windowWidth, windowHeight);
 
-					glUseProgram(lightShader);
+					//glUseProgram(lightShader);
 					glActiveTexture(GL_TEXTURE4);
 					blurredShadowMap->Bind();
 				}
 				else
 				{
-					glUseProgram(lightShader);
+					//glUseProgram(lightShader);
 					glActiveTexture(GL_TEXTURE4);
 					light->shadowMapTexture->Bind();
 				}
-
-				glUniform1i(ShadowMapHandle, 4);
 
 				//GLuint shadowFadeSize = glGetUniformLocation(lightShader, "transitionDistance");
 				//glUniform1f(shadowFadeSize, light->shadowFadeRange);
 
 				//GLuint shadowDistance = glGetUniformLocation(lightShader, "shadowDistance");
 				//glUniform1f(shadowDistance, light->object->node.TopDownTransform.getScale().z); //i think instead of projection size we have to use the radius, maybve that's what it is and what i should send
-
-				glUniformMatrix4fv(DepthBiasMatrixHandle, 1, GL_FALSE, &light->BiasedLightMatrixVP[0][0]);
 			}
 			else
 			{
@@ -1002,6 +961,9 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 
 			GLuint Ambient = glGetUniformLocation(lightShader, "ambient");
 			glUniform1f(Ambient, light->object->mat->specularIntensity);
+
+			GLuint DepthBiasMatrixHandle = glGetUniformLocation(lightShaderWithShadows, "DepthBiasMVP");
+			glUniformMatrix4fv(DepthBiasMatrixHandle, 1, GL_FALSE, &light->BiasedLightMatrixVP[0][0]);
 
 			glDrawElements(GL_TRIANGLES, light->object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0);
 

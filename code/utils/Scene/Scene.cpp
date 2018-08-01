@@ -331,7 +331,7 @@ Vector3 Scene::generateRandomIntervallVectorSpherical(int min, int max)
 		rZ = rand() % range - max;
 		sum = rX*rX + rY*rY + rZ*rZ;
 	} while (sum > max*max || sum < min*min); //inside sphere change to < for outside of sphere
-	return Vector3(rX / 100.0, rY / 100.0, rZ / 100.0);
+	return Vector3(rX, rY, rZ);
 }
 
 
