@@ -728,7 +728,7 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 			GLuint Ambient = glGetUniformLocation(lightShader, "ambient");
 			glUniform1f(Ambient, light->object->mat->specularIntensity);
 
-			GLuint farPlaneForDepth = glGetUniformLocation(lightShaderWithShadows, "far_plane");
+			GLuint farPlaneForDepth = glGetUniformLocation(lightShader, "far_plane");
 			glUniform1f(farPlaneForDepth, (float)light->object->radius);
 
 			glDrawElements(GL_TRIANGLES, light->object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0);
@@ -962,7 +962,7 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 			GLuint Ambient = glGetUniformLocation(lightShader, "ambient");
 			glUniform1f(Ambient, light->object->mat->specularIntensity);
 
-			GLuint DepthBiasMatrixHandle = glGetUniformLocation(lightShaderWithShadows, "DepthBiasMVP");
+			GLuint DepthBiasMatrixHandle = glGetUniformLocation(lightShader, "DepthBiasMVP");
 			glUniformMatrix4fv(DepthBiasMatrixHandle, 1, GL_FALSE, &light->BiasedLightMatrixVP[0][0]);
 
 			glDrawElements(GL_TRIANGLES, light->object->mesh->indicesSize, GL_UNSIGNED_INT, (void*)0);
