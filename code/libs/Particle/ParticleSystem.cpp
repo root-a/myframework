@@ -36,6 +36,7 @@ ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
 	Spread = 1.5f;
 	aliveParticles = 0;
 	SetUp();
+	additive = true;
 }
 
 ParticleSystem::~ParticleSystem()
@@ -83,7 +84,7 @@ int ParticleSystem::UpdateParticles(double deltaTime, const mwm::Vector3& camPos
 			// Simulate simple physics : gravity only, no collisions
 			p.speed += Vector3(0.0, -9.81, 0.0) * deltaTime * 0.5;
 			p.pos += p.speed * deltaTime;
-			p.cameraDistance = (p.pos - camPos).vectLengt();
+			p.cameraDistance = (p.pos - camPos).squareMag();
 			//p.size -= (float)deltaTime*3.5f;
 			//if (p.size < 0.f) p.size = 0.f; p.lifeTime = 0.f;
 			// Fill the GPU buffer
@@ -159,15 +160,15 @@ void ParticleSystem::UpdateBuffers()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4), g_particule_color_data);
 }
 
-void ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, const Vector3F& cameraUp, const Vector3F& cameraRight)
+int ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, const Vector3F& cameraUp, const Vector3F& cameraRight)
 {
 	UpdateBuffers();
 
 	glEnable(GL_BLEND);
 	glEnable(GL_DEPTH_TEST);
 	// Use additive blending to give it a 'glow' effect
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	if (additive) glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+	else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	CameraRightHandle = glGetUniformLocation(currentShaderID, "CameraRight");
 	CameraUpHandle = glGetUniformLocation(currentShaderID, "CameraUp");
@@ -191,6 +192,8 @@ void ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, cons
 	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glDisable(GL_BLEND);
+	
+	return aliveParticles;
 }
 
 void ParticleSystem::SetTexture(GLuint textureID)
@@ -247,7 +250,7 @@ void ParticleSystem::Update()
 {
 	GenerateNewParticles(Times::Instance()->deltaTime);
 	aliveParticles = UpdateParticles(Times::Instance()->deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
-	SortParticles();
+	if (!additive) SortParticles();
 }
 
 void ParticleSystem::SetLifeTime(float lifetime)
