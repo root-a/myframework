@@ -231,7 +231,11 @@ Object * Scene::addSpotLight(bool castShadow, const mwm::Vector3 & position, con
 {
 	Object* newChild = Scene::addChild();
 	SpotLight * spotLightComp = new SpotLight(newChild);
-	if (castShadow) spotLightComp->GenerateShadowMapBuffer(256,256);
+	if (castShadow)
+	{
+		spotLightComp->GenerateShadowMapBuffer();
+		spotLightComp->GenerateBlurShadowMapBuffer();
+	}
 	newChild->AddComponent(spotLightComp);
 	spotLightComponents.push_back(spotLightComp);
 
@@ -250,7 +254,11 @@ Object * Scene::addSpotLightTo(Object * parent, bool castShadow, const mwm::Vect
 {
 	Object* newChild = Scene::addChildTo(parent);
 	SpotLight * spotLightComp = new SpotLight(newChild);
-	if (castShadow) spotLightComp->GenerateShadowMapBuffer(256, 256);
+	if (castShadow)
+	{
+		spotLightComp->GenerateShadowMapBuffer();
+		spotLightComp->GenerateBlurShadowMapBuffer();
+	}
 	newChild->AddComponent(spotLightComp);
 	spotLightComponents.push_back(spotLightComp);
 
