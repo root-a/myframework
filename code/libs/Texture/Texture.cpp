@@ -18,7 +18,7 @@ Texture::Texture(GLenum target, GLint level, GLint internalFormat, GLsizei width
 
 Texture::~Texture()
 {
-	glDeleteBuffers(1, &handle);
+	glDeleteTextures(1, &handle);
 }
 
 void Texture::AddTextureParameterI(GLenum pname, GLint param)

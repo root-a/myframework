@@ -13,13 +13,14 @@ SpotLight::SpotLight(Object* owner)
 	object = owner;
 	Quaternion qXangle = Quaternion(108, Vector3(1.0, 0.0, 0.0));
 	Quaternion qYangle = Quaternion(162, Vector3(0.0, 1.0, 0.0));
-	Matrix3 rotationMatrix = (qYangle*qXangle).ConvertToMatrix3();
-	Vector3 lightForward = rotationMatrix.getForward();
+	Vector3 lightForward = (qYangle*qXangle).getForward();
 	LightInvDir = -1.0 * lightForward.toFloat();
 
 	SetCutOff(12.5f);
 	SetOuterCutOff(17.5f);
 	shadowMapBuffer = nullptr;
+	pingPongBuffers[0] = nullptr;
+	pingPongBuffers[1] = nullptr;
 	castShadow = false;
 }
 
@@ -71,35 +72,144 @@ void SpotLight::SetRadius(float newRadius)
 
 FrameBuffer * SpotLight::GenerateShadowMapBuffer(int width, int height)
 {
-	shadowMapBuffer = FBOManager::Instance()->Generate2DShadowMapBuffer(width,height);
-	shadowMapTexture = shadowMapBuffer->textures[0];
-	castShadow = true;
+	if (!castShadow)
+	{
+		shadowMapBuffer = FBOManager::Instance()->Generate2DShadowMapBuffer(width, height);
+		shadowMapTexture = shadowMapBuffer->textures[0];
+		castShadow = true;
+	}
 	return shadowMapBuffer;
+}
+
+void SpotLight::DeleteShadowMapBuffer()
+{
+	if (castShadow)
+	{
+		shadowMapBuffer->DeleteAllTextures();
+		FBOManager::Instance()->DeleteFrameBuffer(shadowMapBuffer);
+		castShadow = false;
+		shadowMapBuffer = nullptr;
+	}
+}
+
+void SpotLight::GenerateBlurShadowMapBuffer(bool oneSize, int blurLevels)
+{
+	if (!blurShadowMap)
+	{
+		blurShadowMap = true;
+		oneSizeBlur = oneSize;
+		shadowBlurLevels = blurLevels;
+		int width = shadowMapTexture->width;
+		int height = shadowMapTexture->height;
+		if (oneSizeBlur)
+		{
+			for (int i = 0; i < 2; i++)
+			{
+				FrameBuffer* pingPongBuffer = FBOManager::Instance()->GenerateFBO();
+				pingPongBuffer->dynamicSize = false;
+				Texture* blurTexture = pingPongBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
+				blurTexture->SetLinear();
+				blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
+				pingPongBuffer->GenerateAndAddTextures();
+				pingPongBuffer->CheckAndCleanup();
+				pingPongBuffers[i] = pingPongBuffer;
+			}
+		}
+		else
+		{
+			std::vector<FrameBuffer*>* bufferStorage = &multiBlurBufferStart;
+			for (int i = 0; i < 2; i++)
+			{
+				FrameBuffer* multiBlurBuffer = FBOManager::Instance()->GenerateFBO();
+				//multiBlurBuffer->dynamicSize = false;
+				Texture* blurTexture = multiBlurBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
+				blurTexture->SetLinear();
+				blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
+				multiBlurBuffer->GenerateAndAddTextures();
+
+				multiBlurBuffer->CheckAndCleanup();
+
+				bufferStorage->push_back(multiBlurBuffer);
+				FrameBuffer* parentBuffer = multiBlurBuffer;
+				for (int j = 1; j < blurLevels; j++)
+				{
+					FrameBuffer* childBlurBuffer = FBOManager::Instance()->GenerateFBO();
+					childBlurBuffer->dynamicSize = false;
+					Texture* blurTexture = childBlurBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
+					blurTexture->SetLinear();
+					blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
+					childBlurBuffer->GenerateAndAddTextures();
+
+					childBlurBuffer->CheckAndCleanup();
+					bufferStorage->push_back(childBlurBuffer);
+
+					parentBuffer->RegisterChildBuffer(childBlurBuffer);
+					parentBuffer = childBlurBuffer;
+				}
+				multiBlurBuffer->UpdateTextures(width, height);
+				bufferStorage = &multiBlurBufferTarget;
+			}
+		}
+	}
+}
+
+void SpotLight::DeleteShadowMapBlurBuffer()
+{
+	if (blurShadowMap)
+	{
+		blurShadowMap = false;
+		if (oneSizeBlur)
+		{
+			for (size_t i = 0; i < 2; i++)
+			{
+				FrameBuffer* blurBuffer = pingPongBuffers[i];
+				blurBuffer->DeleteAllTextures();
+				FBOManager::Instance()->DeleteFrameBuffer(blurBuffer);
+				pingPongBuffers[i] = nullptr;
+			}
+		}
+		else
+		{
+			for (auto buffer : multiBlurBufferStart)
+			{
+				buffer->DeleteAllTextures();
+				FBOManager::Instance()->DeleteFrameBuffer(buffer);
+			}
+			multiBlurBufferStart.clear();
+			for (auto buffer : multiBlurBufferTarget)
+			{
+				buffer->DeleteAllTextures();
+				FBOManager::Instance()->DeleteFrameBuffer(buffer);
+			}
+			multiBlurBufferTarget.clear();
+		}
+	}
 }
 
 void SpotLight::ResizeShadowMap(int width, int height)
 {
 	shadowMapBuffer->UpdateTextures(width, height);
+	if (blurShadowMap)
+	{
+		if (oneSizeBlur)
+		{
+			pingPongBuffers[0]->UpdateTextures(width, height);
+			pingPongBuffers[1]->UpdateTextures(width, height);
+		}
+		else
+		{
+			multiBlurBufferStart[0]->UpdateTextures(width, height);
+			multiBlurBufferTarget[0]->UpdateTextures(width, height);
+		}
+	}
 }
 
-void SpotLight::SetAttenuation(float constant, float linear, float exponential)
+bool SpotLight::CanCastShadow()
 {
-	attenuation.Constant = constant;
-	attenuation.Linear = linear;
-	attenuation.Exponential = exponential;
+	return castShadow && shadowMapActive;
 }
 
-void SpotLight::SetConstant(float constant)
+bool SpotLight::CanBlurShadowMap()
 {
-	attenuation.Constant = constant;
-}
-
-void SpotLight::SetLinear(float linear)
-{
-	attenuation.Linear = linear;
-}
-
-void SpotLight::SetExponential(float exponential)
-{
-	attenuation.Exponential = exponential;
+	return blurShadowMap && shadowMapBlurActive;
 }

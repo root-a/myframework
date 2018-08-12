@@ -28,7 +28,8 @@ Render::~Render()
 {
 }
 
-Render * Render::Instance()
+Render*
+Render::Instance()
 {
 	static Render instance;
 
@@ -139,7 +140,8 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 	return objectsRendered;
 }
 
-int Render::drawLight(const FrameBuffer * lightFrameBuffer, const FrameBuffer * geometryBuffer, const GLenum * lightAttachmentsToDraw, const int countOfAttachments)
+int
+Render::drawLight(const FrameBuffer * lightFrameBuffer, const FrameBuffer * geometryBuffer, const GLenum * lightAttachmentsToDraw, const int countOfAttachments)
 {
 	int lightsRendered = 0;
 	
@@ -158,7 +160,8 @@ int Render::drawLight(const FrameBuffer * lightFrameBuffer, const FrameBuffer * 
 	return lightsRendered;
 }
 
-void Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjection, const GLuint currentShaderID)
+void
+Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjection, const GLuint currentShaderID)
 {
 	Matrix4F ModelMatrix = object->node.TopDownTransform.toFloat();
 	Matrix4F MVP = (object->node.TopDownTransform*ViewProjection).toFloat();
@@ -483,9 +486,9 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 			{
 				Texture* blurredShadowMap = nullptr;
 				if(directionalLight->oneSizeBlur)
-					blurredShadowMap = BlurTextureAtSameSize(dirShadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], directionalLight->blurLevel, directionalLight->blurIntensity, blurShader, windowWidth, windowHeight);
+					blurredShadowMap = BlurTextureAtSameSize(dirShadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], directionalLight->activeBlurLevel, directionalLight->blurIntensity, blurShader, windowWidth, windowHeight);
 				else
-					blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, directionalLight->blurLevel, directionalLight->blurIntensity, blurShader, windowWidth, windowHeight);
+					blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, directionalLight->activeBlurLevel, directionalLight->blurIntensity, blurShader, windowWidth, windowHeight);
 
 				glActiveTexture(GL_TEXTURE4);
 				blurredShadowMap->Bind();
@@ -822,7 +825,7 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 	{
 		if (FrustumManager::Instance()->isBoundingSphereInView(light->object->node.centeredPosition, light->radius))
 		{
-			if (light->castShadow)
+			if (light->CanCastShadow())
 			{
 				
 				lightShader = lightShaderWithShadows;
@@ -844,13 +847,13 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 				glClearColor(0, 0, 0, 1);
 
-				if (light->blurShadowMap)
+				if (light->CanBlurShadowMap())
 				{
 					Texture* blurredShadowMap = nullptr;
 					if (light->oneSizeBlur)
-						blurredShadowMap = BlurTextureAtSameSize(light->shadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], light->blurLevel, light->blurIntensity, blurShader, windowWidth, windowHeight);
+						blurredShadowMap = BlurTextureAtSameSize(light->shadowMapTexture, light->pingPongBuffers[0], light->pingPongBuffers[1], light->activeBlurLevel, light->blurIntensity, blurShader, windowWidth, windowHeight);
 					else
-						blurredShadowMap = BlurTexture(light->shadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, light->blurLevel, light->blurIntensity, blurShader, windowWidth, windowHeight);
+						blurredShadowMap = BlurTexture(light->shadowMapTexture, light->multiBlurBufferStart, light->multiBlurBufferTarget, light->activeBlurLevel, light->blurIntensity, blurShader, windowWidth, windowHeight);
 
 					//glUseProgram(lightShader);
 					glActiveTexture(GL_TEXTURE4);
@@ -1028,7 +1031,6 @@ Render::AddMultiBlurBuffer(int width, int height, int levels, double scaleX, dou
 		multiBlurBuffer->UpdateTextures(width, height);
 		bufferStorage = &multiBlurBufferTarget;
 	}
-	
 }
 
 Texture*

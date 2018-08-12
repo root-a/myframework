@@ -7,7 +7,7 @@ class FrameBuffer
 {
 public:
 	FrameBuffer(GLenum target, int scaleX = 1, int scaleY = 1, bool dynamic = true);
-	~FrameBuffer() {};
+	~FrameBuffer();
 
 	GLuint handle;
 	void GenerateAndAddTextures();
@@ -21,6 +21,7 @@ public:
 	void AddDefaultTextureParameters();
 	void CheckAndCleanup();
 	void ReadPixelData(unsigned int x, unsigned int y, GLenum readTextureFormat, GLenum sendDataType, void * data, GLenum attachment);
+	void DeleteAllTextures();
 	std::vector<FrameBuffer*> children;
 	double scaleXFactor;
 	double scaleYFactor;

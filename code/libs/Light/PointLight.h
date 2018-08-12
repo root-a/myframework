@@ -20,16 +20,12 @@ public:
 	float ProjectionSize = 150.f;
 	bool hasShadowMap = false;
 	bool blurShadowMap = true;
-	int blurLevel = 3;
+	int activeBlurLevel = 3;
 	float blurIntensity = 0.5f;
 	float shadowFadeRange = 10.f;
 	bool oneSizeBlur = true;
 	Attenuation attenuation;
 	void UpdateScale();
-	void SetAttenuation(float constant, float linear, float exponential);
-	void SetConstant(float constant);
-	void SetLinear(float linear);
-	void SetExponential(float exponential);
 	FrameBuffer* GenerateShadowMapBuffer(int width, int height);
 	void ResizeShadowMap(int width, int height);
 	FrameBuffer* shadowMapBuffer;

@@ -123,6 +123,16 @@ FrameBuffer* FBOManager::Generate3DShadowMapBuffer(int width, int height)
 	*/
 }
 
+void FBOManager::DeleteFrameBuffer(FrameBuffer * buffer)
+{
+	std::vector<FrameBuffer*>::iterator iter = std::find(buffers.begin(), buffers.end(), buffer);
+	if (iter != FBOManager::Instance()->buffers.end())
+	{
+		buffers.erase(iter);
+		delete buffer;
+	}
+}
+
 FrameBuffer* FBOManager::GenerateFBO()
 {
 	buffers.push_back(new FrameBuffer(GL_FRAMEBUFFER));

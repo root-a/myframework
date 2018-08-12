@@ -20,6 +20,7 @@ public:
 	void UnbindFrameBuffer(FrameBufferMode readWrite);
 	FrameBuffer* Generate2DShadowMapBuffer(int width, int height);
 	FrameBuffer* Generate3DShadowMapBuffer(int width, int height);
+	void DeleteFrameBuffer(FrameBuffer* buffer);
 	std::vector<FrameBuffer*> buffers;
 	FrameBuffer* GenerateFBO();
 private:

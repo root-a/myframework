@@ -44,28 +44,6 @@ void PointLight::UpdateScale()
 	object->SetScale(Vector3(ret, ret, ret));
 }
 
-void PointLight::SetAttenuation(float constant, float linear, float exponential)
-{
-	attenuation.Constant = constant;
-	attenuation.Linear = linear;
-	attenuation.Exponential = exponential;
-}
-
-void PointLight::SetConstant(float constant)
-{
-	attenuation.Constant = constant;
-}
-
-void PointLight::SetLinear(float linear)
-{
-	attenuation.Linear = linear;
-}
-
-void PointLight::SetExponential(float exponential)
-{
-	attenuation.Exponential = exponential;
-}
-
 FrameBuffer * PointLight::GenerateShadowMapBuffer(int width, int height)
 {
 	LightMatrixesVP.resize(6);

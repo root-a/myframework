@@ -2,6 +2,7 @@
 #include "MyMathLib.h"
 #include "Component.h"
 #include "Attenuation.h"
+#include <vector>
 
 class Material;
 class Mesh;
@@ -22,18 +23,17 @@ public:
 	void SetCutOff(float cutOffInDegrees);
 	void SetOuterCutOff(float outerCutOffInDegrees);
 	void SetRadius(float newRadius);
-	void SetAttenuation(float constant, float linear, float exponential);
-	void SetConstant(float constant);
-	void SetLinear(float linear);
-	void SetExponential(float exponential);
-	FrameBuffer * GenerateShadowMapBuffer(int width, int height);
+	FrameBuffer * GenerateShadowMapBuffer(int width = 256, int height = 256);
+	void DeleteShadowMapBuffer();
+	void GenerateBlurShadowMapBuffer(bool oneSize = true, int blurLevels = 4);
+	void DeleteShadowMapBlurBuffer();
 	void ResizeShadowMap(int width, int height);
-	bool blurShadowMap = true;
-	int blurLevel = 3;
+	
+	int activeBlurLevel = 3;
+	int shadowBlurLevels = 4;
 	float blurIntensity = 0.5f;
 	float shadowFadeRange = 10.f;
 	bool oneSizeBlur = true;
-	bool castShadow = false;
 	float innerCutOff = 12.5f;
 	float outerCutOff = 17.5f;
 	float cosInnerCutOff = 0;
@@ -44,5 +44,15 @@ public:
 	Attenuation attenuation;
 	FrameBuffer* shadowMapBuffer;
 	Texture* shadowMapTexture;
+	FrameBuffer* pingPongBuffers[2];
+	std::vector<FrameBuffer*> multiBlurBufferStart;
+	std::vector<FrameBuffer*> multiBlurBufferTarget;
+	bool shadowMapActive = false;
+	bool shadowMapBlurActive = false;
+	bool CanCastShadow();
+	bool CanBlurShadowMap();
+private:
+	bool castShadow = false;
+	bool blurShadowMap = false;
 };
 

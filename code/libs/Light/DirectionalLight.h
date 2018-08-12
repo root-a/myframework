@@ -20,7 +20,7 @@ public:
 	void SetProjectionRadius(double radius);
 	float radius = 150.f;
 	bool blurShadowMap = true;
-	int blurLevel = 3;
+	int activeBlurLevel = 3;
 	float blurIntensity = 0.5f;
 	float shadowFadeRange = 10.f;
 	bool oneSizeBlur = true;

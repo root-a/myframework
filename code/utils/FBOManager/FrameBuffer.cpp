@@ -10,6 +10,11 @@ FrameBuffer::FrameBuffer(GLenum target, int scaleX, int scaleY, bool dynamic)
 	dynamicSize = dynamic;
 }
 
+FrameBuffer::~FrameBuffer()
+{
+	glDeleteFramebuffers(1, &handle);
+}
+
 void FrameBuffer::GenerateAndAddTextures()
 {
 	for (auto& texture : textures)
@@ -98,4 +103,13 @@ void FrameBuffer::ReadPixelData(unsigned int x, unsigned int y, GLenum readTextu
 	glReadPixels(x, y, 1, 1, readTextureFormat, sendDataType, data);
 	glReadBuffer(GL_NONE);
 	UnBindBuffer(GL_READ_FRAMEBUFFER);
+}
+
+void FrameBuffer::DeleteAllTextures()
+{
+	for (auto& texture : textures)
+	{
+		delete texture;
+	}
+	textures.clear();
 }
