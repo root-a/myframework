@@ -19,7 +19,7 @@ PointLight::~PointLight()
 
 void PointLight::Update()
 {
-	if (shadowMapBuffer != nullptr)
+	if (CanCastShadow())
 	{
 		ProjectionMatrix = Matrix4::OpenGLPersp(fov, shadowMapTexture->aspect, near, object->radius);
 		LightMatrixesVP[0] = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + Vector3( 1.0, 0.0, 0.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_POSITIVE_X
@@ -46,13 +46,36 @@ void PointLight::UpdateScale()
 
 FrameBuffer * PointLight::GenerateShadowMapBuffer(int width, int height)
 {
-	LightMatrixesVP.resize(6);
-	shadowMapBuffer = FBOManager::Instance()->Generate3DShadowMapBuffer(width, height);
-	shadowMapTexture = shadowMapBuffer->textures[0];
+	if (shadowMapBuffer == nullptr)
+	{
+		LightMatrixesVP.resize(6);
+		shadowMapBuffer = FBOManager::Instance()->Generate3DShadowMapBuffer(width, height);
+		shadowMapTexture = shadowMapBuffer->textures[0];
+	}
 	return shadowMapBuffer;
+}
+
+void PointLight::DeleteShadowMapBuffer()
+{
+	if (shadowMapBuffer != nullptr)
+	{
+		shadowMapBuffer->DeleteAllTextures();
+		FBOManager::Instance()->DeleteFrameBuffer(shadowMapBuffer);
+		shadowMapBuffer = nullptr;
+	}
 }
 
 void PointLight::ResizeShadowMap(int width, int height)
 {
 	shadowMapBuffer->UpdateTextures(width, height);
+}
+
+bool PointLight::CanCastShadow()
+{
+	return shadowMapBuffer != nullptr && shadowMapActive;
+}
+
+bool PointLight::CanBlurShadowMap()
+{
+	return blurMode != BlurMode::None && shadowMapBlurActive;
 }

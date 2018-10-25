@@ -47,7 +47,9 @@ double Vector3::squareMag() const
 /*! \fn function returning new normalized vector*/
 Vector3 Vector3::vectNormalize() const
 {
-	double length = sqrt(x*x + y*y + z*z);
+	//double squareMag = x * x + y * y + z * z;
+	//if (squareMag == 0.0) return Vector3();
+	double length = sqrt(x * x + y * y + z * z);
 	return Vector3(x / length, y / length, z / length);
 }
 /*! \fn cross product function returning normal vector*/

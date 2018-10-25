@@ -27,7 +27,7 @@ void DirectionalLight::Update()
 	Vector3 lightForward = rotationMatrix.getForward();
 	LightInvDir = -1.0 * lightForward.toFloat();
 
-	if (hasShadowMap)
+	if (CanCastShadow())
 	{
 		ProjectionMatrix = Matrix4::orthographic(-radius, radius, radius, -radius, radius, -radius);
 		Matrix4 lightViewMatrix = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + lightForward, Vector3(0, 1, 0));
@@ -39,5 +39,14 @@ void DirectionalLight::Update()
 void DirectionalLight::SetProjectionRadius(double newRadius)
 {
 	radius = newRadius;
-	
+}
+
+bool DirectionalLight::CanCastShadow()
+{
+	return shadowMapActive;
+}
+
+bool DirectionalLight::CanBlurShadowMap()
+{
+	return shadowMapBlurActive;
 }

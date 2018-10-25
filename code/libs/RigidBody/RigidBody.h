@@ -15,8 +15,8 @@ public:
 	
 	void SetAwake(const bool awake = true);
 	void SetCanSleep(const bool canSleep);
-	void ApplyImpulse(const mwm::Vector3& force, const mwm::Vector3& picking_point);
-	void ApplyImpulse(const mwm::Vector3& direction, double magnitude, const mwm::Vector3& point);
+	void ApplyImpulse(const mwm::Vector3& force, const mwm::Vector3& target);
+	void ApplyImpulse(const mwm::Vector3& direction, double magnitude, const mwm::Vector3& target);
 	double GetMass();
 	double GetMassInverse();
 	void SetMass(double mass);

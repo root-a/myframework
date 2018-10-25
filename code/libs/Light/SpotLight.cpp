@@ -21,7 +21,6 @@ SpotLight::SpotLight(Object* owner)
 	shadowMapBuffer = nullptr;
 	pingPongBuffers[0] = nullptr;
 	pingPongBuffers[1] = nullptr;
-	castShadow = false;
 }
 
 SpotLight::~SpotLight()
@@ -72,37 +71,37 @@ void SpotLight::SetRadius(float newRadius)
 
 FrameBuffer * SpotLight::GenerateShadowMapBuffer(int width, int height)
 {
-	if (!castShadow)
+	if (shadowMapBuffer == nullptr)
 	{
 		shadowMapBuffer = FBOManager::Instance()->Generate2DShadowMapBuffer(width, height);
 		shadowMapTexture = shadowMapBuffer->textures[0];
-		castShadow = true;
 	}
 	return shadowMapBuffer;
 }
 
 void SpotLight::DeleteShadowMapBuffer()
 {
-	if (castShadow)
+	if (shadowMapBuffer != nullptr)
 	{
 		shadowMapBuffer->DeleteAllTextures();
 		FBOManager::Instance()->DeleteFrameBuffer(shadowMapBuffer);
-		castShadow = false;
 		shadowMapBuffer = nullptr;
 	}
 }
 
-void SpotLight::GenerateBlurShadowMapBuffer(bool oneSize, int blurLevels)
+void SpotLight::GenerateBlurShadowMapBuffer(BlurMode mode, int blurLevels)
 {
-	if (!blurShadowMap)
+	if (blurMode == BlurMode::None)
 	{
-		blurShadowMap = true;
-		oneSizeBlur = oneSize;
+		blurMode = mode;
 		shadowBlurLevels = blurLevels;
 		int width = shadowMapTexture->width;
 		int height = shadowMapTexture->height;
-		if (oneSizeBlur)
+		switch (blurMode)
 		{
+		case None:
+			break;
+		case OneSize:
 			for (int i = 0; i < 2; i++)
 			{
 				FrameBuffer* pingPongBuffer = FBOManager::Instance()->GenerateFBO();
@@ -114,8 +113,8 @@ void SpotLight::GenerateBlurShadowMapBuffer(bool oneSize, int blurLevels)
 				pingPongBuffer->CheckAndCleanup();
 				pingPongBuffers[i] = pingPongBuffer;
 			}
-		}
-		else
+			break;
+		case MultiSize:
 		{
 			std::vector<FrameBuffer*>* bufferStorage = &multiBlurBufferStart;
 			for (int i = 0; i < 2; i++)
@@ -150,66 +149,75 @@ void SpotLight::GenerateBlurShadowMapBuffer(bool oneSize, int blurLevels)
 				bufferStorage = &multiBlurBufferTarget;
 			}
 		}
+			break;
+		default:
+			break;
+		}
 	}
 }
 
 void SpotLight::DeleteShadowMapBlurBuffer()
 {
-	if (blurShadowMap)
+	switch (blurMode)
 	{
-		blurShadowMap = false;
-		if (oneSizeBlur)
+	case None:
+		break;
+	case OneSize:
+		for (size_t i = 0; i < 2; i++)
 		{
-			for (size_t i = 0; i < 2; i++)
-			{
-				FrameBuffer* blurBuffer = pingPongBuffers[i];
-				blurBuffer->DeleteAllTextures();
-				FBOManager::Instance()->DeleteFrameBuffer(blurBuffer);
-				pingPongBuffers[i] = nullptr;
-			}
+			FrameBuffer* blurBuffer = pingPongBuffers[i];
+			blurBuffer->DeleteAllTextures();
+			FBOManager::Instance()->DeleteFrameBuffer(blurBuffer);
+			pingPongBuffers[i] = nullptr;
 		}
-		else
+		break;
+	case MultiSize:
+		for (auto buffer : multiBlurBufferStart)
 		{
-			for (auto buffer : multiBlurBufferStart)
-			{
-				buffer->DeleteAllTextures();
-				FBOManager::Instance()->DeleteFrameBuffer(buffer);
-			}
-			multiBlurBufferStart.clear();
-			for (auto buffer : multiBlurBufferTarget)
-			{
-				buffer->DeleteAllTextures();
-				FBOManager::Instance()->DeleteFrameBuffer(buffer);
-			}
-			multiBlurBufferTarget.clear();
+			buffer->DeleteAllTextures();
+			FBOManager::Instance()->DeleteFrameBuffer(buffer);
 		}
+		multiBlurBufferStart.clear();
+		for (auto buffer : multiBlurBufferTarget)
+		{
+			buffer->DeleteAllTextures();
+			FBOManager::Instance()->DeleteFrameBuffer(buffer);
+		}
+		multiBlurBufferTarget.clear();
+		break;
+	default:
+		break;
 	}
+	blurMode = BlurMode::None;
 }
 
 void SpotLight::ResizeShadowMap(int width, int height)
 {
 	shadowMapBuffer->UpdateTextures(width, height);
-	if (blurShadowMap)
+	
+	switch (blurMode)
 	{
-		if (oneSizeBlur)
-		{
-			pingPongBuffers[0]->UpdateTextures(width, height);
-			pingPongBuffers[1]->UpdateTextures(width, height);
-		}
-		else
-		{
-			multiBlurBufferStart[0]->UpdateTextures(width, height);
-			multiBlurBufferTarget[0]->UpdateTextures(width, height);
-		}
+	case None:
+		break;
+	case OneSize:
+		pingPongBuffers[0]->UpdateTextures(width, height);
+		pingPongBuffers[1]->UpdateTextures(width, height);
+		break;
+	case MultiSize:
+		multiBlurBufferStart[0]->UpdateTextures(width, height);
+		multiBlurBufferTarget[0]->UpdateTextures(width, height);
+		break;
+	default:
+		break;
 	}
 }
 
 bool SpotLight::CanCastShadow()
 {
-	return castShadow && shadowMapActive;
+	return shadowMapBuffer != nullptr && shadowMapActive;
 }
 
 bool SpotLight::CanBlurShadowMap()
 {
-	return blurShadowMap && shadowMapBlurActive;
+	return blurMode != BlurMode::None && shadowMapBlurActive;
 }

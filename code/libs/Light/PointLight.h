@@ -3,6 +3,7 @@
 #include "Component.h"
 #include "Attenuation.h"
 #include <vector>
+#include "BlurMode.h"
 
 class Material;
 class Mesh;
@@ -18,15 +19,14 @@ public:
 	void Update();
 	mwm::Matrix4 ProjectionMatrix; //used when drawing depth
 	float ProjectionSize = 150.f;
-	bool hasShadowMap = false;
-	bool blurShadowMap = true;
 	int activeBlurLevel = 3;
 	float blurIntensity = 0.5f;
 	float shadowFadeRange = 10.f;
-	bool oneSizeBlur = true;
+	BlurMode blurMode = BlurMode::None;
 	Attenuation attenuation;
 	void UpdateScale();
 	FrameBuffer* GenerateShadowMapBuffer(int width, int height);
+	void DeleteShadowMapBuffer();
 	void ResizeShadowMap(int width, int height);
 	FrameBuffer* shadowMapBuffer;
 	Texture* shadowMapTexture;
@@ -34,5 +34,11 @@ public:
 	//float far = 50;
 	float fov = 90;
 	std::vector<mwm::Matrix4> LightMatrixesVP; //used when drawing depth
+
+	bool shadowMapBlurActive = true;
+	bool shadowMapActive = false;
+	bool CanCastShadow();
+	bool CanBlurShadowMap();
+private:
 };
 

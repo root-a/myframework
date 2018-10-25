@@ -277,7 +277,7 @@ Object* Scene::addDirectionalLight(bool castShadow, const Vector3F& color /*= Ve
 {
 	Object* newChild = Scene::addChild();
 	DirectionalLight* dirLightComp = new DirectionalLight();
-	dirLightComp->hasShadowMap = castShadow;
+	dirLightComp->shadowMapActive = castShadow;
 	newChild->AddComponent(dirLightComp);
 	directionalLightComponents.push_back(dirLightComp);
 
@@ -296,7 +296,7 @@ Object * Scene::addDirectionalLightTo(Object * parent, bool castShadow, const mw
 {
 	Object* newChild = Scene::addChildTo(parent);
 	DirectionalLight* dirLightComp = new DirectionalLight();
-	dirLightComp->hasShadowMap = castShadow;
+	dirLightComp->shadowMapActive = castShadow;
 	newChild->AddComponent(dirLightComp);
 	directionalLightComponents.push_back(dirLightComp);
 	Material* newMaterial = new Material();

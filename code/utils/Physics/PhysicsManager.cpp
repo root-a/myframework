@@ -593,6 +593,7 @@ void PhysicsManager::CalcFaceVertices(const Vector3& pos, Vector3* vertices, con
 
 void PhysicsManager::ClipFaceToSidePlane(vector<Vector3>& clipPolygon, std::vector<mwm::Vector3>& newClipPolygon, const Vector3& normal, double plane_offset)
 {
+	//if (clipPolygon.size() == 0) return; //happens when position of object is nan, for example it can happen if we calculate new pos from normalized zero vector(currently returns nan)
 	Vector3 Vertex1 = clipPolygon.back();
 	double Distance1 = Vertex1.dotAKAscalar(normal) - plane_offset;//rnDistance(Plane, Vertex1.Position);
 	newClipPolygon.clear();

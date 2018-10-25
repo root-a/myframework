@@ -47,10 +47,10 @@ void RigidBody::IntegrateEuler(double timestep, const Vector3& gravity)
 
 	this->angular_velocity += angular_acc * timestep;
 
-	Vector3 axis = this->angular_velocity.vectNormalize();
 	double angle = this->angular_velocity.vectLengt();
+	Vector3 axis = this->angular_velocity / angle;
 	if (angle != 0){
-		Quaternion test(angle * timestep, axis);
+		Quaternion test(MathUtils::ToDegrees(angle) * timestep, axis);
 		object->SetOrientation((test*object->GetLocalOrientation()).Normalized());
 	}
 
@@ -85,10 +85,10 @@ void RigidBody::IntegrateMid(double timestep, const Vector3& gravity)
 
 	this->angular_velocity += changeInAngVel2;
 
-	Vector3 axis = this->angular_velocity.vectNormalize();
 	double angle = this->angular_velocity.vectLengt();
+	Vector3 axis = this->angular_velocity / angle;
 	if (angle != 0){
-		Quaternion test(angle * timestep, axis);
+		Quaternion test(MathUtils::ToDegrees(angle) * timestep, axis);
 		object->SetOrientation((test*object->GetLocalOrientation()).Normalized());
 	}
 
@@ -138,10 +138,10 @@ void RigidBody::IntegrateRunge(double timestep, const Vector3& gravity)
 
 	Vector3 changeInRot = (timestep / 6.0) * (adx1 + (adx2 + adx3) * 2.0 + adx4);
 
-	Vector3 axis = changeInRot.vectNormalize();
 	double angle = changeInRot.vectLengt();
+	Vector3 axis = changeInRot / angle; //normalize
 	if (angle != 0){
-		Quaternion test(angle, axis);
+		Quaternion test(MathUtils::ToDegrees(angle), axis);
 		object->SetOrientation((test*object->GetLocalOrientation()).Normalized());
 	}
 
@@ -153,24 +153,24 @@ void RigidBody::IntegrateRunge(double timestep, const Vector3& gravity)
 	if (canSleep) UpdateKineticEnergyStoreAndPutToSleep(timestep);
 }
 
-void RigidBody::ApplyImpulse(const Vector3& force, const Vector3& picking_point)
+void RigidBody::ApplyImpulse(const Vector3& force, const Vector3& target)
 {
 	SetAwake();
 	this->accum_force += force;
 	//DebugDraw::Instance()->DrawShapeAtPos("cube", picking_point);
 	//DebugDraw::Instance()->DrawShapeAtPos("pyramid", picking_point+force);
-	Vector3 directionFromCenterToPickingPoint = picking_point - object->GetWorldPosition();
+	Vector3 directionFromCenterToPickingPoint = (target - object->GetWorldPosition()).vectNormalize();
 	Vector3 torque = directionFromCenterToPickingPoint.crossProd(force);
 	this->accum_torque += torque;
 }
 
-void RigidBody::ApplyImpulse(const Vector3& direction, double magnitude, const Vector3& point)
+void RigidBody::ApplyImpulse(const Vector3& direction, double magnitude, const Vector3& target)
 {
 	SetAwake();
 	this->accum_force += direction*magnitude;
 	//DebugDraw::Instance()->DrawShapeAtPos("cube", point);
 	//DebugDraw::Instance()->DrawShapeAtPos("pyramid", picking_point+force);
-	Vector3 directionFromCenterToPickingPoint = (point - object->GetWorldPosition()).vectNormalize();
+	Vector3 directionFromCenterToPickingPoint = (target - object->GetWorldPosition()).vectNormalize();
 	Vector3 torque = directionFromCenterToPickingPoint.crossProd(direction);
 	this->accum_torque += torque*magnitude;
 }

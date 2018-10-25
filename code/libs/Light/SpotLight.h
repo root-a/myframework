@@ -3,6 +3,7 @@
 #include "Component.h"
 #include "Attenuation.h"
 #include <vector>
+#include "BlurMode.h"
 
 class Material;
 class Mesh;
@@ -25,7 +26,7 @@ public:
 	void SetRadius(float newRadius);
 	FrameBuffer * GenerateShadowMapBuffer(int width = 256, int height = 256);
 	void DeleteShadowMapBuffer();
-	void GenerateBlurShadowMapBuffer(bool oneSize = true, int blurLevels = 4);
+	void GenerateBlurShadowMapBuffer(BlurMode mode = BlurMode::OneSize, int blurLevels = 4);
 	void DeleteShadowMapBlurBuffer();
 	void ResizeShadowMap(int width, int height);
 	
@@ -33,7 +34,7 @@ public:
 	int shadowBlurLevels = 4;
 	float blurIntensity = 0.5f;
 	float shadowFadeRange = 10.f;
-	bool oneSizeBlur = true;
+	BlurMode blurMode = BlurMode::None;
 	float innerCutOff = 12.5f;
 	float outerCutOff = 17.5f;
 	float cosInnerCutOff = 0;
@@ -47,12 +48,12 @@ public:
 	FrameBuffer* pingPongBuffers[2];
 	std::vector<FrameBuffer*> multiBlurBufferStart;
 	std::vector<FrameBuffer*> multiBlurBufferTarget;
-	bool shadowMapActive = false;
+
 	bool shadowMapBlurActive = false;
+	bool shadowMapActive = false;
 	bool CanCastShadow();
 	bool CanBlurShadowMap();
 private:
-	bool castShadow = false;
-	bool blurShadowMap = false;
+	
 };
 

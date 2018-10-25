@@ -1,6 +1,7 @@
 #pragma once
 #include "MyMathLib.h"
 #include "Component.h"
+#include "BlurMode.h"
 
 class Material;
 class Mesh;
@@ -19,12 +20,15 @@ public:
 	mwm::Matrix4F BiasedLightMatrixVP; //used when drawing lights to sample depth
 	void SetProjectionRadius(double radius);
 	float radius = 150.f;
-	bool blurShadowMap = true;
 	int activeBlurLevel = 3;
 	float blurIntensity = 0.5f;
 	float shadowFadeRange = 10.f;
-	bool oneSizeBlur = true;
-	bool hasShadowMap = false;
-	
+	BlurMode blurMode = BlurMode::OneSize;
+
+	bool shadowMapActive = false;
+	bool shadowMapBlurActive = false;
+	bool CanCastShadow();
+	bool CanBlurShadowMap();
+private:
 };
 

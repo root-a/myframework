@@ -4,6 +4,7 @@
 #include "Box.h"
 #include "Plane.h"
 #include "BoundingBox.h"
+#include "Attenuation.h"
 
 namespace mwm
 {
@@ -41,6 +42,8 @@ public:
 	int drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, const GLenum* buffers, const int buffersCount, const GLuint fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
 	void AddPingPongBuffer(int width, int height);
 	void AddMultiBlurBuffer(int width, int height, int levels = 4, double scaleX = 0.5, double scaleY = 0.5);
+	void GenerateEBOs();
+	void UpdateEBOs();
 	Texture* PingPongBlur(Texture* sourceTexture, int outputLevel, float blurSize, GLuint blurShader);
 	Texture* MultiBlur(Texture* sourceTexture, int outputLevel, float blurSize, GLuint blurShader);
 	FrameBuffer* AddDirectionalShadowMapBuffer(int width, int height);
@@ -62,4 +65,49 @@ private:
 	bool onceP = true;
 	bool onceS = true;
 	bool onceD = true;
+	
+	struct GBVars
+	{
+		mwm::Matrix4F MVP;
+		mwm::Matrix4F M;
+		mwm::Vector4F MaterialProperties;
+		mwm::Vector4F MaterialColor;
+		mwm::Vector2F tiling;
+		unsigned int objectID;
+	};
+
+	GBVars gb;
+
+	struct LightVars
+	{
+		mwm::Vector3F lightInvDir;
+		float shadowTransitionSize;
+		float outerCutOff;
+		float innerCutOff;
+		float lightRadius;
+		float lightPower;
+		mwm::Vector3F lightColor;
+		float ambient;
+		mwm::Matrix4F depthBiasMVP;
+		mwm::Matrix4F MVP;
+		mwm::Vector3F lightPosition;
+		Attenuation attenuation;
+	};
+
+	LightVars lb;
+
+	struct CamVars
+	{
+		float width;
+		float height;
+		float near;
+		float far;
+		mwm::Vector3F cameraPos;
+	};
+
+	CamVars cb;
+
+	GLuint uboGBVars;
+	GLuint uboLBVars;
+	GLuint uboCBVars;
 };

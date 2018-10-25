@@ -19,19 +19,7 @@ public:
 
 	void UpdateSize(int width, int height);
 
-	void SetFoV(double newFov);
-	
-	void SetNearPlane(double newNearPlane);
-	
-	void SetFarPlane(double newFarPlane);
-
-	void SetFarNearFov(double newFov, double newNearPlane, double newFarPlane);
-
 	mwm::Vector3 ConvertMousePosToWorldDir(double mousePosX, double mousePosY);
-
-	mwm::Vector3 getDirection();
-	mwm::Vector3 getUp();
-	mwm::Vector3 getRight();
 
 	mwm::Vector3 GetInitPos();
 	mwm::Vector3 GetPosition();
@@ -52,19 +40,18 @@ public:
 	int windowHeight;
 	double windowMidX;
 	double windowMidY;
-private:
-	
+
+	double fov;
+	double near;
+	double far;
 	mwm::Vector3 direction;
 	mwm::Vector3 up;
 	mwm::Vector3 right;
+private:
 	mwm::Vector3 position;
 	double verticalAngle;
 	double horizontalAngle;
 
 	double speed;
 	double mouseSpeed;
-
-	double fov;
-	double near;
-	double far;
 };

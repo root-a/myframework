@@ -35,16 +35,6 @@ Camera::~Camera()
 {
 }
 
-Vector3 Camera::getDirection()
-{
-	return direction;
-}
-
-Vector3 Camera::getUp()
-{
-	return up;
-}
-
 Vector3 Camera::GetInitPos()
 {
     return position;
@@ -119,28 +109,6 @@ void Camera::UpdateSize(int width, int height)
 	windowMidY = windowHeight / 2.0;
 }
 
-void Camera::SetFoV(double newFov)
-{
-	fov = newFov;
-}
-
-void Camera::SetNearPlane(double newNearPlane)
-{
-	near = newNearPlane;
-}
-
-void Camera::SetFarPlane(double newFarPlane)
-{
-	far = newFarPlane;
-}
-
-void Camera::SetFarNearFov(double newFov, double newNearPlane, double newFarPlane)
-{
-	fov = newFov;
-	near = newNearPlane;
-	far = newFarPlane;
-}
-
 Vector3 Camera::ConvertMousePosToWorldDir(double mousePosX, double mousePosY)
 {
 	Vector4 mouse_p0s = Vector4();
@@ -199,11 +167,6 @@ void Camera::SetPosition(mwm::Vector3& pos)
 	//then we translate the initial position with that vector -> initialPosition += new vector with dir
 	//this would be required if one did change the camera matrix directly rather than changing the position variable 
 	position = pos;
-}
-
-mwm::Vector3 Camera::getRight()
-{
-	return right;
 }
 
 
