@@ -15,7 +15,7 @@ public:
 	Particle* ParticlesContainer;
 	int FindUnusedParticle();
 	void GenerateNewParticles(double deltaTime);
-	int UpdateParticles(double deltaTime, const mwm::Vector3& camPos);
+	void UpdateParticles(double deltaTime, const mwm::Vector3& camPos);
 	void SortParticles();
 	void UpdateBuffers();
 	int Draw(mwm::Matrix4F& ViewProjection, GLuint currentShaderID, const mwm::Vector3F& cameraUp, const mwm::Vector3F& cameraRight);
@@ -23,9 +23,10 @@ public:
 	void SetEmissionRate(int emissionRate);
 	void SetColor(const mwm::Vector4F& color);
 	void SetSize(float size);
-	void SetLifeTime(float lifetime);
+	void SetLifeTime(double lifetime);
 	void SetDirection(const mwm::Vector3F& direction);
 	void SetSpread(float spread);
+	void SetForce(mwm::Vector3& force);
 	void Update();
 	static const mwm::Vector3F g_vertex_buffer_data[4];
 	mwm::Vector4F* g_particule_position_size_data;
@@ -44,7 +45,7 @@ public:
 	GLuint TextureSamplerHandle;
 
 	bool additive;
-
+	
 protected:
 private:
 	int LastUsedParticle;
@@ -53,9 +54,11 @@ private:
 	mwm::Vector4F Color;
 	void SetUp();
 	int aliveParticles;
+	int newparticles;
 	float Size;
-	float LifeTime;
+	double LifeTime;
 	mwm::Vector3F Direction;
 	float Spread;
+	mwm::Vector3 Force;
 };
 

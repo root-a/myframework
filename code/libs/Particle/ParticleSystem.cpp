@@ -31,12 +31,13 @@ ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
 	EmissionRate = emissionRate;
 	Color = Vector4F(1.f, 1.f, 1.f, 0.8f);
 	Size = 1.f;
-	LifeTime = 0.2f;
+	LifeTime = 0.2;
 	Direction = Vector3F(0.0f, 10.0f, 0.0f);
 	Spread = 1.5f;
 	aliveParticles = 0;
 	SetUp();
 	additive = true;
+	Force = Vector3(0.0, -9.81, 0.0);
 }
 
 ParticleSystem::~ParticleSystem()
@@ -54,51 +55,50 @@ ParticleSystem::~ParticleSystem()
 int ParticleSystem::FindUnusedParticle()
 {
 	for (int i = LastUsedParticle; i < MaxParticles; i++){
-		if (ParticlesContainer[i].lifeTime < 0){
+		if (ParticlesContainer[i].lifeTime < 0.0){
 			LastUsedParticle = i;
 			return i;
 		}
 	}
 
 	for (int i = 0; i < LastUsedParticle; i++){
-		if (ParticlesContainer[i].lifeTime < 0){
+		if (ParticlesContainer[i].lifeTime < 0.0){
 			LastUsedParticle = i;
 			return i;
 		}
 	}
 
-	return 0; 
+	return (MaxParticles-1);
 }
 
-int ParticleSystem::UpdateParticles(double deltaTime, const mwm::Vector3& camPos)
+void ParticleSystem::UpdateParticles(double deltaTime, const mwm::Vector3& camPos)
 {
-	int ParticlesCount = 0;
+	aliveParticles = 0;
 	for (int i = 0; i < MaxParticles; i++){
 
 		Particle& p = ParticlesContainer[i]; 
 
-		if (p.lifeTime > 0.0f)
+		if (p.lifeTime < 0.0)
 		{
-			p.lifeTime -= (float)deltaTime;
+			// Particles that just died will be put at the end of the buffer in SortParticles();
+			p.cameraDistance = -1.0;
+		}
+		else{
+			p.lifeTime -= deltaTime;
 
 			// Simulate simple physics : gravity only, no collisions
-			p.speed += Vector3(0.0, -9.81, 0.0) * deltaTime * 0.5;
+			p.speed += Force * deltaTime * 0.5;
 			p.pos += p.speed * deltaTime;
 			p.cameraDistance = (p.pos - camPos).squareMag();
 			//p.size -= (float)deltaTime*3.5f;
 			//if (p.size < 0.f) p.size = 0.f; p.lifeTime = 0.f;
 			// Fill the GPU buffer
-			g_particule_position_size_data[ParticlesCount] = Vector4F(p.pos.toFloat(), p.size);
-			g_particule_color_data[ParticlesCount] = p.color;
+			g_particule_position_size_data[aliveParticles] = Vector4F(p.pos.toFloat(), p.size);
+			g_particule_color_data[aliveParticles] = p.color;
 
-			ParticlesCount++;
-		}
-		else{
-			// Particles that just died will be put at the end of the buffer in SortParticles();
-			p.cameraDistance = -1.0;
+			aliveParticles++;
 		}
 	}
-	return ParticlesCount;
 }
 
 void ParticleSystem::SortParticles(){
@@ -152,12 +152,12 @@ void ParticleSystem::UpdateBuffers()
 	glBindVertexArray(vaoHandle);
 
 	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4), g_particule_position_size_data);
+	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), g_particule_position_size_data, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
+	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4F), g_particule_position_size_data);
 
 	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4), g_particule_color_data);
+	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), g_particule_position_size_data, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
+	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4F), g_particule_color_data);
 }
 
 int ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, const Vector3F& cameraUp, const Vector3F& cameraRight)
@@ -206,15 +206,17 @@ void ParticleSystem::GenerateNewParticles(double deltaTime)
 	// Generate 10 new particule each millisecond,
 	// but limit this to 16 ms (60 fps), or if you have 1 long frame (1sec),
 	// newparticles will be huge and the next frame even longer.
-	int newparticles = (int)(deltaTime*EmissionRate);
-	if (newparticles > (int)(deltaTime*EmissionRate))
-		newparticles = (int)(deltaTime*EmissionRate);
+	newparticles = ceil(deltaTime*EmissionRate);
+	if (newparticles > (int)(0.016*EmissionRate))
+		newparticles = (int)(0.016*EmissionRate);
 
 	for (int i = 0; i < newparticles; i++){
 		int particleIndex = FindUnusedParticle();
+		
 		ParticlesContainer[particleIndex].lifeTime = LifeTime; // This particle will live 5 seconds.
 		ParticlesContainer[particleIndex].pos = object->GetWorldPosition(); //Vector3();
-
+		//printf("%d p: %f %f %f\n", particleIndex, ParticlesContainer[particleIndex].pos.x, ParticlesContainer[particleIndex].pos.y, ParticlesContainer[particleIndex].pos.z);
+		
 		// Very bad way to generate a random direction; 
 		// See for instance http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution instead,
 		// combined with some user-controlled parameters (main direction, spread, etc)
@@ -249,11 +251,11 @@ void ParticleSystem::SetSize(float size)
 void ParticleSystem::Update()
 {
 	GenerateNewParticles(Times::Instance()->deltaTime);
-	aliveParticles = UpdateParticles(Times::Instance()->deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
+	UpdateParticles(Times::Instance()->deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
 	if (!additive) SortParticles();
 }
 
-void ParticleSystem::SetLifeTime(float lifetime)
+void ParticleSystem::SetLifeTime(double lifetime)
 {
 	LifeTime = lifetime;
 }
@@ -266,4 +268,9 @@ void ParticleSystem::SetDirection(const mwm::Vector3F& direction)
 void ParticleSystem::SetSpread(float spread)
 {
 	Spread = spread;
+}
+
+void ParticleSystem::SetForce(mwm::Vector3 & force)
+{
+	Force = force;
 }

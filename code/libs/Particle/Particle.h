@@ -9,7 +9,7 @@ public:
 	mwm::Vector3 pos, speed;
 	mwm::Vector4F color;
 	float size, angle, weight;
-	float lifeTime;
+	double lifeTime;
 	double cameraDistance;
 
 	bool operator<(Particle& that){
