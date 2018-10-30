@@ -54,10 +54,17 @@ ParticleSystem::~ParticleSystem()
 
 int ParticleSystem::FindUnusedParticle()
 {
+	int particleWithLowestLifeTime = 0;
+	double lowestParticleLifeTime = 10000.0;
 	for (int i = LastUsedParticle; i < MaxParticles; i++){
 		if (ParticlesContainer[i].lifeTime < 0.0){
 			LastUsedParticle = i;
 			return i;
+		}
+		else if(ParticlesContainer[i].lifeTime < lowestParticleLifeTime)
+		{
+			particleWithLowestLifeTime = i;
+			lowestParticleLifeTime = ParticlesContainer[i].lifeTime;
 		}
 	}
 
@@ -66,9 +73,14 @@ int ParticleSystem::FindUnusedParticle()
 			LastUsedParticle = i;
 			return i;
 		}
+		else if (ParticlesContainer[i].lifeTime < lowestParticleLifeTime)
+		{
+			particleWithLowestLifeTime = i;
+			lowestParticleLifeTime = ParticlesContainer[i].lifeTime;
+		}
 	}
 
-	return (MaxParticles-1);
+	return particleWithLowestLifeTime;
 }
 
 void ParticleSystem::UpdateParticles(double deltaTime, const mwm::Vector3& camPos)
