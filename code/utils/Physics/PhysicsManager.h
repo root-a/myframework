@@ -141,7 +141,7 @@ inline bool PhysicsManager::overlapOnAxis(const RigidBody* oneObj, const RigidBo
 
 	double penetration = penetrationOnAxis(oneObj, twoObj, axisn, toCentre);
 
-	if (penetration < 0) return false;
+	if (penetration < 0.000001) return false;
 	if (penetration < smallestPenetration) {
 		smallestPenetration = penetration;
 		smallestAxis = axisn;

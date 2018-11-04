@@ -3,7 +3,7 @@
 using namespace mwm;
 LineNode::LineNode()
 {
-	this->TopDownTransform = Matrix4::identityMatrix();
+	this->TopDownTransform = Matrix4(1);
 	this->position = Vector3(0.f,0.f,0.f);
 }
 

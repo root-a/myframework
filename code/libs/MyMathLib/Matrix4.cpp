@@ -21,6 +21,15 @@ Matrix4::Matrix4()
 	memset(_matrix, 0, sizeof _matrix);
 }
 
+Matrix4::Matrix4(int identity)
+{
+	memset(_matrix, 0, sizeof _matrix);
+	_matrix[0][0] = 1.0;
+	_matrix[1][1] = 1.0;
+	_matrix[2][2] = 1.0;
+	_matrix[3][3] = 1.0;
+}
+
 Matrix4::~Matrix4()
 {
 
@@ -447,6 +456,7 @@ Matrix4 Matrix4::orthographicTopToBottom(const double &near, const double &far, 
 }
 
 /*! \fn identity matrix */
+/*
 Matrix4 Matrix4::identityMatrix()
 {
 	Matrix4 temp;
@@ -456,6 +466,7 @@ Matrix4 Matrix4::identityMatrix()
 	temp._matrix[3][3] = 1.0;
 	return temp;
 }
+*/
 
 /*! \fn bias shadowmap matrix*/
 Matrix4 Matrix4::biasMatrix()
@@ -853,10 +864,10 @@ Matrix4 Matrix4::extractRotation() const
 
 Quaternion Matrix4::toQuaternion() const
 {
-	float tr = _matrix[0][0] + _matrix[1][1] + _matrix[2][2];
+	double tr = _matrix[0][0] + _matrix[1][1] + _matrix[2][2];
 	Quaternion temp;
 	if (tr > 0) {
-		float S = sqrt(tr + 1.0) * 2; // S=4*qw
+		double S = sqrt(tr + 1.0) * 2.0; // S=4*qw
 		temp.w = 0.25 * S;
 		temp.x = (_matrix[1][2] - _matrix[2][1]) / S;
 		temp.y = (_matrix[2][0] - _matrix[0][2]) / S;
@@ -864,7 +875,7 @@ Quaternion Matrix4::toQuaternion() const
 	}
 
 	else if ((_matrix[0][0] > _matrix[1][1])&(_matrix[0][0] > _matrix[2][2])) {
-		float S = sqrt(1.0 + _matrix[0][0] - _matrix[1][1] - _matrix[2][2]) * 2; // S=4*qx
+		double S = sqrt(1.0 + _matrix[0][0] - _matrix[1][1] - _matrix[2][2]) * 2.0; // S=4*qx
 		temp.w = (_matrix[1][2] - _matrix[2][1]) / S;
 		temp.x = 0.25 * S;
 		temp.y = (_matrix[1][0] + _matrix[0][1]) / S;
@@ -872,7 +883,7 @@ Quaternion Matrix4::toQuaternion() const
 	}
 
 	else if (_matrix[1][1] > _matrix[2][2]) {
-		float S = sqrt(1.0 + _matrix[1][1] - _matrix[0][0] - _matrix[2][2]) * 2; // S=4*qy
+		double S = sqrt(1.0 + _matrix[1][1] - _matrix[0][0] - _matrix[2][2]) * 2.0; // S=4*qy
 		temp.w = (_matrix[2][0] - _matrix[0][2]) / S;
 		temp.x = (_matrix[1][0] + _matrix[0][1]) / S;
 		temp.y = 0.25 * S;
@@ -880,7 +891,7 @@ Quaternion Matrix4::toQuaternion() const
 	}
 
 	else {
-		float S = sqrt(1.0 + _matrix[2][2] - _matrix[0][0] - _matrix[1][1]) * 2; // S=4*qz
+		double S = sqrt(1.0 + _matrix[2][2] - _matrix[0][0] - _matrix[1][1]) * 2.0; // S=4*qz
 		temp.w = (_matrix[0][1] - _matrix[1][0]) / S;
 		temp.x = (_matrix[2][0] + _matrix[0][2]) / S;
 		temp.y = (_matrix[2][1] + _matrix[1][2]) / S;

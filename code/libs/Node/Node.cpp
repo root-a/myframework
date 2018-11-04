@@ -3,12 +3,12 @@
 using namespace mwm;
 Node::Node()
 {
-	this->TransformationMatrix = Matrix4::identityMatrix();
-	this->TopDownTransform = Matrix4::identityMatrix();
-	this->totalScale = Vector3(1.f,1.f,1.f);
-	this->localScale = Vector3(1.f,1.f,1.f);
-	this->position = Vector3(0.f,0.f,0.f);
-	this->orientation = Quaternion(0, Vector3(1.f, 1.f, 1.f));
+	this->TransformationMatrix = Matrix4(1);
+	this->TopDownTransform = Matrix4(1);
+	this->totalScale = Vector3(1.0,1.0,1.0);
+	this->localScale = Vector3(1.0,1.0,1.0);
+	this->position = Vector3(0.0,0.0,0.0);
+	this->orientation = Quaternion(0.0, Vector3());
 	this->meshCenter = Vector3();
 	this->centeredPosition = Vector3();
 }

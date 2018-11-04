@@ -12,7 +12,7 @@ RigidBody::RigidBody(Object* owner)
 	this->obb.color = Vector3F(0.f, 0.8f, 0.8f);
 	this->aabb.color = Vector3F(1.f, 0.54f, 0.f);
 	this->mass = 1.0;
-	this->massInverse = 1.0 / 1.0;
+	this->massInverse = 1.0 / mass;
 	this->angularDamping = 0.85;
 	this->linearDamping = 0.85;
 	this->isAwake = true;

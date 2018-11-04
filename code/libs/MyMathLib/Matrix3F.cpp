@@ -18,21 +18,30 @@ Matrix3F::Matrix3F()
 	memset(_matrix, 0, sizeof _matrix);
 }
 
+Matrix3F::Matrix3F(int identity)
+{
+	memset(_matrix, 0, sizeof _matrix);
+	_matrix[0][0] = 1.f;
+	_matrix[1][1] = 1.f;
+	_matrix[2][2] = 1.f;
+}
+
 Matrix3F::~Matrix3F()
 {
 
 }
 
 /*! \fn identity matrix */
+/*
 Matrix3F Matrix3F::identityMatrix()
 {
 	Matrix3F temp;
 	temp._matrix[0][0] = 1.f;
 	temp._matrix[1][1] = 1.f;
 	temp._matrix[2][2] = 1.f;
-	temp._matrix[3][3] = 1.f;
 	return temp;
 }
+*/
 
 /*! \fn operator[] overload for indexing */
 float* Matrix3F::operator[] (int index)
@@ -457,36 +466,36 @@ QuaternionF Matrix3F::toQuaternion() const
 {
 	float tr = _matrix[0][0] + _matrix[1][1] + _matrix[2][2];
 	QuaternionF temp;
-	if (tr > 0) {
-		float S = sqrt(tr + 1.0) * 2; // S=4*qw
-		temp.w = 0.25 * S;
+	if (tr > 0.f) {
+		float S = sqrtf(tr + 1.f) * 2.f; // S=4*qw
+		temp.w = 0.25f * S;
 		temp.x = (_matrix[1][2] - _matrix[2][1]) / S;
 		temp.y = (_matrix[2][0] - _matrix[0][2]) / S;
 		temp.z = (_matrix[0][1] - _matrix[1][0]) / S;
 	}
 
 	else if ((_matrix[0][0] > _matrix[1][1])&(_matrix[0][0] > _matrix[2][2])) {
-		float S = sqrt(1.0 + _matrix[0][0] - _matrix[1][1] - _matrix[2][2]) * 2; // S=4*qx
+		float S = sqrtf(1.f + _matrix[0][0] - _matrix[1][1] - _matrix[2][2]) * 2.f; // S=4*qx
 		temp.w = (_matrix[1][2] - _matrix[2][1]) / S;
-		temp.x = 0.25 * S;
+		temp.x = 0.25f * S;
 		temp.y = (_matrix[1][0] + _matrix[0][1]) / S;
 		temp.z = (_matrix[2][0] + _matrix[0][2]) / S;
 	}
 
 	else if (_matrix[1][1] > _matrix[2][2]) {
-		float S = sqrt(1.0 + _matrix[1][1] - _matrix[0][0] - _matrix[2][2]) * 2; // S=4*qy
+		float S = sqrtf(1.f + _matrix[1][1] - _matrix[0][0] - _matrix[2][2]) * 2.f; // S=4*qy
 		temp.w = (_matrix[2][0] - _matrix[0][2]) / S;
 		temp.x = (_matrix[1][0] + _matrix[0][1]) / S;
-		temp.y = 0.25 * S;
+		temp.y = 0.25f * S;
 		temp.z = (_matrix[2][1] + _matrix[1][2]) / S;
 	}
 
 	else {
-		float S = sqrt(1.0 + _matrix[2][2] - _matrix[0][0] - _matrix[1][1]) * 2; // S=4*qz
+		float S = sqrtf(1.f + _matrix[2][2] - _matrix[0][0] - _matrix[1][1]) * 2.f; // S=4*qz
 		temp.w = (_matrix[0][1] - _matrix[1][0]) / S;
 		temp.x = (_matrix[2][0] + _matrix[0][2]) / S;
 		temp.y = (_matrix[2][1] + _matrix[1][2]) / S;
-		temp.z = 0.25 * S;
+		temp.z = 0.25f * S;
 	}
 	return temp;
 }

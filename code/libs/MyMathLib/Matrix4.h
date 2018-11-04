@@ -17,6 +17,7 @@ public:
 
 	Matrix4(const Matrix4&);
 	Matrix4(); //!< in constructor matrix values are set to 0 with memset
+	Matrix4(int identity); //!< in constructor matrix values are set to 0 with memset
 	~Matrix4();
 
 	Matrix4 operator~ () const; //!< transpose matrix returns new matrix
@@ -79,7 +80,7 @@ public:
 	static Matrix4 sTranslate(const double &x, const double &y, const double &z); //!< returns transposed translation matrix with specified translation values
 	static Matrix4 sOrthographic(const double &near, const double &far, const double &left, const double &right, const double &top, const double &bottom); //!< function returninng orthographic projection specified with given parameters
 	static Matrix4 sOrthographicTopToBottom(const double& near, const double& far, const double& left, const double& right, const double& top, const double& bottom);
-	static Matrix4 identityMatrix(); //!< identity matrix 
+	//static Matrix4 identityMatrix(); //!< identity matrix 
 	static Matrix4 biasMatrix(); //!< bias shadowmap matrix 
 };
 }

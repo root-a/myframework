@@ -15,6 +15,7 @@ public:
 
 	Matrix3(const Matrix3&);
 	Matrix3(); //!< in constructor matrix values are set to 0 with memset
+	Matrix3(int identity); //!< in constructor matrix values are set to 0 with memset
 	~Matrix3();
 
 	Matrix3 operator~ (); //!< transpose matrix returns new matrix
@@ -63,7 +64,7 @@ public:
 	static Matrix3 rotateY(double angle); //!< function returning rotation matrix with specified rotation angle along Y axis
 	static Matrix3 rotateZ(double angle); //!< function returning rotation matrix with specified rotation angle along Z axis
 	static Matrix3 rotateAngle(Vector3& thisVector, double angle); //!< function returning rotation matrix with specified rotation angle along specified axis(vector)
-	static Matrix3 identityMatrix();
+	//static Matrix3 identityMatrix();
 
 };
 }

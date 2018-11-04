@@ -541,7 +541,7 @@ GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * 
 		glDeleteShader(GeometryShaderID);
 	}
 	glDeleteShader(FragmentShaderID);
-
+	fprintf(stdout, "Shader ID: %d \n\n", ProgramID);
 	return ProgramID;
 }
 

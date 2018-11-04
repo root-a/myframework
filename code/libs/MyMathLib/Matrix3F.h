@@ -12,6 +12,7 @@ public:
 
 	Matrix3F(const Matrix3F&);
 	Matrix3F();
+	Matrix3F(int identity);
 	~Matrix3F();
 
 	Matrix3F operator~ (); //!< transpose matrix returns new matrix
@@ -50,15 +51,13 @@ public:
 
 	static Matrix3F CuboidInertiaTensor(float mass, Vector3F dimensions);
 	static float det(float a, float b, float c, float d, float e, float f, float g, float h, float i); //!< calculates determinant of 3x3 matrix
-	static Matrix3F perspective(const float &near, const float &far, const float &fov); //!< function returning perspective projection specified with given parameters
-	static Matrix3F orthographic(const float &near, const float &far, const float &left, const float &right, const float &top, const float &bottom); //!< function returninng orthographic projection specified with given parameters
 	static Matrix3F translate(float x, float y, float z); //!< returns translation matrix with specified translation values
 	static Matrix3F scale(float x, float y, float z); //!< function returning new scale matrix with specified scale values
 	static Matrix3F rotateX(float angle); //!< function returning rotation matrix with specified rotation angle along X axis
 	static Matrix3F rotateY(float angle); //!< function returning rotation matrix with specified rotation angle along Y axis
 	static Matrix3F rotateZ(float angle); //!< function returning rotation matrix with specified rotation angle along Z axis
 	static Matrix3F rotateAngle(Vector3F& thisVector, float angle); //!< function returning rotation matrix with specified rotation angle along specified axis(vector)
-	static Matrix3F identityMatrix(); //!< identity matrix 
+	//static Matrix3F identityMatrix(); //!< identity matrix 
 
 
 private:

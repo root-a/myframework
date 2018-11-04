@@ -194,7 +194,7 @@ void DebugDraw::DrawCrossHair(int windowWidth, int windowHeight, const Vector3F&
 	Matrix4 scaleM = Matrix4::scale(scale, scale, scale);
 	model1 = scaleM * model1;
 	model2 = scaleM * model2;
-	Matrix4 view = Matrix4::identityMatrix();
+	Matrix4 view = Matrix4(1);
 	Matrix4 proj = Matrix4::orthographicTopToBottom(-1.0, 2000.0, 0.0, (double)windowWidth, (double)windowHeight, 0.0);
 	line.mat->color = color;
 
