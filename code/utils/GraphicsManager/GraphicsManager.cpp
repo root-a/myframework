@@ -294,7 +294,7 @@ bool GraphicsManager::LoadShaders(const char * path)
 					std::string currentShaderExt = currentShaderFullName.substr(pos+1, currentShaderFullName.length()-1);
 					if (strcmp(shaderName.c_str(), currentShaderName.c_str()) == 0)
 					{
-						printf("%s\n", ent->d_name);
+						//printf("%s\n", ent->d_name);
 						if (strcmp(currentShaderExt.c_str(), "fs") == 0)
 						{
 							shadersMap[shader.first].fs = shaderPath + currentShaderFullName;
@@ -319,15 +319,17 @@ bool GraphicsManager::LoadShaders(const char * path)
 					break;
 				}
 				case DT_DIR:
-					printf("%s/\n", ent->d_name);
+					//printf("%s/\n", ent->d_name);
 					break;
 
 				case DT_LNK:
-					printf("%s@\n", ent->d_name);
+					//printf("%s@\n", ent->d_name);
 					break;
 
-				default:
-					printf("%s*\n", ent->d_name);
+				default: 
+				{
+					//printf("%s*\n", ent->d_name);
+				}
 				}
 			}
 			closedir(dir);
