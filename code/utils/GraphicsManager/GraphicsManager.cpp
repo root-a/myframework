@@ -10,6 +10,7 @@
 #include <fstream>
 #include <sstream>
 #include <algorithm>
+#include "dirent.h"
 #include <GL/glew.h>
 #include <iosfwd>
 #define STB_IMAGE_IMPLEMENTATION
@@ -241,6 +242,114 @@ bool GraphicsManager::LoadMaterials(const char * path) {
 	return true;
 }
 
+bool GraphicsManager::LoadShaders(const char * path)
+{
+	FILE * file;
+	file = fopen(path, "r");
+	if (file == NULL) {
+		printf("Impossible to open the file ! Are you in the right path ?\n");
+		getchar();
+		return false;
+	}
+	char line[128];
+	std::map<std::string, std::string> shaders;
+	while (fgets(line, sizeof(line), file)) {
+		if (line[0] == '/' || line[0] == ';' || line[0] == '#') continue; /* ignore comment line */
+		int diffuseID, normalID, specID, emiID, heighID;
+		char programName[128];
+		char filePath[128];
+		int matches = sscanf(line, "%s %s", programName, filePath);
+		if (matches != 2)
+		{
+			printf("Wrong shader information!\n");
+		}
+		else {
+			shaders[programName] = filePath;
+			//scan for all files within filepath for the same name
+			//maybe we should make another file, shader directories
+			//directories for all, we scan everything and then from second file we pick only the files we want to use
+			//ShaderManager::Instance()->AddShader(programName, LoadProgram(VS + filePath, FS + filePath, GS + filePath);
+		}
+	}
+	fclose(file);
+	std::unordered_map<std::string, ShaderPaths> shadersMap;
+
+	DIR *dir;
+	struct dirent *ent;
+	for (auto& shader : shaders)
+	{
+		size_t pos = shader.second.find_last_of("/");
+		std::string shaderPath = shader.second.substr(0, pos+1);
+		std::string shaderName = shader.second.substr(pos+1, shader.second.length()-1);
+		bool shaderFound = false;
+		if ((dir = opendir(shaderPath.c_str())) != NULL) {
+			/* print all the files and directories within directory */
+			while ((ent = readdir(dir)) != NULL) {
+				switch (ent->d_type) {
+				case DT_REG:
+				{
+					std::string currentShaderFullName = ent->d_name;
+					size_t pos = currentShaderFullName.find_last_of(".");
+					std::string currentShaderName = currentShaderFullName.substr(0, pos);
+					std::string currentShaderExt = currentShaderFullName.substr(pos+1, currentShaderFullName.length()-1);
+					if (strcmp(shaderName.c_str(), currentShaderName.c_str()) == 0)
+					{
+						printf("%s\n", ent->d_name);
+						if (strcmp(currentShaderExt.c_str(), "fs") == 0)
+						{
+							shadersMap[shader.first].fs = shaderPath + currentShaderFullName;
+							shaderFound = true;
+						}
+						else if (strcmp(currentShaderExt.c_str(), "vs") == 0)
+						{
+							shadersMap[shader.first].vs = shaderPath + currentShaderFullName;
+							shaderFound = true;
+						}
+						else if (strcmp(currentShaderExt.c_str(), "gs") == 0)
+						{
+							shadersMap[shader.first].gs = shaderPath + currentShaderFullName;
+							shaderFound = true;
+						}
+						else
+						{
+							printf("wrong shader file extension: %s\n", currentShaderExt.c_str());
+						}
+						
+					}
+					break;
+				}
+				case DT_DIR:
+					printf("%s/\n", ent->d_name);
+					break;
+
+				case DT_LNK:
+					printf("%s@\n", ent->d_name);
+					break;
+
+				default:
+					printf("%s*\n", ent->d_name);
+				}
+			}
+			closedir(dir);
+			if (!shaderFound)
+			{
+				printf("\nSHADER PROGRAM: %s not found in directory: %s !\n", shaderName.c_str(), shaderPath.c_str());
+			}
+		}
+		else {
+			/* could not open directory */
+			perror("could not open directory");
+		}
+	}
+	for (auto& program : shadersMap)
+	{
+		GLuint programID = LoadProgram(program.second.vs.c_str(), program.second.fs.c_str(), program.second.gs.c_str());
+		GraphicsStorage::shaderIDs[program.first] = programID;
+	}
+
+	return true;
+}
+
 Texture* GraphicsManager::LoadBMP(const char *imagepath){
 
 	printf("Reading image %s\n", imagepath);
@@ -413,13 +522,13 @@ Texture* GraphicsManager::LoadDDS(const char *imagepath){
 
 }
 
-GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * fragment_file_path, const char* geometry_file_path){
+GLuint GraphicsManager::LoadProgram(const char * vertex_file_path, const char * fragment_file_path, const char* geometry_file_path){
 
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
 	GLuint FragmentShaderID = glCreateShader(GL_FRAGMENT_SHADER);
 	GLuint GeometryShaderID = -1;
-	if (geometry_file_path != nullptr)
+	if (geometry_file_path != nullptr && strcmp(geometry_file_path, "") != 0)
 	{
 		GeometryShaderID = glCreateShader(GL_GEOMETRY_SHADER);
 	}
@@ -495,7 +604,7 @@ GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * 
 		fprintf(stdout, "%s\n", &FragmentShaderErrorMessage[0]);
 	}
 
-	if (geometry_file_path != nullptr)
+	if (geometry_file_path != nullptr && strcmp(geometry_file_path, "") != 0)
 	{
 		// Compile Geometry Shader
 		printf("Compiling shader : %s\n", geometry_file_path);
@@ -518,7 +627,7 @@ GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * 
 	fprintf(stdout, "Linking program\n");
 	GLuint ProgramID = glCreateProgram();
 	glAttachShader(ProgramID, VertexShaderID);
-	if (geometry_file_path != nullptr)
+	if (geometry_file_path != nullptr && strcmp(geometry_file_path, "") != 0)
 	{
 		glAttachShader(ProgramID, GeometryShaderID);
 	}
@@ -530,13 +639,13 @@ GLuint GraphicsManager::LoadShaders(const char * vertex_file_path, const char * 
 	glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
 	if (InfoLogLength > 0)
 	{
-		std::vector<char> ProgramErrorMessage(std::max(InfoLogLength, int(1)));
+		std::vector<char> ProgramErrorMessage(std::max<int>(InfoLogLength, int(1)));
 		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
 		fprintf(stdout, "%s\n", &ProgramErrorMessage[0]);
 	}
 
 	glDeleteShader(VertexShaderID);
-	if (geometry_file_path != nullptr)
+	if (geometry_file_path != nullptr && strcmp(geometry_file_path, "") != 0)
 	{
 		glDeleteShader(GeometryShaderID);
 	}
@@ -619,7 +728,10 @@ Texture* GraphicsManager::CreateTexture(int width, int height, bool isDepth, uns
 
 void GraphicsManager::LoadAllAssets()
 {
-	//load all objs
+	printf("\nLOADING GPU PROGRAMS\n");
+	LoadShaders("Resources/programs.txt");
+	printf("\nDONE\n");
+
 	printf("\nLOADING OBJs\n");
 	LoadOBJs("Resources/models.txt");
 	printf("\nDONE\n");

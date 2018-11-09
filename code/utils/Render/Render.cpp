@@ -17,6 +17,7 @@
 #include "Scene.h"
 #include "Camera.h"
 #include "Texture.h"
+#include "GraphicsStorage.h"
 
 using namespace mwm;
 
@@ -45,7 +46,7 @@ Render::drawGeometry(const std::vector<Object*>& objects, const FrameBuffer * ge
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 
-	GLuint geometryShader = ShaderManager::Instance()->shaderIDs["geometry"];
+	GLuint geometryShader = GraphicsStorage::shaderIDs["geometry"];
 	ShaderManager::Instance()->SetCurrentShader(geometryShader);
 	
 	GLuint TextureSamplerHandle = glGetUniformLocation(geometryShader, "myTextureSampler");
@@ -285,7 +286,7 @@ Render::drawCubeDepth(const std::vector<Object*>& objects, const std::vector<mwm
 void Render::drawSkyboxWithClipPlane(const FrameBuffer * lightFrameBuffer, const GLenum * lightAttachmentsToDraw, const int countOfAttachments, Texture* texture, const mwm::Vector4F& plane, const mwm::Matrix4& ViewMatrix)
 {
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
-	GLuint currentShader = ShaderManager::Instance()->shaderIDs["skyboxWithClipPlane"];
+	GLuint currentShader = GraphicsStorage::shaderIDs["skyboxWithClipPlane"];
 	ShaderManager::Instance()->SetCurrentShader(currentShader);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, lightFrameBuffer->handle);
@@ -313,7 +314,7 @@ Render::drawSkybox(const FrameBuffer * lightFrameBuffer, const GLenum * lightAtt
 {
 	//glDepthRange(0.999999, 1.0);
 	//glDisable(GL_CULL_FACE);
-	GLuint currentShader = ShaderManager::Instance()->shaderIDs["skybox"];
+	GLuint currentShader = GraphicsStorage::shaderIDs["skybox"];
 	ShaderManager::Instance()->SetCurrentShader(currentShader);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, lightFrameBuffer->handle);
@@ -350,7 +351,7 @@ void Render::drawGSkybox(const FrameBuffer * lightFrameBuffer, const GLenum * li
 {
 	//glDepthRange(0.999999, 1.0);
 	//glDisable(GL_CULL_FACE);
-	GLuint currentShader = ShaderManager::Instance()->shaderIDs["gskybox"];
+	GLuint currentShader = GraphicsStorage::shaderIDs["gskybox"];
 	ShaderManager::Instance()->SetCurrentShader(currentShader);
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, lightFrameBuffer->handle);
@@ -392,10 +393,10 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
 
-	GLuint lightShaderNoShadows = ShaderManager::Instance()->shaderIDs["directionalLight"];
-	GLuint lightShaderWithShadows = ShaderManager::Instance()->shaderIDs["directionalLightShadow"];
-	GLuint depthShader = ShaderManager::Instance()->shaderIDs["depth"];
-	GLuint blurShader = ShaderManager::Instance()->shaderIDs["fastBlurShadow"];
+	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["directionalLight"];
+	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["directionalLightShadow"];
+	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
+	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 
 	glActiveTexture(GL_TEXTURE0);
 	geometryTextures[0]->Bind();
@@ -544,11 +545,11 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
 	
-	GLuint lightShaderNoShadows = ShaderManager::Instance()->shaderIDs["pointLight"];
-	GLuint lightShaderWithShadows = ShaderManager::Instance()->shaderIDs["pointLightShadow"];
-	GLuint depthShader = ShaderManager::Instance()->shaderIDs["depthCube"];
-	GLuint blurShader = ShaderManager::Instance()->shaderIDs["fastBlurShadow"];
-	GLuint stencilShader = ShaderManager::Instance()->shaderIDs["stencil"];
+	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["pointLight"];
+	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["pointLightShadow"];
+	GLuint depthShader = GraphicsStorage::shaderIDs["depthCube"];
+	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
+	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
 
 	glActiveTexture(GL_TEXTURE0);
 	geometryTextures[0]->Bind();
@@ -719,11 +720,11 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 	glActiveTexture(GL_TEXTURE3);
 	geometryTextures[3]->Bind();
 
-	GLuint lightShaderNoShadows = ShaderManager::Instance()->shaderIDs["spotLight"];
-	GLuint lightShaderWithShadows = ShaderManager::Instance()->shaderIDs["spotLightShadow"];
-	GLuint depthShader = ShaderManager::Instance()->shaderIDs["depth"];
-	GLuint blurShader = ShaderManager::Instance()->shaderIDs["fastBlurShadow"];
-	GLuint stencilShader = ShaderManager::Instance()->shaderIDs["stencil"];
+	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["spotLight"];
+	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["spotLightShadow"];
+	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
+	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
+	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
 
 	glUseProgram(lightShaderNoShadows); //we bind shader so we can set variables on it, not to get locations
 

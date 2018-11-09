@@ -11,9 +11,6 @@ public:
     static ShaderManager* Instance();
     GLuint GetCurrentShaderID();
     void SetCurrentShader(GLuint);
-	void DeleteShaders();
-	void AddShader(const char* shaderName, GLuint shader);
-	std::unordered_map<std::string, GLuint> shaderIDs;
 private:
     ShaderManager();
     ~ShaderManager();

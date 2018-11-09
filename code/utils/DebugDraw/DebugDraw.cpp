@@ -92,7 +92,7 @@ void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float w
 	
 	
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
+	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
 	line.Draw(model, *View, *Projection, wireframeShader, width);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
@@ -114,7 +114,7 @@ void DebugDraw::DrawNormal(const Vector3& normal, const Vector3& position, float
 		model = Matrix4::rotateAngle(axis, deg)*model;
 	}
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
+	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
 	line.Draw(model, *View, *Projection, wireframeShader, width);
 	point.Draw(model, *View, *Projection, wireframeShader);
@@ -138,7 +138,7 @@ void DebugDraw::DrawPlane(const Vector3& normal, const Vector3& position, const 
 	model = Matrix4::scale(halfExtent) * model;
 
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
+	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
 	plane.Draw(model, *View, *Projection, wireframeShader);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
@@ -162,7 +162,7 @@ void DebugDraw::DrawPlaneN(const Vector3& normal, const Vector3& position, const
 	model = Matrix4::scale(halfExtent) * model;
 
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
+	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
 	plane.Draw(model, *View, *Projection, wireframeShader);
 	line.Draw(model, *View, *Projection, wireframeShader);
@@ -174,7 +174,7 @@ void DebugDraw::DrawPlaneN(const Vector3& normal, const Vector3& position, const
 void DebugDraw::DrawPoint(const Vector3& position, float size)
 {
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
+	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
 	point.Draw(Matrix4::translate(position), *View, *Projection, wireframeShader, size);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
@@ -199,7 +199,7 @@ void DebugDraw::DrawCrossHair(int windowWidth, int windowHeight, const Vector3F&
 	line.mat->color = color;
 
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = ShaderManager::Instance()->shaderIDs["wireframe"];
+	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
 	line.Draw(model1, view, proj, wireframeShader, 2.f);
 	line.Draw(model2, view, proj, wireframeShader, 2.f);

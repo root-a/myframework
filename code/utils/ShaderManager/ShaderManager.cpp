@@ -29,17 +29,3 @@ void ShaderManager::SetCurrentShader(GLuint id)
     this->current_shader = id;
 	glUseProgram(id);
 }
-
-void ShaderManager::AddShader(const char* shaderName, GLuint shader)
-{
-	shaderIDs[shaderName] = shader;
-}
-
-void ShaderManager::DeleteShaders()
-{ 
-	for (auto& shader : shaderIDs)
-	{
-		glDeleteProgram(shader.second);
-	}
-	shaderIDs.clear();
-}
