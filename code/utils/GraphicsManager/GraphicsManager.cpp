@@ -558,7 +558,7 @@ GLuint GraphicsManager::LoadProgram(const char * vertex_file_path, const char * 
 
 	// Read the Geometry Shader code from the file
 	std::string GeometryShaderCode;
-	if (geometry_file_path != nullptr)
+	if (geometry_file_path != nullptr && strcmp(geometry_file_path, "") != 0)
 	{
 		std::ifstream GeometryShaderStream(geometry_file_path, std::ios::in);
 		if (GeometryShaderStream.is_open())
