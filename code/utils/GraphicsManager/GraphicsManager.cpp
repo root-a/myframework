@@ -731,7 +731,7 @@ Texture* GraphicsManager::CreateTexture(int width, int height, bool isDepth, uns
 void GraphicsManager::LoadAllAssets()
 {
 	printf("\nLOADING GPU PROGRAMS\n");
-	LoadShaders("Resources/programs.txt");
+	LoadShaders("Resources/shaders.txt");
 	printf("\nDONE\n");
 
 	printf("\nLOADING OBJs\n");
