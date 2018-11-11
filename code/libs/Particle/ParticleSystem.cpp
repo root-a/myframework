@@ -185,14 +185,12 @@ int ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, const
 	CameraRightHandle = glGetUniformLocation(currentShaderID, "CameraRight");
 	CameraUpHandle = glGetUniformLocation(currentShaderID, "CameraUp");
 	ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
-	// Same as the billboards tutorial
 
 	glUniform3fv(CameraRightHandle, 1, &cameraRight.x);
 	glUniform3fv(CameraUpHandle, 1, & cameraUp.x);
 
 	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection[0][0]);
 
-	// Bind our texture in Texture Unit 0
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, TextureID);
 	TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
@@ -200,8 +198,7 @@ int ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, const
 
 	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, aliveParticles);
 
-	// Don't forget to reset to default blending mode
-	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	if (additive) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
 	glDisable(GL_BLEND);
 	
