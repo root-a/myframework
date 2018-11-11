@@ -18,11 +18,19 @@
 #include "Camera.h"
 #include "Texture.h"
 #include "GraphicsStorage.h"
+#include "DebugDraw.h"
 
 using namespace mwm;
 
 Render::Render()
 {
+	pb.gamma = 1.2f;
+	pb.exposure = 1.0f;
+	pb.brightness = 0.0f;
+	pb.contrast = 1.0f;
+	pb.bloomIntensity = 1.f;
+	pb.hdrEnabled = GL_TRUE;
+	pb.bloomEnabled = GL_TRUE;
 }
 
 Render::~Render()
@@ -85,7 +93,6 @@ Render::drawGeometry(const std::vector<Object*>& objects, const FrameBuffer * ge
 		}
 	}
 
-	//glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
@@ -195,8 +202,15 @@ Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjection, c
 }
 
 int
-Render::drawPicking(std::unordered_map<unsigned int, Object*>& pickingList, const mwm::Matrix4 & ViewProjection, const GLuint currentShaderID)
+Render::drawPicking(std::unordered_map<unsigned int, Object*>& pickingList, const FrameBuffer* pickingBuffer, const GLenum* attachments, const int countOfAttachments)
 {
+	GLuint currentShaderID = GraphicsStorage::shaderIDs["picking"];
+	ShaderManager::Instance()->SetCurrentShader(currentShaderID);
+
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, pickingBuffer->handle);
+	glDrawBuffers(countOfAttachments, attachments);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
 	glBindBuffer(GL_UNIFORM_BUFFER, uboGBVars);
 	int objectsRendered = 0;
 	Object* object = nullptr;
@@ -220,6 +234,7 @@ Render::drawPicking(std::unordered_map<unsigned int, Object*>& pickingList, cons
 			objectsRendered++;
 		}
 	}
+	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	return objectsRendered;
 }
@@ -890,6 +905,37 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 }
 
 void
+Render::drawHDR(Texture* colorTexture, Texture* bloomTexture)
+{
+	GLuint hdrBloom = GraphicsStorage::shaderIDs["hdrBloom"];
+	ShaderManager::Instance()->SetCurrentShader(hdrBloom);
+
+	glActiveTexture(GL_TEXTURE0);
+	colorTexture->Bind();
+
+	glActiveTexture(GL_TEXTURE1);
+	bloomTexture->Bind();
+	
+	if (onceHDR)
+	{
+		GLuint hdrBuffer = glGetUniformLocation(hdrBloom, "hdrBuffer");
+		glUniform1i(hdrBuffer, 0);
+		GLuint bloomBuffer = glGetUniformLocation(hdrBloom, "bloomBuffer");
+		glUniform1i(bloomBuffer, 1);
+		onceHDR = false;
+	}
+
+	glBindBuffer(GL_UNIFORM_BUFFER, uboPBVars); //we bind ubos only to update them they are accessible all the time for shaders even when not bound
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, 28, &pb);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+
+	DebugDraw::Instance()->DrawQuad();
+
+	glActiveTexture(GL_TEXTURE0);
+	glBindTexture(GL_TEXTURE_2D, 0);
+}
+
+void
 Render::AddPingPongBuffer(int width, int height)
 {
 	for (int i = 0; i < 2; i++)
@@ -961,6 +1007,12 @@ void Render::GenerateEBOs()
 	glBufferData(GL_UNIFORM_BUFFER, 28, NULL, GL_STATIC_DRAW);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 2, uboCBVars); //bind uniform buffer to binding point 2
+
+	glGenBuffers(1, &uboPBVars);
+	glBindBuffer(GL_UNIFORM_BUFFER, uboPBVars);
+	glBufferData(GL_UNIFORM_BUFFER, 28, NULL, GL_STATIC_DRAW);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 3, uboPBVars); //bind uniform buffer to binding point 3
 }
 
 void Render::UpdateEBOs()
