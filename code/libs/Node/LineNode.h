@@ -9,7 +9,7 @@ public:
 	LineNode();
 	~LineNode();
 
-	void UpdateNodeTransform(const Node& parentNode);
+	void UpdateNode(const Node& parentNode);
 	mwm::Vector3 localPosition;
 
 private:

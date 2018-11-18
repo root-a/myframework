@@ -1,5 +1,5 @@
 #include "Node.h"
-
+#include "Component.h"
 using namespace mwm;
 Node::Node()
 {
@@ -15,18 +15,27 @@ Node::Node()
 
 Node::~Node()
 {
+	for (auto& component : components)
+	{
+		delete component;
+	}
+	components.clear();
 }
 
-void Node::UpdateNodeTransform(const Node& parentNode)
+void Node::UpdateNode(const Node& parentNode)
 {
 	totalScale = localScale * parentNode.totalScale;
 	this->TransformationMatrix = Matrix4::scale(this->localScale) * orientation.ConvertToMatrix() * Matrix4::translate(this->position);
 	this->TopDownTransform = TransformationMatrix*parentNode.TopDownTransform;
 	this->CenteredTopDownTransform = Matrix4::translate(meshCenter)*TopDownTransform;
 	this->centeredPosition = CenteredTopDownTransform.getPosition();
-	for (size_t i = 0; i < children.size(); i++)
+	for (auto& component : components)
 	{
-		children.at(i)->UpdateNodeTransform(*this);
+		component->Update();
+	}
+	for (auto& childNode : children)
+	{
+		childNode->UpdateNode(*this);
 	}
 }
 
