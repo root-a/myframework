@@ -18,7 +18,6 @@
 #include "Camera.h"
 #include "Texture.h"
 #include "GraphicsStorage.h"
-#include "DebugDraw.h"
 
 using namespace mwm;
 
@@ -60,7 +59,7 @@ Render::drawGeometry(const std::vector<Object*>& objects, const FrameBuffer * ge
 	GLuint TextureSamplerHandle = glGetUniformLocation(geometryShader, "myTextureSampler");
 	glUniform1i(TextureSamplerHandle, 0);
 
-	glActiveTexture(GL_TEXTURE0);
+	Texture::Activate(0);// glActiveTexture(GL_TEXTURE0);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboGBVars);
 
 	int objectsRendered = 0;
@@ -93,7 +92,6 @@ Render::drawGeometry(const std::vector<Object*>& objects, const FrameBuffer * ge
 		}
 	}
 
-	glBindTexture(GL_TEXTURE_2D, 0);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	return objectsRendered;
@@ -113,7 +111,7 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 	GLuint TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
 	glUniform1i(TextureSamplerHandle, 0);
 
-	glActiveTexture(GL_TEXTURE0);
+	Texture::Activate(0); //glActiveTexture(GL_TEXTURE0);
 
 	for (auto& object : objects)
 	{
@@ -191,8 +189,7 @@ Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjection, c
 
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, 172, &gb);
 
-	glActiveTexture(GL_TEXTURE0);
-	object->mat->texture->Bind();
+	object->mat->texture->ActivateAndBind(0);
 
 	glBindVertexArray(object->mesh->vaoHandle);
 
@@ -300,7 +297,6 @@ Render::drawCubeDepth(const std::vector<Object*>& objects, const std::vector<mwm
 
 void Render::drawSkyboxWithClipPlane(const FrameBuffer * lightFrameBuffer, const GLenum * lightAttachmentsToDraw, const int countOfAttachments, Texture* texture, const mwm::Vector4F& plane, const mwm::Matrix4& ViewMatrix)
 {
-	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
 	GLuint currentShader = GraphicsStorage::shaderIDs["skyboxWithClipPlane"];
 	ShaderManager::Instance()->SetCurrentShader(currentShader);
 
@@ -316,7 +312,7 @@ void Render::drawSkyboxWithClipPlane(const FrameBuffer * lightFrameBuffer, const
 	View[3][0] = 0;
 	View[3][1] = 0;
 	View[3][2] = 0;
-	Matrix4 ViewProjection = View * currentCamera->ProjectionMatrix;
+	Matrix4 ViewProjection = View * CameraManager::Instance()->GetCurrentCamera()->ProjectionMatrix;
 
 	box.mat->AssignTexture(texture);
 	box.Draw(ViewProjection, currentShader);
@@ -393,8 +389,6 @@ void Render::drawGSkybox(const FrameBuffer * lightFrameBuffer, const GLenum * li
 	glDepthMask(GL_FALSE);
 	//glEnable(GL_CULL_FACE);
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	//glDepthRange(0.0, 1.0);
 	//glDepthMask(GL_TRUE);
 }
@@ -413,17 +407,10 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
 	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 
-	glActiveTexture(GL_TEXTURE0);
-	geometryTextures[0]->Bind();
-	
-	glActiveTexture(GL_TEXTURE1);
-	geometryTextures[1]->Bind();
-	
-	glActiveTexture(GL_TEXTURE2);
-	geometryTextures[2]->Bind();
-	
-	glActiveTexture(GL_TEXTURE3);
-	geometryTextures[3]->Bind();
+	geometryTextures[0]->ActivateAndBind(0); //input value same as sampler uniform
+	geometryTextures[1]->ActivateAndBind(1);
+	geometryTextures[2]->ActivateAndBind(2);
+	geometryTextures[3]->ActivateAndBind(3);
 
 	glUseProgram(lightShaderNoShadows);	
 
@@ -468,7 +455,7 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 
 			glDrawBuffer(GL_COLOR_ATTACHMENT0);
 			glDepthMask(GL_TRUE);
-			glClearColor(1,1,0,1);
+			glClearColor(1, 1, 0, 1);
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
 			glCullFace(GL_FRONT);
@@ -490,14 +477,12 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 				case OneSize:
 					if (pingPongBuffers[0] != nullptr)
 					blurredShadowMap = BlurTextureAtSameSize(dirShadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], directionalLight->activeBlurLevel, directionalLight->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
-					glActiveTexture(GL_TEXTURE4);
-					blurredShadowMap->Bind();
+					blurredShadowMap->ActivateAndBind(4);
 					break;
 				case MultiSize:
 					if (multiBlurBufferStart[0] != nullptr)
 					blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, directionalLight->activeBlurLevel, directionalLight->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
-					glActiveTexture(GL_TEXTURE4);
-					blurredShadowMap->Bind();
+					blurredShadowMap->ActivateAndBind(4);
 					break;
 				default:
 					break;
@@ -505,8 +490,7 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 			}
 			else
 			{
-				glActiveTexture(GL_TEXTURE4);
-				dirShadowMapTexture->Bind();
+				dirShadowMapTexture->ActivateAndBind(4);
 			}
 			
 			lb.shadowTransitionSize = directionalLight->shadowFadeRange;
@@ -566,17 +550,10 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
 
-	glActiveTexture(GL_TEXTURE0);
-	geometryTextures[0]->Bind();
-
-	glActiveTexture(GL_TEXTURE1);
-	geometryTextures[1]->Bind();
-
-	glActiveTexture(GL_TEXTURE2);
-	geometryTextures[2]->Bind();
-
-	glActiveTexture(GL_TEXTURE3);
-	geometryTextures[3]->Bind();
+	geometryTextures[0]->ActivateAndBind(0);
+	geometryTextures[1]->ActivateAndBind(1);
+	geometryTextures[2]->ActivateAndBind(2);
+	geometryTextures[3]->ActivateAndBind(3);
 
 	glUseProgram(lightShaderNoShadows);
 
@@ -638,8 +615,7 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 				glClearColor(0, 0, 0, 1);
 
-				glActiveTexture(GL_TEXTURE4);
-				light->shadowMapTexture->Bind();
+				light->shadowMapTexture->ActivateAndBind(4);
 			}
 			else
 			{
@@ -708,8 +684,6 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 		}
 	}
 	glDisable(GL_STENCIL_TEST);
-	glActiveTexture(GL_TEXTURE4);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	return lightsRendered;
 }
@@ -723,17 +697,10 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
 
-	glActiveTexture(GL_TEXTURE0); //we should activate the textures once, should not need any shader bound for that
-	geometryTextures[0]->Bind();
-
-	glActiveTexture(GL_TEXTURE1);
-	geometryTextures[1]->Bind();
-
-	glActiveTexture(GL_TEXTURE2);
-	geometryTextures[2]->Bind();
-
-	glActiveTexture(GL_TEXTURE3);
-	geometryTextures[3]->Bind();
+	geometryTextures[0]->ActivateAndBind(0);
+	geometryTextures[1]->ActivateAndBind(1);
+	geometryTextures[2]->ActivateAndBind(2);
+	geometryTextures[3]->ActivateAndBind(3);
 
 	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["spotLight"];
 	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["spotLightShadow"];
@@ -817,16 +784,12 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 					default:
 						break;
 					}
-
-					glActiveTexture(GL_TEXTURE4);
-					blurredShadowMap->Bind();
+					blurredShadowMap->ActivateAndBind(4);
 				}
 				else
 				{
-					glActiveTexture(GL_TEXTURE4);
-					light->shadowMapTexture->Bind();
+					light->shadowMapTexture->ActivateAndBind(4);
 				}
-
 				lb.depthBiasMVP = light->BiasedLightMatrixVP;
 			}
 			else
@@ -910,11 +873,8 @@ Render::drawHDR(Texture* colorTexture, Texture* bloomTexture)
 	GLuint hdrBloom = GraphicsStorage::shaderIDs["hdrBloom"];
 	ShaderManager::Instance()->SetCurrentShader(hdrBloom);
 
-	glActiveTexture(GL_TEXTURE0);
-	colorTexture->Bind();
-
-	glActiveTexture(GL_TEXTURE1);
-	bloomTexture->Bind();
+	colorTexture->ActivateAndBind(0);
+	bloomTexture->ActivateAndBind(1);
 	
 	if (onceHDR)
 	{
@@ -929,10 +889,24 @@ Render::drawHDR(Texture* colorTexture, Texture* bloomTexture)
 	glBufferSubData(GL_UNIFORM_BUFFER, 0, 28, &pb);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-	DebugDraw::Instance()->DrawQuad();
+	glBindVertexArray(plane.mesh->vaoHandle);
+	glDrawElements(GL_TRIANGLES, plane.mesh->indicesSize, GL_UNSIGNED_SHORT, (void*)0);
+}
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, 0);
+void Render::drawRegion(int posX, int posY, int width, int height, const Texture * texture)
+{
+	glEnable(GL_SCISSOR_TEST);
+	glScissor(posX, posY, width, height);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+	glDisable(GL_SCISSOR_TEST);
+	glViewport(posX, posY, width, height);
+
+	texture->ActivateAndBind(0);
+	
+	glBindVertexArray(plane.mesh->vaoHandle);
+	glDrawElements(GL_TRIANGLES, plane.mesh->indicesSize, GL_UNSIGNED_SHORT, (void*)0);
+
+	glViewport(0, 0, CameraManager::Instance()->GetCurrentCamera()->windowWidth, CameraManager::Instance()->GetCurrentCamera()->windowHeight);
 }
 
 void
@@ -1058,7 +1032,7 @@ Render::AddDirectionalShadowMapBuffer(int width, int height)
 }
 
 void
-Render::Blur(Texture* sourceTexture, GLuint destinationFbo, float offsetxVal, float offsetyVal, GLuint offset)
+Render::BlurOnOneAxis(Texture* sourceTexture, GLuint destinationFbo, float offsetxVal, float offsetyVal, GLuint offset)
 {
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, destinationFbo);
 
@@ -1081,7 +1055,7 @@ Render::BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*> startFrame
 	GLuint blurMapSampler = glGetUniformLocation(shader, "blurMapSampler");
 	glUniform1i(blurMapSampler, 5); //we tell the sampler to use the texture stored in texture bank GL_TEXTURE5, should be done only once
 
-	glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
+	Texture::Activate(5); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
 
 	glBindVertexArray(plane.mesh->vaoHandle);
 
@@ -1096,12 +1070,12 @@ Render::BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*> startFrame
 
 		glViewport(0, 0, textureWidth, textureHeight);
 
-		Blur(HorizontalSourceTexture, startFrameBuffer[i]->handle, blurSize / ((float)textureWidth), 0.f, offset); //horizontally
-		Blur(startFrameBuffer[i]->textures[0], targetFrameBuffer[i]->handle, 0.f, blurSize / ((float)textureHeight), offset); //vertically
+		BlurOnOneAxis(HorizontalSourceTexture, startFrameBuffer[i]->handle, blurSize / ((float)textureWidth), 0.f, offset); //horizontally
+		BlurOnOneAxis(startFrameBuffer[i]->textures[0], targetFrameBuffer[i]->handle, 0.f, blurSize / ((float)textureHeight), offset); //vertically
 		HorizontalSourceTexture = targetFrameBuffer[i]->textures[0];
 	}
 
-	glBindTexture(GL_TEXTURE_2D, 0); //we unbind the texture from the active texture bank (GL_TEXTURE5)
+	//glBindTexture(GL_TEXTURE_2D, 0); //we unbind the texture from the active texture bank (GL_TEXTURE5)
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
@@ -1119,7 +1093,7 @@ Render::BlurTextureAtSameSize(Texture* sourceTexture, FrameBuffer* startFrameBuf
 	GLuint blurMapSampler = glGetUniformLocation(shader, "blurMapSampler");
 	glUniform1i(blurMapSampler, 5); //we tell the sampler to use the texture stored in texture bank GL_TEXTURE5
 
-	glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
+	Texture::Activate(5); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
 
 	glBindVertexArray(plane.mesh->vaoHandle);
 
@@ -1137,12 +1111,12 @@ Render::BlurTextureAtSameSize(Texture* sourceTexture, FrameBuffer* startFrameBuf
 
 	for (size_t i = 0; i < outputLevel + 1; i++)
 	{
-		Blur(HorizontalSourceTexture, startFrameBuffer->handle, offsetWidth, 0.f, offset); //horizontally
-		Blur(startFrameBuffer->textures[0], targetFrameBuffer->handle, 0.f, offsetHeight, offset); //vertically
+		BlurOnOneAxis(HorizontalSourceTexture, startFrameBuffer->handle, offsetWidth, 0.f, offset); //horizontally
+		BlurOnOneAxis(startFrameBuffer->textures[0], targetFrameBuffer->handle, 0.f, offsetHeight, offset); //vertically
 		HorizontalSourceTexture = targetFrameBuffer->textures[0];
 	}
 
-	glBindTexture(GL_TEXTURE_2D, 0); //we unbind the texture from the active texture bank (GL_TEXTURE5)
+	//glBindTexture(GL_TEXTURE_2D, 0); //we unbind the texture from the active texture bank (GL_TEXTURE5)
 
 	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 

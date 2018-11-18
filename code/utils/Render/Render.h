@@ -59,6 +59,7 @@ public:
 	int drawPointLights(const std::vector<PointLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, const GLenum* buffers, const int buffersCount, const GLuint fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
 	int drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, const GLenum* buffers, const int buffersCount, const GLuint fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
 	void drawHDR(Texture* colorTexture, Texture* bloomTexture);
+	void drawRegion(int posX, int posY, int width, int height, const Texture* texture);
 	void AddPingPongBuffer(int width, int height);
 	void AddMultiBlurBuffer(int width, int height, int levels = 4, double scaleX = 0.5, double scaleY = 0.5);
 	void GenerateEBOs();
@@ -73,7 +74,7 @@ public:
 	Texture* dirShadowMapTexture;
 	PostHDRBloom pb;
 private:
-	void Blur(Texture* sourceTexture, GLuint destinationFbo, float offsetxVal, float offsetyVal, GLuint offsetHandle);
+	void BlurOnOneAxis(Texture* sourceTexture, GLuint destinationFbo, float offsetxVal, float offsetyVal, GLuint offsetHandle);
 	Texture* BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*> startFrameBuffer, std::vector<FrameBuffer*> targetFrameBuffer, int outputLevel, float blurSize, GLuint shader, int windowWidth, int windowHeight);
 	Texture* BlurTextureAtSameSize(Texture* sourceTexture, FrameBuffer* startFrameBuffer, FrameBuffer* targetFrameBuffer, int outputLevel, float blurSize, GLuint shader, int windowWidth, int windowHeight);
     Render();
