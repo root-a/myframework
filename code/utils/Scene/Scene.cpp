@@ -185,8 +185,6 @@ void Scene::Clear()
 	directionalLightComponents.clear();
 	spotLightComponents.clear();
 	pointLightComponents.clear();
-
-	SceneObject->ClearComponents(); //just clear components
 }
 
 Object* Scene::addPointLight(bool castShadow, const Vector3& position, const Vector3F& color)
@@ -365,24 +363,5 @@ void Scene::addRandomlyPointLights(int num, int min, int max)
 
 void Scene::Update()
 {
-	SceneObject->node.UpdateNodeTransform(SceneObject->node); //update scenegraph
-
-	//update components:
-	SceneObject->Update();
-	for (auto& obj : renderList)
-	{
-		obj->Update();
-	}
-	for (auto& obj : pointLights)
-	{
-		obj->Update();
-	}
-	for (auto& obj : spotLights)
-	{
-		obj->Update();
-	}
-	for (auto& obj : directionalLights)
-	{
-		obj->Update();
-	}
+	SceneObject->node.UpdateNode(SceneObject->node); //update scenegraph
 }
