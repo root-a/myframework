@@ -255,7 +255,6 @@ bool GraphicsManager::LoadShaders(const char * path)
 	std::map<std::string, std::string> shaders;
 	while (fgets(line, sizeof(line), file)) {
 		if (line[0] == '/' || line[0] == ';' || line[0] == '#') continue; /* ignore comment line */
-		int diffuseID, normalID, specID, emiID, heighID;
 		char programName[128];
 		char filePath[128];
 		int matches = sscanf(line, "%s %s", programName, filePath);
@@ -265,10 +264,6 @@ bool GraphicsManager::LoadShaders(const char * path)
 		}
 		else {
 			shaders[programName] = filePath;
-			//scan for all files within filepath for the same name
-			//maybe we should make another file, shader directories
-			//directories for all, we scan everything and then from second file we pick only the files we want to use
-			//ShaderManager::Instance()->AddShader(programName, LoadProgram(VS + filePath, FS + filePath, GS + filePath);
 		}
 	}
 	fclose(file);
@@ -347,9 +342,77 @@ bool GraphicsManager::LoadShaders(const char * path)
 	{
 		GLuint programID = LoadProgram(program.second.vs.c_str(), program.second.fs.c_str(), program.second.gs.c_str());
 		GraphicsStorage::shaderIDs[program.first] = programID;
+		LoadUniforms(programID);
 	}
 
 	return true;
+}
+
+void GraphicsManager::LoadUniforms(GLuint programID)
+{
+	GLint i;
+	GLint count;
+
+	GLint size; // size of the variable
+	GLenum type; // type of the variable (float, vec3 or mat4, etc)
+
+	const GLsizei bufSize = 64; // maximum name length
+	GLchar name[bufSize]; // variable name in GLSL
+	std::string readableType; // variable name in GLSL
+	GLsizei length; // name length
+	glGetProgramiv(programID, GL_ACTIVE_UNIFORMS, &count);
+	std::vector<std::string> samplers;
+	for (i = 0; i < count; i++)
+	{
+		glGetActiveUniform(programID, (GLuint)i, bufSize, &length, &size, &type, name);
+
+		
+		switch (type)
+		{
+		case GL_SAMPLER_1D:
+		{
+			readableType = "sampler 1D";
+			samplers.push_back(name);
+			break;
+		}
+		case GL_SAMPLER_2D:
+		{
+			readableType = "sampler 2D";
+			samplers.push_back(name);
+			break;
+		}
+		case GL_SAMPLER_3D:
+		{
+			readableType = "sampler 3D";
+			samplers.push_back(name);
+			break;
+		}
+		case GL_SAMPLER_CUBE:
+		{
+			readableType = "sampler CUBE";
+			samplers.push_back(name);
+			break;
+		}
+		default:
+		{
+			readableType = "other";
+			break;
+		}
+		}
+		//printf("Uniform #%d Type: %s Name: %s\n", i, readableType.c_str(), name); //we get type and name, number is irrelevant, it's just a count, we should get the id ourselves using the name, done :D
+
+	}
+	std::map<int, std::string> samplersOrdered;
+	for (auto& samplerName : samplers)
+	{
+		GLuint samplerLocation = glGetUniformLocation(programID, samplerName.c_str());
+		samplersOrdered[samplerLocation] = samplerName;
+	}
+	for (auto& sampler : samplersOrdered)
+	{
+		//printf("id %d Name: %s\n", sampler.first, sampler.second.c_str()); //ordered samplers with location ids
+	}
+
 }
 
 Texture* GraphicsManager::LoadBMP(const char *imagepath){

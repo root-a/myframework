@@ -25,6 +25,7 @@ public:
 	static bool LoadTextures(const char * path);
 	static bool LoadMaterials(const char * path);
 	static bool LoadShaders(const char * path);
+	static void LoadUniforms(GLuint programID);
 	static Texture* LoadBMP(const char *imagepath);
 	static Texture* LoadDDS(const char *imagepath);
 	static unsigned char * LoadImage(const char* path, int* x, int* y, int* numOfElements, int forcedNumOfEle);
