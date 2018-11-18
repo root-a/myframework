@@ -94,7 +94,6 @@ void PointSystem::SetUpBuffers()
 
 void PointSystem::UpdateBuffers()
 {
-	//Bind VAO
 	glBindVertexArray(vaoHandle);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
@@ -109,7 +108,7 @@ void PointSystem::UpdateBuffers()
 
 void PointSystem::Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID, float size)
 {
-	UpdateBuffers();
+	glBindVertexArray(vaoHandle);
 
 	ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
 	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
@@ -136,4 +135,5 @@ FastPoint* PointSystem::GetPointOnce()
 void PointSystem::Update()
 {
 	ActiveCount = UpdateContainer();
+	UpdateBuffers();
 }

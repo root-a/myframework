@@ -98,7 +98,6 @@ void LineSystem::SetUpBuffers()
 
 void LineSystem::UpdateBuffers()
 {
-	//Bind VAO
 	glBindVertexArray(vaoHandle);
 
 	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
@@ -112,7 +111,7 @@ void LineSystem::UpdateBuffers()
 
 void LineSystem::Draw(const mwm::Matrix4 & ViewProjection, const unsigned int currentShaderID, float width)
 {
-	UpdateBuffers();
+	glBindVertexArray(vaoHandle);
 
 	ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
 	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
@@ -132,6 +131,8 @@ FastLine* LineSystem::GetLine()
 void LineSystem::Update()
 {
 	ActiveCount = UpdateContainer();
+
+	UpdateBuffers();
 }
 
 FastLine* LineSystem::GetLineOnce()

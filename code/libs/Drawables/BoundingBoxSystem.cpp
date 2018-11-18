@@ -129,7 +129,6 @@ void BoundingBoxSystem::SetUpBuffers()
 
 void BoundingBoxSystem::UpdateBuffers()
 {
-	//Bind VAO
 	glBindVertexArray(vaoHandle);
 
 	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
@@ -143,7 +142,7 @@ void BoundingBoxSystem::UpdateBuffers()
 
 void BoundingBoxSystem::Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID)
 {
-	UpdateBuffers();
+	glBindVertexArray(vaoHandle);
 
 	ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
 	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
@@ -171,4 +170,6 @@ FastBoundingBox* BoundingBoxSystem::GetBoundingBoxOnce()
 void BoundingBoxSystem::Update()
 {
 	ActiveCount = UpdateContainer();
+	
+	UpdateBuffers();
 }
