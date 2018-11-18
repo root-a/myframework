@@ -118,7 +118,18 @@ void Texture::Generate()
 	}
 }
 
-void Texture::Bind()
+void Texture::ActivateAndBind(int textureSlot) const
+{
+	glActiveTexture(GL_TEXTURE0 + textureSlot);
+	glBindTexture(target, handle);
+}
+
+void Texture::Bind() const
 {
 	glBindTexture(target, handle);
+}
+
+void Texture::Activate(int textureSlot)
+{
+	glActiveTexture(GL_TEXTURE0 + textureSlot);
 }

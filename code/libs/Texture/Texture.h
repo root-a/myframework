@@ -35,7 +35,9 @@ public:
 	void SetNearest();
 	void Update(int windowWidth, int windowHeight);
 	void Generate();
-	void Bind();
+	void ActivateAndBind(int textureSlot) const;
+	void Bind() const;
+	static void Activate(int textureSlot);
 	GLuint handle;
 	GLenum target;
 	GLint level;
