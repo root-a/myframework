@@ -18,16 +18,6 @@ Object::Object()
 
 Object::~Object()
 {
-	ClearComponents();
-}
-
-void Object::ClearComponents()
-{
-	for (auto& component : components)
-	{
-		delete component;
-	}
-	components.clear();
 }
 
 void Object::AssignMaterial(Material* mat)
@@ -119,16 +109,12 @@ mwm::Quaternion Object::GetWorldOrientation()
 
 void Object::AddComponent(Component* newComponent)
 {
-	components.push_back(newComponent);
+	node.components.push_back(newComponent);
 	newComponent->object = this;
 }
 
 void Object::Update()
 {
-	for (auto& component : components)
-	{
-		component->Update();
-	}
 	CalculateRadius();
 }
 

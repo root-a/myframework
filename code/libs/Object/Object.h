@@ -19,7 +19,6 @@ public:
 	
 	void Update();
 	void AddComponent(Component* newComponent);
-	void ClearComponents();
 	void AssignMaterial(Material* mat);
 	void AssignMesh(Mesh* mesh);
 	
@@ -47,7 +46,7 @@ public:
 	template <typename T>
 	T* GetComponent()
 	{ 
-		for (auto& component : components)
+		for (auto& component : node.components)
 		{
 			if (dynamic_cast<T*>(component))
 			{
@@ -57,7 +56,7 @@ public:
 		return NULL;
 	}
 private:
-	std::vector<Component*> components;
+	
 	
 };
 
