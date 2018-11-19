@@ -67,6 +67,16 @@ void GraphicsStorage::ClearShaders()
 	shaderIDs.clear();
 }
 
+void GraphicsStorage::Clear()
+{
+	ClearMeshes();
+	ClearTextures();
+	ClearCubemaps();
+	ClearShaders();
+	ClearOBJs();
+	ClearMaterials();
+}
+
 std::unordered_map<std::string, Mesh*> GraphicsStorage::meshes;
 std::vector<Texture*> GraphicsStorage::textures;
 std::vector<Material*> GraphicsStorage::materials;
