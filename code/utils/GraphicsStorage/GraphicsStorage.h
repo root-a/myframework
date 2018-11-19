@@ -27,6 +27,7 @@ public:
 	static void ClearCubemaps();
 	static void ClearOBJs();
 	static void ClearShaders();
+	static void Clear();
 private:
 
 };
