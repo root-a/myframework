@@ -304,7 +304,7 @@ Matrix3 Matrix3::rotateAngle(Vector3& v, double angle)
 }
 
 /*! \fn returns translation matrix with specified translation values*/
-Matrix3 Matrix3::translate(double x, double y, double z)
+Matrix3 Matrix3::translation(double x, double y, double z)
 {
 	Matrix3 translation;
 	translation._matrix[0][0] = 1.0;
@@ -318,7 +318,7 @@ Matrix3 Matrix3::translate(double x, double y, double z)
 }
 
 /*! \fn returns translation matrix with specified translation values*/
-Matrix3 Matrix3::translate(const Vector3& right)
+Matrix3 Matrix3::translation(const Vector3& right)
 {
 	Matrix3 translation;
 	translation._matrix[0][0] = 1.0;
@@ -385,12 +385,12 @@ double Matrix3::det(double a, double b, double c, double d, double e, double f, 
 }
 
 //no need to transpose
-Matrix3 Matrix3::CuboidInertiaTensor(double mass, Vector3& dimensions)
+Matrix3 Matrix3::CuboidInertiaTensor(Vector3& dimensions)
 {
 	Matrix3 I;
-	I[0][0] = (1.0 / 12.0) * mass * (dimensions.y*dimensions.y + dimensions.z*dimensions.z);
-	I[1][1] = (1.0 / 12.0) * mass * (dimensions.x*dimensions.x + dimensions.z*dimensions.z);
-	I[2][2] = (1.0 / 12.0) * mass * (dimensions.x*dimensions.x + dimensions.y*dimensions.y);
+	I[0][0] = (1.0 / 12.0) * (dimensions.y*dimensions.y + dimensions.z*dimensions.z);
+	I[1][1] = (1.0 / 12.0) * (dimensions.x*dimensions.x + dimensions.z*dimensions.z);
+	I[2][2] = (1.0 / 12.0) * (dimensions.x*dimensions.x + dimensions.y*dimensions.y);
 
 	return I;
 }
@@ -471,6 +471,98 @@ void Matrix3::setAxes(const Vector3& right, const Vector3& up, const Vector3& fo
 	_matrix[2][0] = forward.x;
 	_matrix[2][1] = forward.y;
 	_matrix[2][2] = forward.z;
+}
+
+void Matrix3::setScale(const Vector3 & scale)
+{
+	_matrix[0][0] = scale.x;
+	_matrix[1][1] = scale.y;
+	_matrix[2][2] = scale.z;
+}
+
+void Matrix3::setScale(double x, double y, double z)
+{
+	_matrix[0][0] = x;
+	_matrix[1][1] = y;
+	_matrix[2][2] = z;
+}
+
+void Matrix3::setPosition(const Vector3 & position)
+{
+	_matrix[3][0] = position.x;
+	_matrix[3][1] = position.y;
+	_matrix[3][2] = position.z;
+}
+
+void Matrix3::translate(const Vector3 & position)
+{
+	_matrix[3][0] += position.x;
+	_matrix[3][1] += position.y;
+	_matrix[3][2] += position.z;
+}
+
+void Matrix3::operator*=(const Matrix3 & right)
+{
+	Matrix3 temp;
+	for (int r = 0; r < 3; r++)
+	{
+		for (int c = 0; c < 3; c++)
+		{
+			for (int k = 0; k < 3; k++)
+			{
+				temp._matrix[r][c] = temp._matrix[r][c] + _matrix[r][k] * right._matrix[k][c];
+			}
+		}
+	}
+	*this = temp;
+}
+
+void Matrix3::operator*=(const double & right)
+{
+	Matrix3 temp;
+	for (int i = 0; i < 3; i++)
+	{
+		for (int c = 0; c < 3; c++)
+		{
+			temp._matrix[i][c] = _matrix[i][c] * right;
+		}
+	}
+	*this = temp;
+}
+
+void Matrix3::setIdentity()
+{
+	memset(_matrix, 0, sizeof _matrix);
+	_matrix[0][0] = 1.0;
+	_matrix[1][1] = 1.0;
+	_matrix[2][2] = 1.0;
+}
+
+void Matrix3::inverseThis()
+{
+	//find determinant
+	double a, b, c, d, e, f, g, h, i;
+	a = _matrix[0][0]; 	b = _matrix[0][1]; 	c = _matrix[0][2];
+	d = _matrix[1][0]; 	e = _matrix[1][1]; 	f = _matrix[1][2];
+	g = _matrix[2][0]; 	h = _matrix[2][1]; 	i = _matrix[2][2];
+
+	//double det = a*e*i + b*f*g + c*d*h - c*e*g - b*d*i - a*f*h; //or a(ei-fh)-b(id-fg)+c(dh-eg)
+	double det = a * (e*i - f * h) - b * (i*d - f * g) + c * (d*h - e * g);
+	//cout << det << endl;
+
+	//matrix of minor, transpose and change signs in one
+	_matrix[0][0] = (e*i - f * h);	_matrix[0][1] = -(b*i - c * h);	_matrix[0][2] = (b*f - c * e);			// + - +
+	_matrix[1][0] = -(d*i - f * g);	_matrix[1][1] = (a*i - c * g);	_matrix[1][2] = -(a*f - c * d);			// - + -
+	_matrix[2][0] = (d*h - e * g);	_matrix[2][1] = -(a*h - b * g);	_matrix[2][2] = (a*e - b * d);			// + - +
+
+	double oneByDet = 1.0 / det;
+
+	*this *= oneByDet;
+}
+
+void Matrix3::clear()
+{
+	memset(_matrix, 0, sizeof _matrix);
 }
 
 /**

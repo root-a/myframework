@@ -1,23 +1,31 @@
 #include "Object.h"
 #include "Node.h"
 #include "Material.h"
-#include "Mesh.h"
 #include <cmath> 
-#include "OBJ.h"
-#include "RigidBody.h"
 #include <algorithm>
 #include <math.h>
-
+#include "Component.h"
+#include "Bounds.h"
 using namespace mwm;
 
 Object::Object()
 {
-	//radius = 1.f;
-	mesh = nullptr;
+	node = &localNode;
+	vao = nullptr;
+	ID = currentID;
+	currentID++;
+	bounds = new Bounds();
+	AddComponent(bounds);
 }
 
 Object::~Object()
 {
+	for (auto& component : components)
+	{
+		delete component;
+	}
+	components.clear();
+	dynamicComponents.clear();
 }
 
 void Object::AssignMaterial(Material* mat)
@@ -25,111 +33,77 @@ void Object::AssignMaterial(Material* mat)
 	this->mat = mat;
 }
 
-void Object::AssignMesh(Mesh* mesh)
+void Object::AssignMesh(Vao* mesh)
 {
-	this->mesh = mesh;
-	this->node.meshCenter = mesh->obj->center_of_mesh;
-	CalculateRadius();
+	vao = mesh;
 }
 
-Vector3 Object::extractScale()
+void Object::Attach(Node * nodeToAttachTo)
 {
-	return node.TopDownTransform.extractScale();
+	node = nodeToAttachTo;
 }
 
-Vector3 Object::getScale()
+void Object::Attach(Object * objectToAttachTo)
 {
-	return this->node.totalScale;
+	node = objectToAttachTo->node;
 }
 
-mwm::Vector3 Object::GetLocalScale()
+void Object::Detach()
 {
-	return this->node.localScale;
-}
-
-void Object::SetPosition(const Vector3& vector )
-{
-	this->node.position = vector;
-}
-
-Vector3 Object::GetWorldPosition() const
-{
-	return this->node.TopDownTransform.getPosition();
-}
-
-
-mwm::Vector3 Object::GetLocalPosition() const
-{
-	return this->node.position;
-}
-
-void Object::SetScale(const Vector3& vector )
-{
-	Vector3 parentScale = this->node.totalScale / this->node.localScale;
-	this->node.localScale = vector;
-	this->node.totalScale = this->node.localScale * parentScale;
-
-	CalculateRadius();
-}
-
-void Object::Translate(const Vector3& vector)
-{
-	this->node.position += vector;
-}
-
-Vector3 Object::GetMeshDimensions()
-{
-	return this->mesh->obj->GetDimensions();
-}
-
-void Object::SetOrientation(const Quaternion& q)
-{
-	this->node.orientation = q;
-}
-
-Quaternion Object::GetLocalOrientation()
-{
-	return this->node.orientation;
-}
-
-mwm::Matrix3 Object::GetWorldRotation3()
-{
-	return this->node.TopDownTransform.extractRotation3();
-}
-
-mwm::Matrix4 Object::GetWorldRotation()
-{
-	return this->node.TopDownTransform.extractRotation();
-}
-
-mwm::Quaternion Object::GetWorldOrientation()
-{
-	return this->node.TopDownTransform.extractRotation3().toQuaternion();
-}
-
-void Object::AddComponent(Component* newComponent)
-{
-	node.components.push_back(newComponent);
-	newComponent->object = this;
+	node->SetPosition(node->GetWorldPosition());
+	node->SetOrientation(node->GetWorldOrientation());
+	node->SetScale(node->getScale());
+	node = &localNode;
 }
 
 void Object::Update()
 {
-	CalculateRadius();
 }
 
-void Object::CalculateRadius()
+void Object::UpdateComponents()
 {
-	if (mesh != nullptr)
+	for (auto& component : dynamicComponents)
 	{
-		Vector3 halfExtents = (mesh->obj->dimensions*node.totalScale)*0.5;
-		if (mesh->obj->name.compare("sphere") == 0)
+		component->Update();
+	}
+}
+
+void Object::ResetIDs()
+{
+	currentID = 0;
+}
+
+unsigned int Object::Count()
+{
+	return currentID;
+}
+
+void Object::AddComponent(Component* newComponent)
+{
+	components.push_back(newComponent);
+	if (newComponent->IsDynamic())
+		dynamicComponents.push_back(newComponent);
+	newComponent->Init(this);
+}
+
+void Object::UpdateComponentDynamicState(Component* component)
+{
+	if (component->IsDynamic())
+	{
+		dynamicComponents.push_back(component);
+	}
+	else
+	{
+		for (size_t i = 0; i < dynamicComponents.size(); i++)
 		{
-			radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere //picking max component in case sphere was not scaled uniformly
-		}
-		else
-		{
-			radius = halfExtents.vectLengt(); //perfect for cuboid
+			if (component == dynamicComponents[i])
+			{
+				dynamicComponents[i] = dynamicComponents.back();
+				dynamicComponents.pop_back();
+				return;
+			}
 		}
 	}
 }
+
+unsigned int Object::currentID = 0;

@@ -6,9 +6,12 @@ class Component
 public:
 	Component();
 	virtual ~Component();
-	Object* object;
+	virtual void Init(Object* parent);
 	virtual void Update() = 0;
-private:
-
+	Object* object;
+	bool IsDynamic();
+	void SetDynamic(bool newDynamic);
+protected:
+	bool dynamic;
 };
 

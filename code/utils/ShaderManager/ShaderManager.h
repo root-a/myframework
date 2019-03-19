@@ -10,7 +10,7 @@ class ShaderManager
 public:
     static ShaderManager* Instance();
     GLuint GetCurrentShaderID();
-    void SetCurrentShader(GLuint);
+    void SetCurrentShader(GLuint id);
 private:
     ShaderManager();
     ~ShaderManager();

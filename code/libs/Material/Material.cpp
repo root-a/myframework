@@ -23,11 +23,31 @@ Material::Material()
 
 Material::~Material()
 {
+	textures.clear();
+}
+
+void Material::ActivateAndBind() const
+{
+	for (size_t i = 0; i < textures.size(); i++)
+	{
+		textures[i]->ActivateAndBind(0);
+	}
+}
+
+void Material::Bind() const
+{
+	for (size_t i = 0; i < textures.size(); i++)
+	{
+		textures[i]->Bind();
+	}
 }
 
 void Material::AssignTexture(Texture *newTexture)
 {
-	this->texture = newTexture;
+	if (textures.size() == 0)
+		textures.push_back(newTexture);
+	else
+		textures[0] = newTexture;
 }
 void Material::SetDiffuseIntensity(float d)
 {

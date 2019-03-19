@@ -6,7 +6,6 @@
 #include "BlurMode.h"
 
 class Material;
-class Mesh;
 class Texture;
 class FrameBuffer;
 class Texture;

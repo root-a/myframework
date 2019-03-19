@@ -1,10 +1,12 @@
 #pragma once
-#include <GL/glew.h>
 #include <vector>
+
 class Texture;
 
 class FrameBuffer
 {
+	typedef unsigned int GLuint;
+	typedef unsigned int GLenum;
 public:
 	FrameBuffer(GLenum target, int scaleX = 1, int scaleY = 1, bool dynamic = true);
 	~FrameBuffer();
@@ -12,20 +14,22 @@ public:
 	GLuint handle;
 	void GenerateAndAddTextures();
 	void BindBuffer(GLenum target);
-	void UnBindBuffer(GLenum target);
 	std::vector<Texture*> textures;
+	std::vector<GLenum> attachments;
 	Texture* RegisterTexture(Texture* texture);
 	void AttachTexture(Texture* texture);
 	void RegisterChildBuffer(FrameBuffer* child);
 	void UpdateTextures(int newBufferSizeX, int newBufferSizeY);
 	void AddDefaultTextureParameters();
 	void CheckAndCleanup();
-	void ReadPixelData(unsigned int x, unsigned int y, GLenum readTextureFormat, GLenum sendDataType, void * data, GLenum attachment);
+	void ReadPixelData(GLuint x, GLuint y, GLuint width, GLuint height, GLenum sendDataType, void * data, Texture* texture);
 	void DeleteAllTextures();
 	std::vector<FrameBuffer*> children;
 	double scaleXFactor;
 	double scaleYFactor;
 	bool dynamicSize;
+	void ActivateDrawBuffers();
+	void DeactivateDrawBuffers();
 private:
 	FrameBuffer() {};
 };

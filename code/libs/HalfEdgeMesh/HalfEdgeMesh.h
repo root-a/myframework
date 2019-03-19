@@ -1,6 +1,5 @@
 #pragma once
 #include "MyMathLib.h"
-#include "Mesh.h"
 #include "PoolParty.h"
 #include "Vector.h"
 
@@ -9,7 +8,7 @@ class Edge;
 class Face;
 class OBJ;
 
-class HalfEdgeMesh: public Mesh
+class HalfEdgeMesh
 {
 public:
 	HalfEdgeMesh();

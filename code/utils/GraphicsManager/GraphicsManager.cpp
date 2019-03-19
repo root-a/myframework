@@ -2,7 +2,7 @@
 #include "GraphicsManager.h"
 #include "GraphicsStorage.h"
 #include "OBJ.h"
-#include "Mesh.h"
+#include "Vao.h"
 #include "Material.h"
 #include "Texture.h"
 #include <string>
@@ -65,7 +65,7 @@ bool GraphicsManager::LoadOBJs(const char * path)
 			tempOBJ->name = tempOBJ->name.substr(0, dot);
 		}
 
-		GraphicsStorage::objects.push_back(tempOBJ);
+		GraphicsStorage::objs[tempOBJ->name] = tempOBJ;
 	}
 	fclose(file);
 	return true;
@@ -244,6 +244,7 @@ bool GraphicsManager::LoadMaterials(const char * path) {
 
 bool GraphicsManager::LoadShaders(const char * path)
 {
+	GraphicsStorage::ClearShaders();
 	FILE * file;
 	file = fopen(path, "r");
 	if (file == NULL) {
@@ -267,7 +268,6 @@ bool GraphicsManager::LoadShaders(const char * path)
 		}
 	}
 	fclose(file);
-	std::unordered_map<std::string, ShaderPaths> shadersMap;
 
 	DIR *dir;
 	struct dirent *ent;
@@ -292,17 +292,17 @@ bool GraphicsManager::LoadShaders(const char * path)
 						//printf("%s\n", ent->d_name);
 						if (strcmp(currentShaderExt.c_str(), "fs") == 0)
 						{
-							shadersMap[shader.first].fs = shaderPath + currentShaderFullName;
+							GraphicsStorage::shaderPaths[shader.first].fs = shaderPath + currentShaderFullName;
 							shaderFound = true;
 						}
 						else if (strcmp(currentShaderExt.c_str(), "vs") == 0)
 						{
-							shadersMap[shader.first].vs = shaderPath + currentShaderFullName;
+							GraphicsStorage::shaderPaths[shader.first].vs = shaderPath + currentShaderFullName;
 							shaderFound = true;
 						}
 						else if (strcmp(currentShaderExt.c_str(), "gs") == 0)
 						{
-							shadersMap[shader.first].gs = shaderPath + currentShaderFullName;
+							GraphicsStorage::shaderPaths[shader.first].gs = shaderPath + currentShaderFullName;
 							shaderFound = true;
 						}
 						else
@@ -338,14 +338,35 @@ bool GraphicsManager::LoadShaders(const char * path)
 			perror("could not open directory");
 		}
 	}
-	for (auto& program : shadersMap)
+	for (auto& program : GraphicsStorage::shaderPaths)
 	{
 		GLuint programID = LoadProgram(program.second.vs.c_str(), program.second.fs.c_str(), program.second.gs.c_str());
-		GraphicsStorage::shaderIDs[program.first] = programID;
-		LoadUniforms(programID);
+		if (programID > 0) 
+		{
+			GraphicsStorage::shaderIDs[program.first] = programID;
+			LoadUniforms(programID);
+		}
 	}
 
 	return true;
+}
+
+bool GraphicsManager::ReloadShaders()
+{
+	return LoadShaders("resources/shaders.txt");
+}
+
+bool GraphicsManager::ReloadShader(const char * name)
+{
+	auto& shaderPaths = GraphicsStorage::shaderPaths[name];
+	unsigned int result = LoadProgram(shaderPaths.vs.c_str(), shaderPaths.fs.c_str(), shaderPaths.gs.c_str());
+	if (result > 0)
+	{
+		glDeleteProgram(GraphicsStorage::shaderIDs[name]);
+		GraphicsStorage::shaderIDs[name] = result;
+		return true;
+	}
+	return false;
 }
 
 void GraphicsManager::LoadUniforms(GLuint programID)
@@ -412,7 +433,6 @@ void GraphicsManager::LoadUniforms(GLuint programID)
 	{
 		//printf("id %d Name: %s\n", sampler.first, sampler.second.c_str()); //ordered samplers with location ids
 	}
-
 }
 
 Texture* GraphicsManager::LoadBMP(const char *imagepath){
@@ -702,12 +722,7 @@ GLuint GraphicsManager::LoadProgram(const char * vertex_file_path, const char * 
 	// Check the program
 	glGetProgramiv(ProgramID, GL_LINK_STATUS, &Result);
 	glGetProgramiv(ProgramID, GL_INFO_LOG_LENGTH, &InfoLogLength);
-	if (InfoLogLength > 0)
-	{
-		std::vector<char> ProgramErrorMessage(std::max<int>(InfoLogLength, int(1)));
-		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
-		fprintf(stdout, "%s\n", &ProgramErrorMessage[0]);
-	}
+	
 
 	glDeleteShader(VertexShaderID);
 	if (geometry_file_path != nullptr && strcmp(geometry_file_path, "") != 0)
@@ -715,58 +730,75 @@ GLuint GraphicsManager::LoadProgram(const char * vertex_file_path, const char * 
 		glDeleteShader(GeometryShaderID);
 	}
 	glDeleteShader(FragmentShaderID);
+	if (InfoLogLength > 0)
+	{
+		std::vector<char> ProgramErrorMessage(std::max<int>(InfoLogLength, int(1)));
+		glGetProgramInfoLog(ProgramID, InfoLogLength, NULL, &ProgramErrorMessage[0]);
+		fprintf(stdout, "%s\n", &ProgramErrorMessage[0]);
+		ProgramID = 0;
+	}
 	fprintf(stdout, "Shader ID: %d \n\n", ProgramID);
 	return ProgramID;
 }
 
-Mesh* GraphicsManager::LoadOBJToVBO(OBJ* object, Mesh* mesh)
+Vao* GraphicsManager::LoadOBJToVAO(OBJ* object, Vao* vao)
 {
-	//Create VAO
-	glGenVertexArrays(1, &mesh->vaoHandle);
-	//Bind VAO
-	glBindVertexArray(mesh->vaoHandle);
+	glGenVertexArrays(1, &vao->vaoHandle);
+	vao->Bind();
 
+	vao->vertexBuffers.reserve(4);
+	GLuint vertexBuffer;
 	// 1rst attribute buffer : vertices
-	glGenBuffers(1, &mesh->vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->vertexbuffer);
+	glGenBuffers(1, &vertexBuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
 	glBufferData(GL_ARRAY_BUFFER, object->indexed_vertices.size() * sizeof(Vector3F), &object->indexed_vertices[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(0);
+	vao->vertexBuffers.push_back(vertexBuffer);
 
+	GLuint uvbuffer;
 	// 2nd attribute buffer : UVs
-	glGenBuffers(1, &mesh->uvbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->uvbuffer);
+	glGenBuffers(1, &uvbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
 	glBufferData(GL_ARRAY_BUFFER, object->indexed_uvs.size() * sizeof(Vector2F), &object->indexed_uvs[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(1);
+	vao->vertexBuffers.push_back(uvbuffer);
 
+	GLuint normalbuffer;
 	// 3rd attribute buffer : normals
-	glGenBuffers(1, &mesh->normalbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, mesh->normalbuffer);
+	glGenBuffers(1, &normalbuffer);
+	glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
 	glBufferData(GL_ARRAY_BUFFER, object->indexed_normals.size() * sizeof(Vector3F), &object->indexed_normals[0], GL_STATIC_DRAW);
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(2);
+	vao->vertexBuffers.push_back(normalbuffer);
 
+	GLuint elementbuffer;
 	// 4th element buffer Generate a buffer for the indices as well
-	glGenBuffers(1, &mesh->elementbuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mesh->elementbuffer);
+	glGenBuffers(1, &elementbuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, object->indices.size() * sizeof(unsigned int), &object->indices[0], GL_STATIC_DRAW);
-	mesh->indicesSize = (unsigned int)object->indices.size();
+	vao->indicesCount = (unsigned int)object->indices.size();
+	vao->vertexBuffers.push_back(elementbuffer);
 
 	//Unbind the VAO now that the VBOs have been set up
-	glBindVertexArray(0);
+	vao->Unbind();
 	
-	mesh->obj = object;
-	return mesh;
+	return vao;
 }
 
-void GraphicsManager::LoadAllOBJsToVBO()
+void GraphicsManager::LoadAllOBJsToVAOs()
 {
-	for (size_t i = 0; i < GraphicsStorage::objects.size(); i++)
+	for (auto& obj : GraphicsStorage::objs)
 	{	
-		Mesh* newMesh = new Mesh();
-		LoadOBJToVBO(GraphicsStorage::objects.at(i), newMesh);
-		GraphicsStorage::meshes[newMesh->obj->name] = newMesh;
+		Vao* newVao = new Vao();
+		//Mesh* newMesh = new Mesh();
+		LoadOBJToVAO(obj.second, newVao);
+		//newMesh->obj = obj.second;
+		//newMesh->vao = newVao;
+		GraphicsStorage::vaos[obj.second->name] = newVao;
+		//GraphicsStorage::meshes[obj.second->name] = newMesh;
 	}
 }
 
@@ -794,28 +826,27 @@ Texture* GraphicsManager::CreateTexture(int width, int height, bool isDepth, uns
 void GraphicsManager::LoadAllAssets()
 {
 	printf("\nLOADING GPU PROGRAMS\n");
-	LoadShaders("Resources/shaders.txt");
+	LoadShaders("resources/shaders.txt");
 	printf("\nDONE\n");
 
 	printf("\nLOADING OBJs\n");
-	LoadOBJs("Resources/models.txt");
+	LoadOBJs("resources/models.txt");
 	printf("\nDONE\n");
 
-	//load all objs to vbo and create meshes with buffers
-	printf("\nLOADING OBJs TO VBO and creating Meshes with buffers\n");
-	LoadAllOBJsToVBO();
+	printf("\nLOADING OBJs TO VAOs\n");
+	LoadAllOBJsToVAOs();
 	printf("\nDONE\n");
 
 	printf("\nLOADING TEXTURES\n");
-	LoadTextures("Resources/textures.txt");
+	LoadTextures("resources/textures.txt");
 	printf("\nDONE\n");
 
 	printf("\nLOADING CUBE MAPS\n");
-	LoadCubeMaps("Resources/cubemaps.txt");
+	LoadCubeMaps("resources/cubemaps.txt");
 	printf("\nDONE\n");
 
 	printf("\nLOADING MATERIALS\n");
-	LoadMaterials("Resources/materials.txt");
+	LoadMaterials("resources/materials.txt");
 	printf("\nDONE\n");
 }
 

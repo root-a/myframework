@@ -1,8 +1,8 @@
 #include "GraphicsStorage.h"
 #include "Material.h"
-#include "Mesh.h"
 #include "Texture.h"
 #include "OBJ.h"
+#include "Vao.h"
 #include <GL/glew.h>
 
 GraphicsStorage::GraphicsStorage()
@@ -22,13 +22,13 @@ void GraphicsStorage::ClearMaterials()
 	materials.clear();
 }
 
-void GraphicsStorage::ClearMeshes()
+void GraphicsStorage::ClearVaos()
 {
-	for (auto& mesh : meshes)
+	for (auto& vao : vaos)
 	{
-		delete mesh.second;
+		delete vao.second;
 	}
-	meshes.clear();
+	vaos.clear();
 }
 
 void GraphicsStorage::ClearTextures()
@@ -51,11 +51,11 @@ void GraphicsStorage::ClearCubemaps()
 
 void GraphicsStorage::ClearOBJs()
 {
-	for (auto& object : objects)
+	for (auto& obj : objs)
 	{
-		delete object;
+		delete obj.second;
 	}
-	objects.clear();
+	objs.clear();
 }
 
 void GraphicsStorage::ClearShaders()
@@ -65,11 +65,23 @@ void GraphicsStorage::ClearShaders()
 		glDeleteProgram(shader.second);
 	}
 	shaderIDs.clear();
+	shaderPaths.clear();
 }
 
-std::unordered_map<std::string, Mesh*> GraphicsStorage::meshes;
+void GraphicsStorage::Clear()
+{
+	ClearVaos();
+	ClearTextures();
+	ClearCubemaps();
+	ClearShaders();
+	ClearOBJs();
+	ClearMaterials();
+}
+
+std::unordered_map<std::string, Vao*> GraphicsStorage::vaos;
 std::vector<Texture*> GraphicsStorage::textures;
 std::vector<Material*> GraphicsStorage::materials;
-std::vector<OBJ*> GraphicsStorage::objects;
+std::unordered_map<std::string, OBJ*> GraphicsStorage::objs;
 std::vector<Texture*> GraphicsStorage::cubemaps;
 std::unordered_map<std::string, GLuint> GraphicsStorage::shaderIDs;
+std::unordered_map<std::string, ShaderPaths> GraphicsStorage::shaderPaths;

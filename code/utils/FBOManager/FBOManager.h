@@ -1,28 +1,24 @@
 #pragma once
 #include <vector>
-#include <GL/glew.h>
 
 class Texture;
 class FrameBuffer;
 
-enum FrameBufferMode
-{
-	read,
-	draw,
-	readDraw
-};
 class FBOManager
 {
+	typedef unsigned int GLuint;
+	typedef unsigned int GLenum;
 public:
 	static FBOManager* Instance();
 	void UpdateTextureBuffers(int windowWidth, int windowHeight);
-	void BindFrameBuffer(FrameBufferMode readWrite, GLuint frameBuffer);
-	void UnbindFrameBuffer(FrameBufferMode readWrite);
+	void BindFrameBuffer(GLuint readWriteMode, GLuint frameBuffer);
 	FrameBuffer* Generate2DShadowMapBuffer(int width, int height);
 	FrameBuffer* Generate3DShadowMapBuffer(int width, int height);
 	void DeleteFrameBuffer(FrameBuffer* buffer);
 	std::vector<FrameBuffer*> buffers;
 	FrameBuffer* GenerateFBO();
+	GLuint readBuffer;
+	GLuint drawBuffer;
 private:
 	FBOManager();
 	~FBOManager();

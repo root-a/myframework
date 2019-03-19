@@ -679,6 +679,38 @@ void Matrix4F::setForward(const Vector3F& axis)
 	_matrix[2][2] = axis.z;
 }
 
+void Matrix4F::clear()
+{
+	memset(_matrix, 0, sizeof _matrix);
+}
+
+void Matrix4F::zeroPosition()
+{
+	_matrix[3][0] = 0.0;
+	_matrix[3][1] = 0.0;
+	_matrix[3][2] = 0.0;
+}
+
+void Matrix4F::zeroScale()
+{
+	_matrix[0][0] = 0.0;
+	_matrix[1][1] = 0.0;
+	_matrix[2][2] = 0.0;
+}
+
+void Matrix4F::zeroRotation()
+{
+	_matrix[0][0] = 0.0;
+	_matrix[0][1] = 0.0;
+	_matrix[0][2] = 0.0;
+	_matrix[1][0] = 0.0;
+	_matrix[1][1] = 0.0;
+	_matrix[1][2] = 0.0;
+	_matrix[2][0] = 0.0;
+	_matrix[2][1] = 0.0;
+	_matrix[2][2] = 0.0;
+}
+
 Vector3F Matrix4F::getAxis(int axis) const
 {
 	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]);

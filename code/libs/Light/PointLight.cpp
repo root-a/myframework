@@ -11,6 +11,7 @@ using namespace mwm;
 PointLight::PointLight()
 {
 	shadowMapBuffer = nullptr;
+	dynamic = true;
 }
 
 PointLight::~PointLight()
@@ -21,13 +22,13 @@ void PointLight::Update()
 {
 	if (CanCastShadow())
 	{
-		ProjectionMatrix = Matrix4::OpenGLPersp(fov, shadowMapTexture->aspect, near, object->radius);
-		LightMatrixesVP[0] = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + Vector3( 1.0, 0.0, 0.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_POSITIVE_X
-		LightMatrixesVP[1] = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + Vector3(-1.0, 0.0, 0.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_NEGATIVE_X
-		LightMatrixesVP[2] = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + Vector3( 0.0, 1.0, 0.0), Vector3(0.0,  0.0, 1.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_POSITIVE_Y
-		LightMatrixesVP[3] = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + Vector3( 0.0,-1.0, 0.0), Vector3(0.0,  0.0,-1.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
-		LightMatrixesVP[4] = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + Vector3( 0.0, 0.0, 1.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_POSITIVE_Z
-		LightMatrixesVP[5] = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + Vector3( 0.0, 0.0,-1.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+		ProjectionMatrix = Matrix4::OpenGLPersp(fov, shadowMapTexture->aspect, near, object->bounds->radius);
+		LightMatrixesVP[0] = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + Vector3( 1.0, 0.0, 0.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_POSITIVE_X
+		LightMatrixesVP[1] = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + Vector3(-1.0, 0.0, 0.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+		LightMatrixesVP[2] = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + Vector3( 0.0, 1.0, 0.0), Vector3(0.0,  0.0, 1.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+		LightMatrixesVP[3] = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + Vector3( 0.0,-1.0, 0.0), Vector3(0.0,  0.0,-1.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+		LightMatrixesVP[4] = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + Vector3( 0.0, 0.0, 1.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+		LightMatrixesVP[5] = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + Vector3( 0.0, 0.0,-1.0), Vector3(0.0, -1.0, 0.0)) * ProjectionMatrix; //GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
 	}
 }
 
@@ -41,7 +42,7 @@ void PointLight::UpdateScale()
 
 	//float ret = (-attenuation.Linear + sqrtf(attenuation.Linear * attenuation.Linear - 4 * attenuation.Exponential * (attenuation.Constant - 256 * MaxChannel * object->mat->diffuseIntensity))) / (2 * attenuation.Exponential);
 
-	object->SetScale(Vector3(ret, ret, ret));
+	object->node->SetScale(Vector3(ret, ret, ret));
 }
 
 FrameBuffer * PointLight::GenerateShadowMapBuffer(int width, int height)

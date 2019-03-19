@@ -156,6 +156,15 @@ Window::StaticWindowIconifyCallback(GLFWwindow* win, int iconified)
 //------------------------------------------------------------------------------
 /**
 */
+void Window::StaticDragAndDropCallback(GLFWwindow * win, int count, const char ** paths)
+{
+	Window* window = (Window*)glfwGetWindowUserPointer(win);
+	if (nullptr != window->dragAndDropCallback) window->dragAndDropCallback(count, paths);
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
 void
 Window::Resize()
 {
@@ -206,7 +215,7 @@ Window::Open()
 	{
 		GLenum res = glewInit();
 		assert(res == GLEW_OK);
-		if (!(GLEW_VERSION_3_3))
+		if (!(GLEW_VERSION_4_3))
 		{
 			printf("[WARNING]: OpenGL 3.3+ is not supported on this hardware!\n");
 			glfwDestroyWindow(this->window);
@@ -223,6 +232,7 @@ Window::Open()
 		
 		// setup stuff
 		//glEnable(GL_FRAMEBUFFER_SRGB);
+		glEnable(GL_POINT_SMOOTH);
 		glEnable(GL_LINE_SMOOTH);
 		glEnable(GL_POLYGON_SMOOTH);
 		glEnable(GL_MULTISAMPLE);
@@ -242,6 +252,7 @@ Window::Open()
 	glfwSetWindowCloseCallback(this->window, Window::StaticCloseCallback);
 	glfwSetFramebufferSizeCallback(this->window, Window::StaticWindowSizeCallback);
 	glfwSetWindowIconifyCallback(this->window, Window::StaticWindowIconifyCallback);
+	glfwSetDropCallback(this->window, Window::StaticDragAndDropCallback);
 	// increase window count and return result
 	Window::WindowCount++;
 	return this->window != nullptr;

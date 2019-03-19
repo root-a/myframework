@@ -4,23 +4,34 @@
 #include "Material.h"
 #include "GraphicsStorage.h"
 #include "PhysicsManager.h"
-#include "Mesh.h"
 #include "OBJ.h"
 #include "DirectionalLight.h"
 #include "SpotLight.h"
 #include "PointLight.h"
+#include "InstanceSystem.h"
+#include "FastInstanceSystem.h"
+#include <chrono>
 
 using namespace mwm;
 
 Scene::Scene()
 {
-	idCounter = 1;
-	SceneObject = new Object();
+	Init();
 }
 
 Scene::~Scene()
 {
 	
+}
+
+void Scene::Init()
+{
+	objectPool = new PoolParty<Object, 100>();
+	objectPool->CreatePoolParty(100);
+	SceneObject = objectPool->PoolPartyAlloc();
+	allObjects.push_back(SceneObject);
+	dirtyNodes.push_back(SceneObject->node);
+
 }
 
 Scene* Scene::Instance()
@@ -32,24 +43,69 @@ Scene* Scene::Instance()
 
 Object* Scene::addChild()
 {
-	Object* child = new Object();
-	SceneObject->node.addChild(&child->node);
-
-	child->ID = idCounter;
-	idCounter++;
-
-	return child;
+	return addChildTo(SceneObject);
 }
 
 Object* Scene::addChildTo(Object* parentObject)
 {
-	Object* child = new Object();
-	parentObject->node.addChild(&child->node);
-
-	child->ID = idCounter;
-	idCounter++;
-
+	Object* child = objectPool->PoolPartyAlloc();
+	parentObject->node->addChild(child->node);
+	allObjects.push_back(child);
+	dirtyNodes.push_back(child->node);
 	return child;
+}
+
+void Scene::BuildDynamicNodeArray()
+{
+	if (SceneObject->node->GetMovable())
+	{
+		dynamicNodeArray.push_back(SceneObject->node);
+	}
+	else
+		SearchNodeForMovables(SceneObject->node);
+}
+
+void Scene::SearchNodeForMovables(Node* nodeToSearch)
+{
+	for (auto* childNode : nodeToSearch->children)
+	{
+		if (childNode->GetMovable())
+		{
+			dynamicNodeArray.push_back(childNode);
+		}
+		else
+			SearchNodeForMovables(childNode);
+	}
+}
+
+void Scene::SwitchObjectMovableMode(Object* object, bool movable) //this will have to be changed so we won't have to call this function but the function on the node itself
+{
+	SwitchNodeMovableMode(object->node, movable);
+}
+
+void Scene::SwitchNodeMovableMode(Node* node, bool movable)
+{
+	bool stateChanged = node->SetMovable(movable); 
+	if (stateChanged)
+	{
+		if (movable)
+			dirtyDynamicNodes.push_back(node);
+		else
+			dirtyStaticNodes.push_back(node);
+	}
+	
+}
+
+int Scene::FindNodeIndexInDynamicArray(Node * node)
+{
+	for (size_t i = 0; i < dynamicNodeArray.size(); i++)
+	{
+		if (dynamicNodeArray[i] == node)
+		{
+			return i;
+		}
+	}
+	return -1;
 }
 
 void Scene::addRandomObject(const Vector3& pos)
@@ -58,21 +114,70 @@ void Scene::addRandomObject(const Vector3& pos)
 	pickingList[newChild->ID] = newChild;
 	renderList.push_back(newChild);
 
-	int index = rand() % (GraphicsStorage::meshes.size());
+	int index = rand() % (GraphicsStorage::objs.size());
 	float rS = (float)(rand() % 5);
 
-	newChild->SetPosition(pos);
-	newChild->SetScale(Vector3(rS, rS, rS));
+	newChild->node->SetPosition(pos);
+	newChild->node->SetScale(Vector3(rS, rS, rS));
 
 	Material* newMaterial = new Material();
 
-	auto it = GraphicsStorage::meshes.begin();
+	auto it = GraphicsStorage::objs.begin();
 	std::advance(it, index); 
-
-	newChild->AssignMesh(it->second);
+	
+	newChild->AssignMesh(GraphicsStorage::vaos[it->first]);
+	newChild->bounds->SetUp(GraphicsStorage::objs[it->first]->center_of_mesh, GraphicsStorage::objs[it->first]->dimensions, GraphicsStorage::objs[it->first]->name);
 	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
+}
+
+Object* Scene::addInstanceSystem(const char * name, int count, const mwm::Vector3 & pos)
+{
+	return addInstanceSystemTo(SceneObject, name, count, pos);
+}
+
+Object* Scene::addInstanceSystemTo(Object * parent, const char * name, int count, const mwm::Vector3 & pos)
+{
+	Object* newChild = Scene::addChildTo(parent);
+	pickingList[newChild->ID] = newChild;
+	renderList.push_back(newChild);
+
+	newChild->node->SetPosition(pos);
+	newChild->AssignMesh(GraphicsStorage::vaos[name]);
+	newChild->bounds->SetUp(GraphicsStorage::objs[name]->center_of_mesh, GraphicsStorage::objs[name]->dimensions, GraphicsStorage::objs[name]->name);
+	Material* newMaterial = new Material();
+	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
+	GraphicsStorage::materials.push_back(newMaterial);
+	newChild->AssignMaterial(newMaterial);
+	InstanceSystem* iSystem = new InstanceSystem(count);
+	instanceSystemComponents.push_back(iSystem);
+	newChild->AddComponent(iSystem);
+	return newChild;
+}
+
+Object* Scene::addFastInstanceSystem(const char * name, int count, const mwm::Vector3 & pos)
+{
+	return addFastInstanceSystemTo(SceneObject, name, count, pos);
+}
+
+Object* Scene::addFastInstanceSystemTo(Object * parent, const char * name, int count, const mwm::Vector3 & pos)
+{
+	Object* newChild = Scene::addChildTo(parent);
+	pickingList[newChild->ID] = newChild;
+	renderList.push_back(newChild);
+
+	newChild->node->SetPosition(pos);
+	newChild->AssignMesh(GraphicsStorage::vaos[name]);
+	newChild->bounds->SetUp(GraphicsStorage::objs[name]->center_of_mesh, GraphicsStorage::objs[name]->dimensions, GraphicsStorage::objs[name]->name);
+	Material* newMaterial = new Material();
+	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
+	GraphicsStorage::materials.push_back(newMaterial);
+	newChild->AssignMaterial(newMaterial);
+	FastInstanceSystem* iSystem = new FastInstanceSystem(count);
+	fastInstanceSystemComponents.push_back(iSystem);
+	newChild->AddComponent(iSystem);
+	return newChild;
 }
 
 void Scene::registerForPicking(Object * object)
@@ -87,17 +192,7 @@ void Scene::unregisterForPicking(Object * object)
 
 Object* Scene::addObject(const char* name, const Vector3& pos)
 {
-	Object* newChild = Scene::addChild();
-	pickingList[newChild->ID] = newChild;
-	renderList.push_back(newChild);
-
-	newChild->SetPosition(pos);
-	newChild->AssignMesh(GraphicsStorage::meshes[name]);
-	Material* newMaterial = new Material();
-	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
-	GraphicsStorage::materials.push_back(newMaterial);
-	newChild->AssignMaterial(newMaterial);
-	return newChild;
+	return addObjectTo(SceneObject, name, pos);
 }
 
 Object* Scene::addObjectTo(Object* parent, const char* name /*= "cube"*/, const mwm::Vector3& pos /*= mwm::Vector3()*/)
@@ -106,8 +201,9 @@ Object* Scene::addObjectTo(Object* parent, const char* name /*= "cube"*/, const 
 	pickingList[newChild->ID] = newChild;
 	renderList.push_back(newChild);
 
-	newChild->SetPosition(pos);
-	newChild->AssignMesh(GraphicsStorage::meshes[name]);
+	newChild->node->SetPosition(pos);
+	newChild->AssignMesh(GraphicsStorage::vaos[name]);
+	newChild->bounds->SetUp(GraphicsStorage::objs[name]->center_of_mesh, GraphicsStorage::objs[name]->dimensions, GraphicsStorage::objs[name]->name);
 	Material* newMaterial = new Material();
 	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
@@ -123,7 +219,6 @@ void Scene::addRandomObjects(int num, int min, int max)
     }
 }
 
-
 void Scene::addRandomlyObjects(const char* name, int num, int min, int max)
 {
 	for (int i = 0; i < num; i++)
@@ -132,16 +227,14 @@ void Scene::addRandomlyObjects(const char* name, int num, int min, int max)
 	}
 }
 
-
 Object* Scene::addPhysicObject(const char* name, const Vector3& pos)
 {
 	Object* object = addObject(name, pos);
-	RigidBody* body = new RigidBody(object);
+	RigidBody* body = new RigidBody();
 	object->AddComponent(body);
 	PhysicsManager::Instance()->RegisterRigidBody(body);
 	return object;
 }
-
 
 void Scene::addRandomlyPhysicObjects(const char* name, int num, int min, int max)
 {
@@ -153,57 +246,32 @@ void Scene::addRandomlyPhysicObjects(const char* name, int num, int min, int max
 
 void Scene::Clear()
 {
-	for (auto& obj : renderList)
-	{
-		delete obj;
-	}
-	renderList.clear();
+	SceneObject->ResetIDs();
+	dynamicNodeArray.clear();
+	dirtyDynamicNodes.clear();
+	dirtyStaticNodes.clear();
+	dirtyNodes.clear();
+	allObjects.clear();
+	delete objectPool;
+	Init();
 
+	renderList.clear();
 	pickingList.clear();
 
-	SceneObject->node.children.clear();
-	idCounter = 1;
-
-	for (auto& obj : pointLights)
-	{
-		delete obj;
-	}
 	pointLights.clear();
-
-	for (auto& obj : spotLights)
-	{
-		delete obj;
-	}
 	spotLights.clear();
-
-	for (auto& obj : directionalLights)
-	{
-		delete obj;
-	}
 	directionalLights.clear();
 
 	directionalLightComponents.clear();
 	spotLightComponents.clear();
 	pointLightComponents.clear();
+	instanceSystemComponents.clear();
+	fastInstanceSystemComponents.clear();
 }
 
 Object* Scene::addPointLight(bool castShadow, const Vector3& position, const Vector3F& color)
 {
-	Object* newChild = Scene::addChild();
-	PointLight * pointLightComp = new PointLight();
-	if (castShadow) pointLightComp->GenerateShadowMapBuffer(1024, 1024);
-	newChild->AddComponent(pointLightComp);
-	pointLightComponents.push_back(pointLightComp);
-
-	newChild->SetPosition(position);
-	Material* newMaterial = new Material();
-	newMaterial->SetColor(color); 
-	newChild->AssignMesh(GraphicsStorage::meshes["sphere"]);
-	GraphicsStorage::materials.push_back(newMaterial);
-	newChild->AssignMaterial(newMaterial);
-	newChild->SetScale(Vector3(4.0, 4.0, 4.0));
-	pointLights.push_back(newChild);
-	return newChild;
+	return addPointLightTo(SceneObject, castShadow, position, color);
 }
 
 Object * Scene::addPointLightTo(Object * parent, bool castShadow, const mwm::Vector3 & position, const mwm::Vector3F & color)
@@ -214,44 +282,27 @@ Object * Scene::addPointLightTo(Object * parent, bool castShadow, const mwm::Vec
 	newChild->AddComponent(pointLightComp);
 	pointLightComponents.push_back(pointLightComp);
 
-	newChild->SetPosition(position);
+	newChild->node->SetPosition(position);
 	Material* newMaterial = new Material();
 	newMaterial->SetColor(color);
-	newChild->AssignMesh(GraphicsStorage::meshes["sphere"]);
+	newChild->AssignMesh(GraphicsStorage::vaos["sphere"]);
+	newChild->bounds->SetUp(GraphicsStorage::objs["sphere"]->center_of_mesh, GraphicsStorage::objs["sphere"]->dimensions, GraphicsStorage::objs["sphere"]->name);
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
-	newChild->SetScale(Vector3(4.0, 4.0, 4.0));
+	newChild->node->SetScale(Vector3(4.0, 4.0, 4.0));
 	pointLights.push_back(newChild);
 	return newChild;
 }
 
 Object * Scene::addSpotLight(bool castShadow, const mwm::Vector3 & position, const mwm::Vector3F & color)
 {
-	Object* newChild = Scene::addChild();
-	SpotLight * spotLightComp = new SpotLight(newChild);
-	if (castShadow)
-	{
-		spotLightComp->GenerateShadowMapBuffer();
-		spotLightComp->GenerateBlurShadowMapBuffer();
-	}
-	newChild->AddComponent(spotLightComp);
-	spotLightComponents.push_back(spotLightComp);
-
-	newChild->SetPosition(position);
-	Material* newMaterial = new Material();
-	newMaterial->SetColor(color);
-	newChild->AssignMesh(GraphicsStorage::meshes["cone"]);
-	GraphicsStorage::materials.push_back(newMaterial);
-	newChild->AssignMaterial(newMaterial);
-	newChild->SetScale(Vector3(4.0, 4.0, 4.0));
-	spotLights.push_back(newChild);
-	return newChild;
+	return addSpotLightTo(SceneObject, castShadow, position, color);
 }
 
 Object * Scene::addSpotLightTo(Object * parent, bool castShadow, const mwm::Vector3 & position, const mwm::Vector3F & color)
 {
 	Object* newChild = Scene::addChildTo(parent);
-	SpotLight * spotLightComp = new SpotLight(newChild);
+	SpotLight * spotLightComp = new SpotLight();
 	if (castShadow)
 	{
 		spotLightComp->GenerateShadowMapBuffer();
@@ -260,34 +311,21 @@ Object * Scene::addSpotLightTo(Object * parent, bool castShadow, const mwm::Vect
 	newChild->AddComponent(spotLightComp);
 	spotLightComponents.push_back(spotLightComp);
 
-	newChild->SetPosition(position);
+	newChild->node->SetPosition(position);
 	Material* newMaterial = new Material();
 	newMaterial->SetColor(color);
-	newChild->AssignMesh(GraphicsStorage::meshes["cone"]);
+	newChild->AssignMesh(GraphicsStorage::vaos["cone"]);
+	newChild->bounds->SetUp(GraphicsStorage::objs["cone"]->center_of_mesh, GraphicsStorage::objs["cone"]->dimensions, GraphicsStorage::objs["cone"]->name);
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
-	newChild->SetScale(Vector3(4.0, 4.0, 4.0));
+	newChild->node->SetScale(Vector3(4.0, 4.0, 4.0));
 	spotLights.push_back(newChild);
 	return newChild;
 }
 
 Object* Scene::addDirectionalLight(bool castShadow, const Vector3F& color /*= Vector3(1, 1, 1)*/)
 {
-	Object* newChild = Scene::addChild();
-	DirectionalLight* dirLightComp = new DirectionalLight();
-	dirLightComp->shadowMapActive = castShadow;
-	newChild->AddComponent(dirLightComp);
-	directionalLightComponents.push_back(dirLightComp);
-
-	Material* newMaterial = new Material();
-	newMaterial->SetColor(color);
-	newChild->AssignMesh(GraphicsStorage::meshes["plane"]);
-	GraphicsStorage::materials.push_back(newMaterial);
-	newChild->AssignMaterial(newMaterial);
-
-	directionalLights.push_back(newChild);
-
-	return newChild;
+	return addDirectionalLightTo(SceneObject, castShadow, color);
 }
 
 Object * Scene::addDirectionalLightTo(Object * parent, bool castShadow, const mwm::Vector3F & color)
@@ -299,7 +337,8 @@ Object * Scene::addDirectionalLightTo(Object * parent, bool castShadow, const mw
 	directionalLightComponents.push_back(dirLightComp);
 	Material* newMaterial = new Material();
 	newMaterial->SetColor(color);
-	newChild->AssignMesh(GraphicsStorage::meshes["plane"]);
+	newChild->AssignMesh(GraphicsStorage::vaos["plane"]);
+	newChild->bounds->SetUp(GraphicsStorage::objs["plane"]->center_of_mesh, GraphicsStorage::objs["plane"]->dimensions, GraphicsStorage::objs["plane"]->name);
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
 
@@ -340,6 +379,12 @@ Vector3 Scene::generateRandomIntervallVectorSpherical(int min, int max)
 	return Vector3(rX, rY, rZ);
 }
 
+void Scene::InitializeSceneTree()
+{
+	SceneObject->node->UpdateNode(*SceneObject->node);
+	BuildDynamicNodeArray();
+	dirtyNodes.clear();
+}
 
 mwm::Vector3 Scene::generateRandomIntervallVectorFlat(int min, int max, axis axis, int axisHeight)
 {
@@ -363,5 +408,69 @@ void Scene::addRandomlyPointLights(int num, int min, int max)
 
 void Scene::Update()
 {
-	SceneObject->node.UpdateNode(SceneObject->node); //update scenegraph
+	Bounds::updateBoundsTime = 0.0;
+	Bounds::updateMinMaxTime = 0.0;
+	std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+	std::chrono::duration<double> elapsed_seconds;
+
+	start = std::chrono::high_resolution_clock::now();
+
+	for (auto* node : dirtyDynamicNodes)
+	{
+		bool movable = node->GetMovable();
+		bool totalMovableParent = node->parent->GetTotalMovable();
+		bool totalMovable = node->GetTotalMovable();
+		if (movable && !totalMovableParent)
+		{
+			dynamicNodeArray.push_back(node);
+		}
+	}
+	dirtyDynamicNodes.clear();
+	for (auto* node : dirtyStaticNodes)
+	{
+		if (!node->GetTotalMovable() || (!node->GetMovable() && node->parent->GetTotalMovable()))//we remove two types, one is when node total is static second is when node is static but total is dynamic meaning a node above is dynamic
+		{
+			int dynamicNodeIndex = FindNodeIndexInDynamicArray(node);
+			if (dynamicNodeIndex != -1)
+			{
+				dynamicNodeArray[dynamicNodeIndex] = dynamicNodeArray.back();
+				dynamicNodeArray.pop_back();
+			}
+		}
+	}
+	dirtyStaticNodes.clear();
+
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	updateDynamicArrayTime = elapsed_seconds.count();
+
+	start = std::chrono::high_resolution_clock::now();
+	
+	for (auto* node : dynamicNodeArray)
+	{
+		node->UpdateNode(*node->parent);
+	}
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	updateTransformsTime = elapsed_seconds.count();
+	
+	start = std::chrono::high_resolution_clock::now();
+	for (auto* node : dirtyNodes)
+	{
+		node->UpdateNode(*node->parent);
+	}
+	dirtyNodes.clear();
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	updateDirtyTransformsTime = elapsed_seconds.count();
+
+	start = std::chrono::high_resolution_clock::now();
+	
+	for (auto* object : allObjects)
+	{
+		object->UpdateComponents();
+	}
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	updateComponentsTime = elapsed_seconds.count();
 }

@@ -34,7 +34,8 @@ public:
 	friend Vector3 operator* (const double& left, const Vector3& right);
 	Vector3 operator/ (const double& right) const;
 	Vector3 operator/ (const Vector3& right) const;
-
+	void zero();
+	void one();
 	
 	void operator+=(const Vector3& v);
 	void operator-=(const Vector3& v);

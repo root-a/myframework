@@ -16,5 +16,10 @@ private:
 	//assign
 	FrustumManager& operator=(const FrustumManager&);
 	mwm::Vector4 planes[6];
-
+	mwm::Vector4 col1;
+	mwm::Vector4 col2;
+	mwm::Vector4 col3;
+	mwm::Vector4 col4;
+	mwm::Vector3 plane3D;
+	mwm::Vector3 plane3DNormal;
 }; 

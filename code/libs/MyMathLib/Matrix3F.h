@@ -46,10 +46,10 @@ public:
 	void setRight(const Vector3F& axis);
 	void setForward(const Vector3F& axis);
 	void setAxes(const Vector3F& right, const Vector3F& up, const Vector3F& forward);
-
+	void clear();
 	void setSkewSymmetric(const Vector3F& vector);
 
-	static Matrix3F CuboidInertiaTensor(float mass, Vector3F dimensions);
+	static Matrix3F CuboidInertiaTensor(Vector3F dimensions);
 	static float det(float a, float b, float c, float d, float e, float f, float g, float h, float i); //!< calculates determinant of 3x3 matrix
 	static Matrix3F translate(float x, float y, float z); //!< returns translation matrix with specified translation values
 	static Matrix3F scale(float x, float y, float z); //!< function returning new scale matrix with specified scale values

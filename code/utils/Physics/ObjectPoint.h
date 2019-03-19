@@ -13,11 +13,11 @@ struct ObjectPoint
 	{
 		if (isMin)
 		{
-			return body->obb.mm.min[axis];
+			return body->object->bounds->obb.mm.min[axis];
 		}
 		else
 		{
-			return body->obb.mm.max[axis];
+			return body->object->bounds->obb.mm.max[axis];
 		}
 	}
 };

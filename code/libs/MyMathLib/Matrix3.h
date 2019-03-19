@@ -51,13 +51,21 @@ public:
 	void setRight(const Vector3& axis);
 	void setForward(const Vector3& axis);
 	void setAxes(const Vector3& right, const Vector3& up, const Vector3& forward);
-
+	void setScale(const Vector3& scale);
+	void setScale(double x, double y, double z);
+	void setPosition(const Vector3& position);
+	void translate(const Vector3& position);
+	void operator*=(const Matrix3& rightMatrix);
+	void operator*=(const double& rightDouble);
+	void setIdentity();
+	void inverseThis();
+	void clear();
 
 	void setSkewSymmetric(const Vector3& vector);
-	static Matrix3 CuboidInertiaTensor(double mass, Vector3& dimensions);
+	static Matrix3 CuboidInertiaTensor(Vector3& dimensions);
 	static double det(double a, double b, double c, double d, double e, double f, double g, double h, double i); //!< calculates determinant of 3x3 matrix
-	static Matrix3 translate(double x, double y, double z); //!< returns translation matrix with specified translation values
-	static Matrix3 translate(const Vector3 & right);
+	static Matrix3 translation(double x, double y, double z); //!< returns translation matrix with specified translation values
+	static Matrix3 translation(const Vector3 & right);
 	static Matrix3 scale(double x, double y, double z); //!< function returning new scale matrix with specified scale values
 	static Matrix3 scale(const Vector3& rightVect); //!< function returning new scale matrix with specified scale values
 	static Matrix3 rotateX(double angle); //!< function returning rotation matrix with specified rotation angle along X axis

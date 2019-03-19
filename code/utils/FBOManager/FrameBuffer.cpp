@@ -1,10 +1,12 @@
 #include "FrameBuffer.h"
 #include "Texture.h"
+#include "FBOManager.h"
+#include <GL/glew.h>
 
 FrameBuffer::FrameBuffer(GLenum target, int scaleX, int scaleY, bool dynamic)
 {
 	glGenFramebuffers(1, &handle);
-	glBindFramebuffer(target, handle);
+	FBOManager::Instance()->BindFrameBuffer(target, handle);
 	scaleXFactor = scaleX;
 	scaleYFactor = scaleY;
 	dynamicSize = dynamic;
@@ -27,17 +29,13 @@ void FrameBuffer::GenerateAndAddTextures()
 
 void FrameBuffer::BindBuffer(GLenum target)
 {
-	glBindFramebuffer(target, handle);
-}
-
-void FrameBuffer::UnBindBuffer(GLenum target)
-{
-	glBindFramebuffer(target, 0);
+	FBOManager::Instance()->BindFrameBuffer(target, handle);
 }
 
 Texture* FrameBuffer::RegisterTexture(Texture* texture)
 {
 	textures.push_back(texture);
+	if (texture->format != GL_DEPTH_COMPONENT) attachments.push_back(texture->attachment);
 	return texture;
 }
 
@@ -78,12 +76,13 @@ void FrameBuffer::CheckAndCleanup()
 {
 	// Disable reading to avoid problems with older GPUs
 	//can't read unless you specify it later
-	glReadBuffer(GL_NONE);
+	//glReadBuffer(GL_NONE);
 	//disable draw if we don't want to draw to all
 	//glDrawBuffer(GL_NONE);
 	//glDrawBuffer(GL_COLOR_ATTACHMENT0);
 	//glDrawBuffer(GL_NONE);
 	// Verify that the FBO is correct
+	ActivateDrawBuffers();
 	GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
 
 	if (Status != GL_FRAMEBUFFER_COMPLETE) {
@@ -93,16 +92,18 @@ void FrameBuffer::CheckAndCleanup()
 
 	// Restore the default framebuffer
 	glBindTexture(GL_TEXTURE_2D, 0);
-	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, 0);
 }
 
-void FrameBuffer::ReadPixelData(unsigned int x, unsigned int y, GLenum readTextureFormat, GLenum sendDataType, void* data, GLenum attachment)
+void FrameBuffer::ReadPixelData(GLuint x, GLuint y, GLuint width, GLuint height, GLenum sendDataType, void* data, Texture* texture)
 {
 	BindBuffer(GL_READ_FRAMEBUFFER);
-	glReadBuffer(attachment);
-	glReadPixels(x, y, 1, 1, readTextureFormat, sendDataType, data);
-	glReadBuffer(GL_NONE);
-	UnBindBuffer(GL_READ_FRAMEBUFFER);
+	//glBindFramebuffer(GL_READ_FRAMEBUFFER, handle);
+	glReadBuffer(texture->attachment);
+	glReadPixels(x, y, width, height, texture->format, sendDataType, data);
+	//glReadBuffer(GL_NONE);
+	//glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	//UnBindBuffer(GL_READ_FRAMEBUFFER);
 }
 
 void FrameBuffer::DeleteAllTextures()
@@ -112,4 +113,17 @@ void FrameBuffer::DeleteAllTextures()
 		delete texture;
 	}
 	textures.clear();
+}
+
+void FrameBuffer::ActivateDrawBuffers()
+{
+	if (attachments.size() > 0)
+	{
+		glDrawBuffers(attachments.size(), &attachments[0]);
+	}
+}
+
+void FrameBuffer::DeactivateDrawBuffers()
+{
+	glDrawBuffer(GL_NONE);
 }

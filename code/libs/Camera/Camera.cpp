@@ -51,9 +51,7 @@ Vector3 Camera::GetPosition() //no scaling of view
 
 Vector3 Camera::GetPosition2() //if scaled view
 {
-	Matrix4 viewModel = ViewMatrix.inverse();
-	Vector3 cameraPos = viewModel.getPosition();
-	return cameraPos;
+	return ViewMatrix.inverse().getPosition();
 }
 
 void Camera::Update(double deltaTime){
@@ -128,18 +126,14 @@ Vector3 Camera::ConvertMousePosToWorldDir(double mousePosX, double mousePosY)
 void Camera::ComputeVectors()
 {
 	// Direction : Spherical coordinates to Cartesian coordinates conversion
-	direction = Vector3(
-		cos(verticalAngle) * sin(horizontalAngle),
-		sin(verticalAngle),
-		cos(verticalAngle) * cos(horizontalAngle)
-		);
+	direction.x = cos(verticalAngle) * sin(horizontalAngle);
+	direction.y = sin(verticalAngle);
+	direction.z = cos(verticalAngle) * cos(horizontalAngle);
 
 	// Right vector
-	right = Vector3(
-		sin(horizontalAngle - 3.14 / 2.0),
-		0.0,
-		cos(horizontalAngle - 3.14 / 2.0)
-		);
+	right.x = sin(horizontalAngle - 3.14 / 2.0),
+	right.y = 0.0;
+	right.z = cos(horizontalAngle - 3.14 / 2.0);
 
 	// Up vector
 	up = right.crossProd(direction);

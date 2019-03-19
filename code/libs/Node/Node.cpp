@@ -3,36 +3,27 @@
 using namespace mwm;
 Node::Node()
 {
-	this->TransformationMatrix = Matrix4(1);
-	this->TopDownTransform = Matrix4(1);
-	this->totalScale = Vector3(1.0,1.0,1.0);
-	this->localScale = Vector3(1.0,1.0,1.0);
-	this->position = Vector3(0.0,0.0,0.0);
-	this->orientation = Quaternion(0.0, Vector3());
-	this->meshCenter = Vector3();
-	this->centeredPosition = Vector3();
+	TopDownTransform.setIdentity();
+	LocalScaleM.setIdentity();
+	LocalPositionM.setIdentity();
+	LocalPositionM.setIdentity();
+	LocalOrientationM.setIdentity();
+	totalScale.one();
+	localScale.one();
+	parent = &worldNode;
+	movable = false;
+	totalMovable = movable;
 }
 
 Node::~Node()
 {
-	for (auto& component : components)
-	{
-		delete component;
-	}
-	components.clear();
 }
 
 void Node::UpdateNode(const Node& parentNode)
 {
 	totalScale = localScale * parentNode.totalScale;
-	this->TransformationMatrix = Matrix4::scale(this->localScale) * orientation.ConvertToMatrix() * Matrix4::translate(this->position);
-	this->TopDownTransform = TransformationMatrix*parentNode.TopDownTransform;
-	this->CenteredTopDownTransform = Matrix4::translate(meshCenter)*TopDownTransform;
-	this->centeredPosition = CenteredTopDownTransform.getPosition();
-	for (auto& component : components)
-	{
-		component->Update();
-	}
+	TopDownTransform = LocalScaleM * LocalOrientationM * LocalPositionM * parentNode.TopDownTransform;
+	
 	for (auto& childNode : children)
 	{
 		childNode->UpdateNode(*this);
@@ -41,5 +32,302 @@ void Node::UpdateNode(const Node& parentNode)
 
 void Node::addChild(Node* child)
 {
-	this->children.push_back(child);
+	child->parent = this;
+	children.push_back(child);
 }
+
+void Node::removeChild(Node * child)
+{
+	for (size_t i = 0; i < children.size(); i++)
+	{
+		if (children[i] == child)
+		{
+			children[i] = children.back();
+			children.pop_back();
+			return;
+		}
+	}
+}
+
+Vector3 Node::extractScale()
+{
+	return TopDownTransform.extractScale();
+}
+
+Vector3 Node::getScale()
+{
+	return totalScale;
+}
+
+mwm::Vector3& Node::GetLocalScale()
+{
+	return localScale;
+}
+
+void Node::SetPosition(const Vector3& vector)
+{
+	localPosition = vector;
+	LocalPositionM.setPosition(vector);
+}
+
+Vector3 Node::GetWorldPosition() const
+{
+	return TopDownTransform.getPosition();
+}
+
+mwm::Vector3& Node::GetLocalPosition()
+{
+	return localPosition;
+}
+
+void Node::Parent(Node * newParent)
+{
+	if (parent != newParent)
+	{
+		if (IsAncestorOf(newParent) != 0)
+		{
+			newParent->parent->removeChild(newParent);
+			parent->addChild(newParent);
+			Matrix4& NewParentLocalMatrix = Matrix4::CalculateRelativeTransform(newParent->parent->TopDownTransform, newParent->TopDownTransform);
+			newParent->LocalPositionM.setPosition(NewParentLocalMatrix.getPosition());
+			newParent->LocalOrientationM = NewParentLocalMatrix.extractRotation();
+			newParent->LocalScaleM.setScale(NewParentLocalMatrix.extractScale());
+		}
+		LocalPositionM.zeroPosition();
+		LocalOrientationM.resetRotation();
+		LocalScaleM.resetScale();
+		parent->removeChild(this);
+		newParent->addChild(this);
+
+		UpdateNode(*parent);
+		if (totalMovable != newParent->totalMovable) UpdateMovable(this);
+	}
+}
+
+void Node::ParentWithOffset(Node* newParent, mwm::Vector3& newLocalPos, mwm::Quaternion& newLocalOri, mwm::Vector3& newLocalScale)
+{
+	if (parent != newParent)
+	{
+		if (IsAncestorOf(newParent) != 0)
+		{
+			newParent->parent->removeChild(newParent);
+			parent->addChild(newParent);
+			Matrix4& NewParentLocalMatrix = Matrix4::CalculateRelativeTransform(newParent->parent->TopDownTransform, newParent->TopDownTransform);
+			newParent->LocalPositionM.setPosition(NewParentLocalMatrix.getPosition());
+			newParent->LocalOrientationM = NewParentLocalMatrix.extractRotation();
+			newParent->LocalScaleM.setScale(NewParentLocalMatrix.extractScale());
+		}
+		LocalPositionM.setPosition(newLocalPos);
+		LocalOrientationM = newLocalOri.ConvertToMatrix();
+		LocalScaleM.setScale(newLocalScale);
+		parent->removeChild(this);
+		newParent->addChild(this);
+
+		UpdateNode(*parent);
+		if (totalMovable != newParent->totalMovable) UpdateMovable(this);
+	}
+}
+
+void Node::ParentWithOffset(Node * newParent, mwm::Matrix4& newLocalTransform)
+{
+	if (parent != newParent)
+	{
+		if (IsAncestorOf(newParent) != 0)
+		{
+			newParent->parent->removeChild(newParent);
+			parent->addChild(newParent);
+			Matrix4& NewParentLocalMatrix = Matrix4::CalculateRelativeTransform(newParent->parent->TopDownTransform, newParent->TopDownTransform);
+			newParent->LocalPositionM.setPosition(NewParentLocalMatrix.getPosition());
+			newParent->LocalOrientationM = NewParentLocalMatrix.extractRotation();
+			newParent->LocalScaleM.setScale(NewParentLocalMatrix.extractScale());
+		}
+		LocalPositionM.setPosition(newLocalTransform.getPosition());
+		LocalOrientationM = newLocalTransform.extractRotation();
+		LocalScaleM.setScale(newLocalTransform.extractScale());
+		parent->removeChild(this);
+		newParent->addChild(this);
+
+		UpdateNode(*parent);
+		if (totalMovable != newParent->totalMovable) UpdateMovable(this);
+	}
+}
+
+void Node::ParentInPlace(Node * newParent)
+{
+	if (parent != newParent)
+	{
+		if (IsAncestorOf(newParent) != 0)
+		{
+			newParent->parent->removeChild(newParent);
+			parent->addChild(newParent);
+			Matrix4& NewParentLocalMatrix = Matrix4::CalculateRelativeTransform(newParent->parent->TopDownTransform, newParent->TopDownTransform);
+			newParent->LocalPositionM.setPosition(NewParentLocalMatrix.getPosition());
+			newParent->LocalOrientationM = NewParentLocalMatrix.extractRotation();
+			newParent->LocalScaleM.setScale(NewParentLocalMatrix.extractScale());
+		}
+
+		Matrix4& NewLocalMatrix = Matrix4::CalculateRelativeTransform(newParent->TopDownTransform, TopDownTransform);
+		LocalPositionM.setPosition(NewLocalMatrix.getPosition());
+		LocalOrientationM = NewLocalMatrix.extractRotation();
+		LocalScaleM.setScale(NewLocalMatrix.extractScale());
+		parent->removeChild(this);
+		newParent->addChild(this);
+		
+		
+		if (totalMovable != newParent->totalMovable) UpdateMovable(this);
+	}
+}
+
+void Node::Unparent()
+{
+	if (parent != &worldNode)
+		Parent(&worldNode);
+}
+
+void Node::UnparentInPlace()
+{
+	if (parent != &worldNode)
+		ParentInPlace(&worldNode);
+}
+
+void Node::UnparentInPlaceToNearestStaticAncestor()
+{
+	Node* ancestor = FindNearestStaticAncestor();
+	if (ancestor != nullptr)
+		ParentInPlace(ancestor);
+}
+
+Node * Node::FindNearestStaticAncestor()
+{
+	Node* ancestor = this;
+	Node* nearestStaticNode = nullptr;
+	do
+	{
+		ancestor = ancestor->parent;
+		if (!ancestor->movable)
+		{
+			if (nearestStaticNode == nullptr)
+			{
+				nearestStaticNode = ancestor;
+			}
+		}
+		else
+		{
+			nearestStaticNode = nullptr;
+		}
+		
+	} while (ancestor != &worldNode);
+
+	return nullptr;
+}
+
+Node * Node::FindNearestMovableAncestor()
+{
+	Node* ancestor = this;
+
+	do
+	{
+		ancestor = ancestor->parent;
+		if (ancestor->movable)
+			return ancestor;
+	} while (ancestor != &worldNode);
+	
+	return nullptr;
+}
+
+int Node::IsAncestorOf(Node * node)
+{
+	Node* ancestor = node->parent; //direct parent
+	if (ancestor == this)
+		return 1;
+	
+	do
+	{
+		ancestor = ancestor->parent; //indirect ancestor
+		if (ancestor == this)
+			return 2;
+	} while (ancestor != &worldNode);
+	
+	return 0; //is not
+}
+
+Node * Node::FindDescendant(Node * node)
+{
+	return nullptr;
+}
+
+bool Node::SetMovable(bool isMovable)
+{
+	movable = isMovable;
+	return UpdateMovable(this);
+}
+
+bool Node::GetMovable()
+{
+	return movable;
+}
+
+bool Node::GetTotalMovable()
+{
+	return totalMovable;
+}
+
+bool Node::UpdateMovable(Node * node)
+{
+	bool newTotalMovable = node->movable || node->parent->totalMovable;
+	if (node->totalMovable != newTotalMovable) //this might not be good
+	{
+		node->totalMovable = newTotalMovable;
+		for (auto* child : children)
+		{
+			child->UpdateMovable(child);
+		}
+		return true;
+	}
+	return false;
+}
+
+void Node::SetScale(const Vector3& vector)
+{
+	localScale = vector;
+	LocalScaleM.setScale(vector);
+}
+
+void Node::Translate(const Vector3& vector)
+{
+	localPosition += vector;
+	LocalPositionM.setPosition(localPosition);
+}
+
+void Node::SetOrientation(const Quaternion& q)
+{
+	localOrientation = q;
+	LocalOrientationM = localOrientation.ConvertToMatrix();
+}
+
+void Node::SetRotation(const mwm::Matrix4 & m)
+{
+	LocalOrientationM = m;
+}
+
+Quaternion& Node::GetLocalOrientation()
+{
+	return localOrientation;
+}
+
+mwm::Matrix3 Node::GetWorldRotation3()
+{
+	return TopDownTransform.extractRotation3();
+}
+
+mwm::Matrix4 Node::GetWorldRotation()
+{
+	return TopDownTransform.extractRotation();
+}
+
+mwm::Quaternion Node::GetWorldOrientation()
+{
+	return TopDownTransform.extractRotation3().toQuaternion();
+}
+
+Node Node::worldNode;

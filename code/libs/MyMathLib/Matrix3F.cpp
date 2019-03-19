@@ -347,12 +347,12 @@ float Matrix3F::det(float a, float b, float c, float d, float e, float f, float 
 	//simplified: return (a*e*i + b*f*g + c*d*h - c*e*g - b*d*i - a*f*h);
 }
 
-Matrix3F Matrix3F::CuboidInertiaTensor(float mass, Vector3F dimensions)
+Matrix3F Matrix3F::CuboidInertiaTensor(Vector3F dimensions)
 {
 	Matrix3F I;
-	I[0][0] = (1.f / 12.f) * mass * (dimensions.vect[1] * dimensions.vect[1] + dimensions.vect[2] * dimensions.vect[2]);
-	I[1][1] = (1.f / 12.f) * mass * (dimensions.vect[0] * dimensions.vect[0] + dimensions.vect[2] * dimensions.vect[2]);
-	I[2][2] = (1.f / 12.f) * mass * (dimensions.vect[0] * dimensions.vect[0] + dimensions.vect[1] * dimensions.vect[1]);
+	I[0][0] = (1.f / 12.f) * (dimensions.vect[1] * dimensions.vect[1] + dimensions.vect[2] * dimensions.vect[2]);
+	I[1][1] = (1.f / 12.f) * (dimensions.vect[0] * dimensions.vect[0] + dimensions.vect[2] * dimensions.vect[2]);
+	I[2][2] = (1.f / 12.f) * (dimensions.vect[0] * dimensions.vect[0] + dimensions.vect[1] * dimensions.vect[1]);
 
 	return I;
 }
@@ -431,6 +431,11 @@ void Matrix3F::setAxes(const Vector3F& right, const Vector3F& up, const Vector3F
 	_matrix[2][0] = forward.x;
 	_matrix[2][1] = forward.y;
 	_matrix[2][2] = forward.z;
+}
+
+void Matrix3F::clear()
+{
+	memset(_matrix, 0, sizeof _matrix);
 }
 
 void Matrix3F::setSkewSymmetric(const Vector3F& vector)

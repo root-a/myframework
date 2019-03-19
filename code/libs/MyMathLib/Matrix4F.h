@@ -48,6 +48,10 @@ public:
 	void setUp(const Vector3F& axis);
 	void setRight(const Vector3F& axis);
 	void setForward(const Vector3F& axis);
+	void clear();
+	void zeroPosition();
+	void zeroScale();
+	void zeroRotation();
 
 	static Matrix4F perspective(const float &near, const float &far, const float &fov); //!< function returning perspective projection specified with given parameters
 	static Matrix4F orthographic(const float &near, const float &far, const float &left, const float &right, const float &top, const float &bottom); //!< function returninng orthographic projection specified with given parameters

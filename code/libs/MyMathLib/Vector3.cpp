@@ -97,6 +97,16 @@ Vector3 Vector3::operator/ (const Vector3& right) const
 	return Vector3(x / right.x, y / right.y, z / right.z);
 }
 
+void Vector3::zero()
+{
+	x = 0, y = 0, z = 0;
+}
+
+void Vector3::one()
+{
+	x = 1.0, y = 1.0, z = 1.0;
+}
+
 /*! \fn adds vector to this vector*/
 void Vector3::operator+=(const Vector3& v)
 {

@@ -2,14 +2,8 @@
 #include "MyMathLib.h"
 #include <unordered_map>
 #include <string>
-#include "BoundingBox.h"
-#include "Line.h"
-#include "Plane.h"
-#include "Point.h"
-#include "Box.h"
 
 class Object;
-class Mesh;
 class Material;
 class FrameBuffer;
 class Texture;
@@ -17,10 +11,12 @@ class LineSystem;
 class BoundingBoxSystem;
 class PointSystem;
 class FrameBuffer;
+class Node;
 
 class DebugDraw
 {
 	typedef unsigned int GLenum;
+	typedef unsigned int GLuint;
 public:
 	static DebugDraw* Instance();
 
@@ -35,23 +31,22 @@ public:
 	void DrawRegion(int posX, int posY, int width, int height, const Texture* texture);
 	void Clear();
 	void Init(Object* debugObject);
-	void DrawFastLineSystems(const FrameBuffer * fboToDrawTo, const GLenum * attachmentsToDraw, const int countOfAttachments);
-	void DrawFastPointSystems(const FrameBuffer * fboToDrawTo, const GLenum * attachmentsToDraw, const int countOfAttachments);
-	void DrawBoundingBoxes();
+	void DrawFastLineSystems(GLuint fboToDrawTo = 0);
+	void DrawFastPointSystems(GLuint fboToDrawTo = 0);
+	void DrawBoundingBoxes(GLuint fboToDrawTo = 0);
+	void GenerateBoudingBoxes();
+	void GenerateFastLines();
+	void GenerateFastLineChildren(Node * parent, Node * child);
 	Material* debugMat;
 	
 	mwm::Matrix4* Projection;
 	mwm::Matrix4* View;
 	void LoadPrimitives();
-	BoundingBox boundingBox;
-	Box box;
-	Line line;
-	Plane plane;
-	Point point;
 	bool debug = false;
 	std::vector<LineSystem*> lineSystems;
 	std::vector<BoundingBoxSystem*> bbSystems;
 	std::vector<PointSystem*> pointSystems;
+	int boundingBoxesDrawn = 0;
 private:
 	DebugDraw();
 	~DebugDraw();
@@ -59,8 +54,6 @@ private:
 	DebugDraw(const DebugDraw&);
 	//assign
 	DebugDraw& operator=(const DebugDraw&);
-	
-
 	std::unordered_map<std::string, Object*> debugShapes;
 };
 

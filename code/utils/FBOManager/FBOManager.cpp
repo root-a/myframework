@@ -3,9 +3,12 @@
 #include "FrameBuffer.h"
 #include "Vector4F.h"
 #include "Texture.h"
+#include <GL/glew.h>
 
 FBOManager::FBOManager()
 {
+	readBuffer = 0;
+	drawBuffer = 0;
 }
 
 FBOManager::~FBOManager()
@@ -28,42 +31,56 @@ void FBOManager::UpdateTextureBuffers(int windowWidth, int windowHeight)
 	}
 }
 
-void FBOManager::UnbindFrameBuffer(FrameBufferMode readWrite)
+void FBOManager::BindFrameBuffer(GLuint readWriteMode, GLuint frameBuffer)
 {
-	switch (readWrite)
+	switch (readWriteMode)
 	{
-	case read:
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
-		break;
-	case draw:
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-		break;
-	case readDraw:
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
-		break;
-	default:
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	case GL_FRAMEBUFFER:
+	{
+		if (readBuffer != frameBuffer && drawBuffer != frameBuffer)
+		{
+			glBindFramebuffer(readWriteMode, frameBuffer);
+			readBuffer = frameBuffer;
+			drawBuffer = frameBuffer;
+		}
+		else if (readBuffer != frameBuffer)
+		{
+			glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuffer);
+			readBuffer = frameBuffer;
+		}
+		else if (drawBuffer != frameBuffer)
+		{
+			glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer);
+			drawBuffer = frameBuffer;
+		}
 		break;
 	}
-}
-
-void FBOManager::BindFrameBuffer(FrameBufferMode readWrite, GLuint frameBuffer)
-{
-	switch (readWrite)
+	case GL_READ_FRAMEBUFFER:
 	{
-	case read:
-		glBindFramebuffer(GL_READ_FRAMEBUFFER, frameBuffer);
-		break;
-	case draw:
-		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, frameBuffer);
-		break;
-	case readDraw:
-		glBindFramebuffer(GL_FRAMEBUFFER, frameBuffer);
-		break;
-	default:
-		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		if (readBuffer != frameBuffer)
+		{
+			glBindFramebuffer(readWriteMode, frameBuffer);
+			readBuffer = frameBuffer;
+		}
 		break;
 	}
+	case GL_DRAW_FRAMEBUFFER:
+	{
+		if (drawBuffer != frameBuffer)
+		{
+			glBindFramebuffer(readWriteMode, frameBuffer);
+			drawBuffer = frameBuffer;
+		}
+		break;
+	}
+	default:
+		break;
+	}
+	//GLint drawFboId = 0, readFboId = 0;
+	//glGetIntegerv(GL_DRAW_FRAMEBUFFER_BINDING, &drawFboId);
+	//glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &readFboId);
+	//printf("current read: %d write: %d\n", readFboId, drawFboId);
+	//printf("stored read: %d write: %d\n\n", readBuffer, drawBuffer);
 }
 
 FrameBuffer* FBOManager::Generate2DShadowMapBuffer(int width, int height)

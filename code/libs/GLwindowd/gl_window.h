@@ -55,6 +55,8 @@ public:
 	void SetWindowSizeFunction(const std::function<void(int, int)>& func);
 	/// set window iconify function callback
 	void SetWindowIconifyFunction(const std::function<void(int)>& func);
+	/// set drag and drop function callback
+	void SetDragAndDropFunction(const std::function<void(int, const char**)>& func);
 
 	/// get mouse button input
 	int GetMouseButton(int button);
@@ -89,6 +91,8 @@ private:
 	static void StaticWindowSizeCallback(GLFWwindow* win, int width, int height);
 	/// static window iconify callback
 	static void StaticWindowIconifyCallback(GLFWwindow* win, int iconified);
+	/// static drag and drop callback
+	static void StaticDragAndDropCallback(GLFWwindow* win, int count, const char** paths);
 
 	/// resize update
 	void Resize();
@@ -113,6 +117,8 @@ private:
 	std::function<void(int, int)> windowSizeCallback;
 	/// function for window iconify callbacks
 	std::function<void(int)> windowIconifyCallback;
+	/// function for drag and drop callnbacks
+	std::function<void(int, const char**)> dragAndDropCallback;
 
 	int32 width;
 	int32 height;
@@ -221,6 +227,15 @@ inline void
 Window::SetWindowIconifyFunction(const std::function<void(int)>& func)
 {
 	this->windowIconifyCallback = func;
+}
+
+//------------------------------------------------------------------------------
+/**
+*/
+inline void
+Window::SetDragAndDropFunction(const std::function<void(int, const char**)>& func)
+{
+	this->dragAndDropCallback = func;
 }
 
 //------------------------------------------------------------------------------

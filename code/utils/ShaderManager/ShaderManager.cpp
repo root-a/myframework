@@ -21,11 +21,14 @@ ShaderManager* ShaderManager::Instance()
 
 GLuint ShaderManager::GetCurrentShaderID()
 {
-	return this->current_shader;
+	return current_shader;
 }
 
 void ShaderManager::SetCurrentShader(GLuint id)
 {
-    this->current_shader = id;
-	glUseProgram(id);
+	if (current_shader != id)
+	{
+		current_shader = id;
+		glUseProgram(id);
+	}
 }

@@ -309,7 +309,7 @@ Matrix4 Matrix4::rotateAngle(const Vector3& v, const double &angle)
 }
 
 /*! \fn returns translation matrix with specified translation values*/
-Matrix4 Matrix4::translate(const double &x, const double &y, const double &z)
+Matrix4 Matrix4::translation(const double &x, const double &y, const double &z)
 {
 	Matrix4 translation;
 	translation._matrix[0][0] = 1.0;
@@ -323,7 +323,7 @@ Matrix4 Matrix4::translate(const double &x, const double &y, const double &z)
 }
 
 /*! \fn returns translation matrix with specified translation values*/
-Matrix4 Matrix4::translate(const Vector3& right)
+Matrix4 Matrix4::translation(const Vector3& right)
 {
 	Matrix4 translation;
 	translation._matrix[0][0] = 1.0;
@@ -382,6 +382,11 @@ Matrix4 Matrix4::inverse() const
 	temp = oneByDet*temp;
 
 	return temp;
+}
+
+Matrix4 Matrix4::CalculateRelativeTransform(const Matrix4 & parent, const Matrix4 & child)
+{
+	return child * parent.inverse();
 }
 
 /*! \fn function returning perspective projection specified with given parameters*/
@@ -742,10 +747,88 @@ Vector3 Matrix4::getScale() const
 	return Vector3(_matrix[0][0], _matrix[1][1], _matrix[2][2]);
 }
 
+void Matrix4::setScale(const Vector3 & scale)
+{
+	_matrix[0][0] = scale.x;
+	_matrix[1][1] = scale.y;
+	_matrix[2][2] = scale.z;
+}
+
 
 Vector3 Matrix4::getPosition() const
 {
 	return Vector3(_matrix[3][0], _matrix[3][1], _matrix[3][2]);
+}
+
+void Matrix4::setPosition(const Vector3 & position)
+{
+	_matrix[3][0] = position.x;
+	_matrix[3][1] = position.y;
+	_matrix[3][2] = position.z;
+}
+
+void Matrix4::translate(const Vector3 & position)
+{
+	_matrix[3][0] += position.x;
+	_matrix[3][1] += position.y;
+	_matrix[3][2] += position.z;
+}
+
+void Matrix4::operator*=(const Matrix4 & right)
+{
+	Matrix4 temp;
+	for (int r = 0; r < 4; r++)
+	{
+		for (int c = 0; c < 4; c++)
+		{
+			for (int k = 0; k < 4; k++)
+			{
+				temp._matrix[r][c] = temp._matrix[r][c] + _matrix[r][k] * right._matrix[k][c];
+			}
+		}
+	}
+	*this = temp;
+}
+
+void Matrix4::setIdentity()
+{
+	memset(_matrix, 0, sizeof _matrix);
+	_matrix[0][0] = 1.0;
+	_matrix[1][1] = 1.0;
+	_matrix[2][2] = 1.0;
+	_matrix[3][3] = 1.0;
+}
+
+void Matrix4::clear()
+{
+	memset(_matrix, 0, sizeof _matrix);
+}
+
+void Matrix4::zeroPosition()
+{
+	_matrix[3][0] = 0.0;
+	_matrix[3][1] = 0.0;
+	_matrix[3][2] = 0.0;
+}
+
+void Matrix4::resetScale()
+{
+	_matrix[0][0] = 1.0;
+	_matrix[1][1] = 1.0;
+	_matrix[2][2] = 1.0;
+}
+
+void Matrix4::resetRotation()
+{
+	_matrix[0][0] = 1.0;
+	_matrix[0][1] = 0.0;
+	_matrix[0][2] = 0.0;
+	_matrix[1][0] = 0.0;
+	_matrix[1][1] = 1.0;
+	_matrix[1][2] = 0.0;
+	_matrix[2][0] = 0.0;
+	_matrix[2][1] = 0.0;
+	_matrix[2][2] = 2.0;
 }
 
 Vector3 Matrix4::getLeft() const
@@ -829,9 +912,9 @@ Vector3 Matrix4::extractScale() const
 Matrix3 Matrix4::extractRotation3() const
 {
 	Matrix3 rotation;
-	Vector3 xAxis = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
-	Vector3 yAxis = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
-	Vector3 zAxis = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
+	Vector3& xAxis = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
+	Vector3& yAxis = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
+	Vector3& zAxis = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
 	rotation[0][0] = xAxis.x;
 	rotation[0][1] = xAxis.y;
 	rotation[0][2] = xAxis.z;
@@ -847,9 +930,9 @@ Matrix4 Matrix4::extractRotation() const
 {
 	Matrix4 rotation;
 	rotation[3][3] = 1.0;
-	Vector3 xAxis = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
-	Vector3 yAxis = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
-	Vector3 zAxis = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
+	Vector3& xAxis = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
+	Vector3& yAxis = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
+	Vector3& zAxis = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
 	rotation[0][0] = xAxis.x;
 	rotation[0][1] = xAxis.y;
 	rotation[0][2] = xAxis.z;
@@ -899,4 +982,19 @@ Quaternion Matrix4::toQuaternion() const
 	}
 	return temp;
 }
+void Matrix4::setOrientation(const Quaternion & q)
+{
+	_matrix[0][0] = 1.0 - 2.0 * q.y*q.y - 2.0 * q.z*q.z;
+	_matrix[1][0] = (2.0 * q.x * q.y) - (2.0 * q.w * q.z);
+	_matrix[2][0] = (2.0 * q.x * q.z) + (2.0 * q.w * q.y);
+
+	_matrix[0][1] = (2.0 * q.x * q.y) + (2.0 * q.w * q.z);
+	_matrix[1][1] = 1.0 - 2.0 * q.x*q.x - 2.0 * q.z*q.z;
+	_matrix[2][1] = (2.0 * q.y * q.z) - (2.0 * q.w * q.x);
+
+	_matrix[0][2] = (2.0 * q.x * q.z) - (2.0 * q.w * q.y);
+	_matrix[1][2] = (2.0 * q.y * q.z) + (2.0 * q.w * q.x);
+	_matrix[2][2] = 1.0 - 2.0 * q.x*q.x - 2.0 * q.y*q.y;
+}
+
 }

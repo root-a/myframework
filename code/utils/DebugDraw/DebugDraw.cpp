@@ -5,7 +5,6 @@
 #include "Node.h"
 #include "GraphicsStorage.h"
 #include "Material.h"
-#include "Mesh.h"
 #include "ShaderManager.h"
 #include "Render.h"
 #include "CameraManager.h"
@@ -18,6 +17,13 @@
 #include "Frustum.h"
 #include "Scene.h"
 #include "RigidBody.h"
+#include "FBOManager.h"
+#include "OBJ.h"
+#include "BoundingBox.h"
+#include "Line.h"
+#include "Plane.h"
+#include "Point.h"
+#include "Box.h"
 
 using namespace mwm;
 
@@ -43,47 +49,53 @@ void DebugDraw::LoadPrimitives()
 
 	Object* newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::meshes["tetra"]);
+	newObject->AssignMesh(GraphicsStorage::vaos["tetra"]);
+	newObject->bounds->SetUp(GraphicsStorage::objs["tetra"]->center_of_mesh, GraphicsStorage::objs["tetra"]->dimensions, GraphicsStorage::objs["tetra"]->name);
 	debugShapes["tetra"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::meshes["pyramid"]);
+	newObject->AssignMesh(GraphicsStorage::vaos["pyramid"]);
+	newObject->bounds->SetUp(GraphicsStorage::objs["pyramid"]->center_of_mesh, GraphicsStorage::objs["pyramid"]->dimensions, GraphicsStorage::objs["pyramid"]->name);
 	debugShapes["pyramid"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::meshes["cube"]);
+	newObject->AssignMesh(GraphicsStorage::vaos["cube"]);
+	newObject->bounds->SetUp(GraphicsStorage::objs["cube"]->center_of_mesh, GraphicsStorage::objs["cube"]->dimensions, GraphicsStorage::objs["cube"]->name);
 	debugShapes["cube"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::meshes["sphere"]);
+	newObject->AssignMesh(GraphicsStorage::vaos["sphere"]);
+	newObject->bounds->SetUp(GraphicsStorage::objs["sphere"]->center_of_mesh, GraphicsStorage::objs["sphere"]->dimensions, GraphicsStorage::objs["sphere"]->name);
 	debugShapes["sphere"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::meshes["icosphere"]);
+	newObject->AssignMesh(GraphicsStorage::vaos["icosphere"]);
+	newObject->bounds->SetUp(GraphicsStorage::objs["icosphere"]->center_of_mesh, GraphicsStorage::objs["icosphere"]->dimensions, GraphicsStorage::objs["icosphere"]->name);
 	debugShapes["icosphere"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::meshes["unitCube"]);
+	newObject->AssignMesh(GraphicsStorage::vaos["unitCube"]);
+	newObject->bounds->SetUp(GraphicsStorage::objs["unitCube"]->center_of_mesh, GraphicsStorage::objs["unitCube"]->dimensions, GraphicsStorage::objs["unitCube"]->name);
 	debugShapes["unitCube"] = newObject;
 }
 
 void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
 {
 	Object* shape = DebugDraw::Instance()->debugShapes[shapeName];
-	shape->SetPosition(pos);
-	shape->SetScale(Vector3(0.5f, 0.5f, 0.5f));
-	shape->node.UpdateNode(Node());
+	shape->node->SetPosition(pos);
+	shape->node->SetScale(Vector3(0.5f, 0.5f, 0.5f));
+	shape->node->UpdateNode(Node());
 	Render::Instance()->drawSingle(shape, *View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
 }
 
 void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float width)
 {
-	Matrix4 model = Matrix4::translate(position);
+	Matrix4 model = Matrix4::translation(position);
 	double length = normal.vectLengt();
 	Vector3 normalized = normal.vectNormalize();
 	
@@ -104,14 +116,14 @@ void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float w
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	line.Draw(model, *View, *Projection, wireframeShader, width);
+	Line::Instance()->Draw(model, *View, *Projection, wireframeShader, width);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
 
 void DebugDraw::DrawNormal(const Vector3& normal, const Vector3& position, float width /*= 4.f*/)
 {
-	Matrix4 model = Matrix4::translate(position);
+	Matrix4 model = Matrix4::translation(position);
 	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normal);
 	double tetha = acos(normal.z);
 	if (axis.squareMag() < 0.0001f)
@@ -126,14 +138,14 @@ void DebugDraw::DrawNormal(const Vector3& normal, const Vector3& position, float
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	line.Draw(model, *View, *Projection, wireframeShader, width);
-	point.Draw(model, *View, *Projection, wireframeShader);
+	Line::Instance()->Draw(model, *View, *Projection, wireframeShader, width);
+	Point::Instance()->Draw(model, *View, *Projection, wireframeShader);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
 void DebugDraw::DrawPlane(const Vector3& normal, const Vector3& position, const Vector3& halfExtent)
 {
-	Matrix4 model = Matrix4::translate(position);
+	Matrix4 model = Matrix4::translation(position);
 	Vector3 axis = Vector3(0.f,0.f,1.f).crossProd(normal);
 	double tetha = acos(normal.z);
 	if (axis.squareMag() < 0.0001f)
@@ -150,14 +162,14 @@ void DebugDraw::DrawPlane(const Vector3& normal, const Vector3& position, const 
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	plane.Draw(model, *View, *Projection, wireframeShader);
+	Plane::Instance()->Draw(model, *View, *Projection, wireframeShader);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
 
 void DebugDraw::DrawPlaneN(const Vector3& normal, const Vector3& position, const Vector3& halfExtent /*= Vector3(1, 1, 1)*/)
 {
-	Matrix4 model = Matrix4::translate(position);
+	Matrix4 model = Matrix4::translation(position);
 	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normal);
 	double tetha = acos(normal.z);
 	if (axis.squareMag() < 0.0001f)
@@ -174,9 +186,9 @@ void DebugDraw::DrawPlaneN(const Vector3& normal, const Vector3& position, const
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	plane.Draw(model, *View, *Projection, wireframeShader);
-	line.Draw(model, *View, *Projection, wireframeShader);
-	point.Draw(model, *View, *Projection, wireframeShader);
+	Plane::Instance()->Draw(model, *View, *Projection, wireframeShader);
+	Line::Instance()->Draw(model, *View, *Projection, wireframeShader);
+	Point::Instance()->Draw(model, *View, *Projection, wireframeShader);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
@@ -186,7 +198,7 @@ void DebugDraw::DrawPoint(const Vector3& position, float size)
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	point.Draw(Matrix4::translate(position), *View, *Projection, wireframeShader, size);
+	Point::Instance()->Draw(Matrix4::translation(position), *View, *Projection, wireframeShader, size);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
@@ -198,8 +210,8 @@ void DebugDraw::DrawCrossHair(const Vector3F& color)
 	double windowHeight = (double)CameraManager::Instance()->GetCurrentCamera()->windowHeight;
 	double x = windowWidth / 2.0;
 	double y = windowHeight / 2.0;
-	Matrix4 model1 = Matrix4::translate(x, y + offset, 0.0);
-	Matrix4 model2 = Matrix4::translate(x - offset, y, 0.0);
+	Matrix4 model1 = Matrix4::translation(x, y + offset, 0.0);
+	Matrix4 model2 = Matrix4::translation(x - offset, y, 0.0);
 
 	model1 = Matrix4::rotateAngle(Vector3(1.0, 0.0, 0.0), 90.0)*model1;
 	model2 = Matrix4::rotateAngle(Vector3(0.0, 1.0, 0.0), 90.0)*model2;
@@ -208,23 +220,23 @@ void DebugDraw::DrawCrossHair(const Vector3F& color)
 	model2 = scaleM * model2;
 	Matrix4 view = Matrix4(1);
 	Matrix4 proj = Matrix4::orthographicTopToBottom(-1.0, 2000.0, 0.0, windowWidth, windowHeight, 0.0);
-	line.mat->color = color;
+	Line::Instance()->mat->color = color;
 
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	line.Draw(model1, view, proj, wireframeShader, 2.f);
-	line.Draw(model2, view, proj, wireframeShader, 2.f);
+	Line::Instance()->Draw(model1, view, proj, wireframeShader, 2.f);
+	Line::Instance()->Draw(model2, view, proj, wireframeShader, 2.f);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
 void DebugDraw::DrawQuad()
 {
 	//bind vao before drawing
-	glBindVertexArray(plane.mesh->vaoHandle);
+	Plane::Instance()->vao.Bind();
 
 	// Draw the triangles !
-	glDrawElements(GL_TRIANGLES, plane.mesh->indicesSize, GL_UNSIGNED_SHORT, (void*)0); // mode, count, type, element array buffer offset
+	glDrawElements(GL_TRIANGLES, Plane::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0); // mode, count, type, element array buffer offset
 }
 
 void DebugDraw::DrawRegion(int posX, int posY, int width, int height, const Texture* texture)
@@ -264,12 +276,13 @@ void DebugDraw::Init(Object* debugObject)
 }
 
 void
-DebugDraw::DrawFastLineSystems(const FrameBuffer * fboToDrawTo, const GLenum * attachmentsToDraw, const int countOfAttachments)
+DebugDraw::DrawFastLineSystems(GLuint fboToDrawTo)
 {
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTo->handle);
-	glDrawBuffers(countOfAttachments, attachmentsToDraw);
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTo);
+
+	GenerateFastLines();
 
 	GLuint fastLineShader = GraphicsStorage::shaderIDs["fastLine"];
 	ShaderManager::Instance()->SetCurrentShader(fastLineShader);
@@ -277,84 +290,81 @@ DebugDraw::DrawFastLineSystems(const FrameBuffer * fboToDrawTo, const GLenum * a
 	{
 		lSystem->Draw(CameraManager::Instance()->ViewProjection, fastLineShader, 1.f);
 	}
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	glDepthMask(GL_FALSE);
 }
 
 void
-DebugDraw::DrawFastPointSystems(const FrameBuffer * fboToDrawTo, const GLenum * attachmentsToDraw, const int countOfAttachments)
+DebugDraw::DrawFastPointSystems(GLuint fboToDrawTo)
 {
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTo->handle);
-	glDrawBuffers(countOfAttachments, attachmentsToDraw);
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTo);
 
 	GLuint fastLineShader = GraphicsStorage::shaderIDs["fastLine"];
 	ShaderManager::Instance()->SetCurrentShader(fastLineShader);
 	for (auto& poSystem : pointSystems)
 	{
-		//poSystem->Update();
 		poSystem->Draw(CameraManager::Instance()->ViewProjection, fastLineShader, 5.f);
 	}
-
-	glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-	glDepthMask(GL_FALSE);
 }
 
 void
-DebugDraw::DrawBoundingBoxes()
+DebugDraw::DrawBoundingBoxes(GLuint fboToDrawTo)
 {
+	GLuint fastBBShader = GraphicsStorage::shaderIDs["fastBB"];
+	ShaderManager::Instance()->SetCurrentShader(fastBBShader);
+
+	GenerateBoudingBoxes();
+
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
+	
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTo);
+
+	boundingBoxesDrawn = 0;
 	for (auto& bbSystem : bbSystems)
 	{
-		//the outcommented code is for case we want to render to post effect buffer so the bbs will be affected by effects
-		//FBOManager::Instance()->BindFrameBuffer(draw, FBOManager::Instance()->lightAndPostFrameBufferHandle); //we bind the lightandposteffect buffer for drawing
-		//GLenum DrawBuffers[] = { GL_COLOR_ATTACHMENT0, GL_COLOR_ATTACHMENT1 };
-		//glDrawBuffers(2, DrawBuffers);
+		boundingBoxesDrawn += bbSystem->Draw(CameraManager::Instance()->ViewProjection, fastBBShader);
+	}	
+}
 
-		GLuint fastBBShader = GraphicsStorage::shaderIDs["fastBB"];
-		ShaderManager::Instance()->SetCurrentShader(fastBBShader);
-
-		for (auto& obj : Scene::Instance()->renderList)
+void DebugDraw::GenerateBoudingBoxes()
+{	
+	for (auto& bbSystem : bbSystems)
+	{
+		for (auto obj : Scene::Instance()->allObjects)
 		{
-			if (FrustumManager::Instance()->isBoundingSphereInView(obj->node.centeredPosition, obj->radius))
+			if (obj->inFrustum)
 			{
-				if (RigidBody* body = obj->GetComponent<RigidBody>())
-				{
-					FastBoundingBox* fastOBB = bbSystem->GetBoundingBoxOnce();
-					fastOBB->color = Vector4F(body->obb.color, 1.f);
-					fastOBB->node.TopDownTransform = body->obb.model;
+				FastBoundingBox* fastOBB = bbSystem->GetBoundingBoxOnce();
+				fastOBB->color = &obj->bounds->obb.color;
+				fastOBB->model = &obj->bounds->obb.model;
 
-					FastBoundingBox* fastAABB = bbSystem->GetBoundingBoxOnce();
-					fastAABB->color = Vector4F(body->aabb.color, 1.f);
-					fastAABB->node.TopDownTransform = body->aabb.model;
-				}
+				FastBoundingBox* fastAABB = bbSystem->GetBoundingBoxOnce();
+				fastAABB->color = &obj->bounds->aabb.color;
+				fastAABB->model = &obj->bounds->aabb.model;
 			}
 		}
-
-		for (auto& obj : Scene::Instance()->pointLights)
-		{
-			if (FrustumManager::Instance()->isBoundingSphereInView(obj->node.centeredPosition, obj->radius))
-			{
-				if (RigidBody* body = obj->GetComponent<RigidBody>())
-				{
-					FastBoundingBox* fastOBB = bbSystem->GetBoundingBoxOnce();
-					fastOBB->color = Vector4F(body->obb.color, 1.f);
-					fastOBB->node.TopDownTransform = body->obb.model;
-
-					FastBoundingBox* fastAABB = bbSystem->GetBoundingBoxOnce();
-					fastAABB->color = Vector4F(body->aabb.color, 1.f);
-					fastAABB->node.TopDownTransform = body->aabb.model;
-				}
-			}
-		}
-		//bbSystem->Update();
-		bbSystem->Draw(CameraManager::Instance()->ViewProjection, fastBBShader);
-
-		//FBOManager::Instance()->UnbindFrameBuffer(draw);
-		
 	}
-	glDepthMask(GL_FALSE);
+}
+
+void
+DebugDraw::GenerateFastLines()
+{
+	if (DebugDraw::Instance()->lineSystems.empty()) return;
+	for (auto& child : Scene::Instance()->SceneObject->node->children)
+	{
+		GenerateFastLineChildren(Scene::Instance()->SceneObject->node, child);
+	}
+}
+
+void
+DebugDraw::GenerateFastLineChildren(Node* parent, Node* child)
+{
+	FastLine* line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->AttachEndA(parent);
+	line->AttachEndB(child);
+	for (auto& childOfChild : child->children)
+	{
+		GenerateFastLineChildren(child, childOfChild);
+	}
 }

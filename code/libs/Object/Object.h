@@ -2,9 +2,10 @@
 #include "MyMathLib.h"
 #include "Node.h"
 #include <vector>
+#include "Bounds.h"
 
 class Material;
-class Mesh;
+class Vao;
 class Component;
 
 class Object
@@ -12,51 +13,58 @@ class Object
 public:
 	Object();
 	~Object();
-	Node node;
+	Node* node;
+	Node localNode;
+
+	Bounds* bounds;
 	Material* mat;
-	Mesh* mesh;
+	Vao* vao;
 	unsigned int ID;
-	
-	void Update();
+
 	void AddComponent(Component* newComponent);
+	void UpdateComponentDynamicState(Component* component);
 	void AssignMaterial(Material* mat);
-	void AssignMesh(Mesh* mesh);
-	
-	mwm::Vector3 GetMeshDimensions();
+	void AssignMesh(Vao* mesh);
 
-	void SetPosition(const mwm::Vector3& vector);
-	void SetScale(const mwm::Vector3& vector);
+	void Attach(Node* nodeToAttachTo);
+	void Attach(Object* objectToAttachTo);
+	void Detach();
 
-	double radius;
-	void CalculateRadius();
+	std::vector<Component*> components;
+	std::vector<Component*> dynamicComponents;
 
-	void Translate(const mwm::Vector3& vector);
-	void SetOrientation(const mwm::Quaternion& q);
-
-	mwm::Matrix3 GetWorldRotation3();
-	mwm::Matrix4 GetWorldRotation();
-	mwm::Quaternion GetWorldOrientation();
-	mwm::Quaternion GetLocalOrientation();
-	mwm::Vector3 extractScale();
-	mwm::Vector3 getScale();
-	mwm::Vector3 GetLocalScale();
-	mwm::Vector3 GetWorldPosition() const;
-	mwm::Vector3 GetLocalPosition() const;
-
-	template <typename T>
-	T* GetComponent()
+	template <typename ComponentClassName>
+	ComponentClassName* GetComponent()
 	{ 
-		for (auto& component : node.components)
+		for (auto& component : components)
 		{
-			if (dynamic_cast<T*>(component))
+			if (dynamic_cast<ComponentClassName*>(component))
 			{
-				return (T*)component;
+				return (ComponentClassName*)component;
 			}
 		}
-		return NULL;
+		return nullptr;
 	}
-private:
+
+	void Update();
+	void UpdateComponents();
+
+	void StopDrawing() { draw = false; drawAlways = false; }
+	void DrawOnce() { draw = true; drawAlways = false; }
+	void DrawAlways() { draw = true; drawAlways = true; }
+
+	bool CanDraw() { return draw; }
+	bool CanDrawAlways() { return drawAlways; }
+	void UpdateDrawState() { draw = drawAlways; }
 	
+	void ResetIDs();
+	static unsigned int Count();
+	bool inFrustum = false;
+	
+private:
+	static unsigned int currentID;
+	bool draw = false;
+	bool drawAlways = false;
+protected:
 	
 };
-

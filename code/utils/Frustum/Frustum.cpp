@@ -20,10 +20,10 @@ FrustumManager* FrustumManager::Instance()
 }
 void FrustumManager::ExtractPlanes(const Matrix4& VP)
 {
-	Vector4 col1 = Vector4(VP._matrix[0][0], VP._matrix[1][0], VP._matrix[2][0], VP._matrix[3][0]);
-	Vector4 col2 = Vector4(VP._matrix[0][1], VP._matrix[1][1], VP._matrix[2][1], VP._matrix[3][1]);
-	Vector4 col3 = Vector4(VP._matrix[0][2], VP._matrix[1][2], VP._matrix[2][2], VP._matrix[3][2]);
-	Vector4 col4 = Vector4(VP._matrix[0][3], VP._matrix[1][3], VP._matrix[2][3], VP._matrix[3][3]);
+	col1.x = VP._matrix[0][0], col1.y = VP._matrix[1][0], col1.z = VP._matrix[2][0], col1.w = VP._matrix[3][0];
+	col2.x = VP._matrix[0][1], col2.y = VP._matrix[1][1], col2.z = VP._matrix[2][1], col2.w = VP._matrix[3][1];
+	col3.x = VP._matrix[0][2], col3.y = VP._matrix[1][2], col3.z = VP._matrix[2][2], col3.w = VP._matrix[3][2];
+	col4.x = VP._matrix[0][3], col4.y = VP._matrix[1][3], col4.z = VP._matrix[2][3], col4.w = VP._matrix[3][3];
 
 	planes[0] = col4 + col1;
 	planes[1] = col4 - col1;
@@ -36,10 +36,10 @@ void FrustumManager::ExtractPlanes(const Matrix4& VP)
 bool FrustumManager::isBoundingSphereInView(Vector3 position, double radius)
 {
 	for (Vector4& plane : planes) {
-		Vector3 vect3 = plane.get_xyz();
-		Vector3 normal = vect3.vectNormalize();
-		double d = plane.w / vect3.vectLengt();
-		if (position.dotAKAscalar(normal) + d + radius <= 0) {
+		plane3D = plane.get_xyz();
+		plane3DNormal = plane3D.vectNormalize();
+		double d = plane.w / plane3D.vectLengt();
+		if (position.dotAKAscalar(plane3DNormal) + d + radius <= 0) {
 			return false;
 		}
 	}

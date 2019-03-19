@@ -6,15 +6,19 @@
 #include "Times.h"
 #include "CameraManager.h"
 #include "Camera.h"
-#include "ShaderManager.h"
-
+#include <cstddef>
 using namespace mwm;
-
+//vertices are mathematically clockwise
 const Vector3F ParticleSystem::g_vertex_buffer_data[4] = {
 	Vector3F(-0.5f, -0.5f, 0.0f),
-	Vector3F(0.5f, -0.5f, 0.0f),
 	Vector3F(-0.5f, 0.5f, 0.0f),
 	Vector3F(0.5f, 0.5f, 0.0f),
+	Vector3F(0.5f, -0.5f, 0.0f),
+};
+//indices are mathematically counter-clockwise
+const GLushort ParticleSystem::elements[] = {
+	0, 3, 2,
+	2, 1, 0
 };
 
 ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
@@ -22,8 +26,7 @@ ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
 	this->LastUsedParticle = 0;
 	this->MaxParticles = MaxParticles;
 	ParticlesContainer = new Particle[MaxParticles];
-	g_particule_position_size_data = new Vector4F[MaxParticles];
-	g_particule_color_data = new Vector4F[MaxParticles];
+	g_particule_data = new ParticleData[MaxParticles];
 	for (int i = 0; i < MaxParticles; i++){
 		ParticlesContainer[i].lifeTime = -1.0f;
 		ParticlesContainer[i].cameraDistance = -1.0;
@@ -38,18 +41,14 @@ ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
 	SetUp();
 	additive = true;
 	Force = Vector3(0.0, -9.81, 0.0);
+	paused = false;
+	dynamic = true;
 }
 
 ParticleSystem::~ParticleSystem()
 {
-	glBindVertexArray(0);
-	glDeleteVertexArrays(1, &vaoHandle);
-	glDeleteBuffers(1, &billboard_vertex_buffer);
-	glDeleteBuffers(1, &particles_position_buffer);
-	glDeleteBuffers(1, &particles_color_buffer);
 	delete[] ParticlesContainer;
-	delete[] g_particule_position_size_data;
-	delete[] g_particule_color_data;
+	delete[] g_particule_data;
 }
 
 int ParticleSystem::FindUnusedParticle()
@@ -105,8 +104,8 @@ void ParticleSystem::UpdateParticles(double deltaTime, const mwm::Vector3& camPo
 			//p.size -= (float)deltaTime*3.5f;
 			//if (p.size < 0.f) p.size = 0.f; p.lifeTime = 0.f;
 			// Fill the GPU buffer
-			g_particule_position_size_data[aliveParticles] = Vector4F(p.pos.toFloat(), p.size);
-			g_particule_color_data[aliveParticles] = p.color;
+			g_particule_data[aliveParticles].posAndSize = Vector4F(p.pos.toFloat(), p.size);
+			g_particule_data[aliveParticles].color = p.color;
 
 			aliveParticles++;
 		}
@@ -119,32 +118,37 @@ void ParticleSystem::SortParticles(){
 
 void ParticleSystem::SetUp()
 {
-	//Create VAO
-	glGenVertexArrays(1, &vaoHandle);
-	//Bind VAO
-	glBindVertexArray(vaoHandle);
 
+	glGenVertexArrays(1, &vao.vaoHandle);
+	glBindVertexArray(vao.vaoHandle);
+
+	vao.vertexBuffers.reserve(3);
+
+	GLuint billboard_vertex_buffer;
 	glGenBuffers(1, &billboard_vertex_buffer);
 	glBindBuffer(GL_ARRAY_BUFFER, billboard_vertex_buffer);
 	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vector3F), g_vertex_buffer_data, GL_STATIC_DRAW);
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(0);
+	vao.vertexBuffers.push_back(billboard_vertex_buffer);
 	
-	// The VBO containing the positions and sizes of the particles
-	glGenBuffers(1, &particles_position_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
-	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(1);
+	vao.indicesCount = 6;
+	GLuint elementbuffer;
+	glGenBuffers(1, &elementbuffer);
+	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
+	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vao.indicesCount * sizeof(GLushort), elements, GL_STATIC_DRAW);
+	vao.vertexBuffers.push_back(elementbuffer);
 
-	// The VBO containing the colors of the particles
-	glGenBuffers(1, &particles_color_buffer);
-	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
+	// The VBO containing the data of the particles
+	glGenBuffers(1, &particles_data_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, particles_data_buffer);
 	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(ParticleData), NULL, GL_STREAM_DRAW);
+	glEnableVertexAttribArray(1);
 	glEnableVertexAttribArray(2);
+	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (void*)0);
+	glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, sizeof(ParticleData), (void*)offsetof(ParticleData, ParticleData::color));
+	vao.vertexBuffers.push_back(particles_data_buffer);
 
 	// These functions are specific to glDrawArrays*Instanced*.
 	// The first parameter is the attribute buffer we're talking about.
@@ -154,22 +158,17 @@ void ParticleSystem::SetUp()
 	glVertexAttribDivisor(1, 1); // positions : one per quad (its center)                 -> 1
 	glVertexAttribDivisor(2, 1); // color : one per quad                                  -> 1
 
-	//Unbind the VAO now that the VBOs have been set up
 	glBindVertexArray(0);
 }
 
 void ParticleSystem::UpdateBuffers()
 {
 	//Bind VAO
-	glBindVertexArray(vaoHandle);
+	glBindVertexArray(vao.vaoHandle);
 
-	glBindBuffer(GL_ARRAY_BUFFER, particles_position_buffer);
+	glBindBuffer(GL_ARRAY_BUFFER, particles_data_buffer);
 	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), g_particule_position_size_data, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4F), g_particule_position_size_data);
-
-	glBindBuffer(GL_ARRAY_BUFFER, particles_color_buffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxParticles * sizeof(Vector4), g_particule_position_size_data, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(Vector4F), g_particule_color_data);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, aliveParticles * sizeof(ParticleData), g_particule_data);
 }
 
 int ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, const Vector3F& cameraUp, const Vector3F& cameraRight)
@@ -193,10 +192,8 @@ int ParticleSystem::Draw(Matrix4F& ViewProjection, GLuint currentShaderID, const
 
 	glActiveTexture(GL_TEXTURE0);
 	glBindTexture(GL_TEXTURE_2D, TextureID);
-	TextureSamplerHandle = glGetUniformLocation(currentShaderID, "myTextureSampler");
-	glUniform1i(TextureSamplerHandle, 0);
 
-	glDrawArraysInstanced(GL_TRIANGLE_STRIP, 0, 4, aliveParticles);
+	glDrawElementsInstanced(GL_TRIANGLES, vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0, aliveParticles);
 
 	if (additive) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
@@ -223,7 +220,7 @@ void ParticleSystem::GenerateNewParticles(double deltaTime)
 		int particleIndex = FindUnusedParticle();
 		
 		ParticlesContainer[particleIndex].lifeTime = LifeTime; // This particle will live 5 seconds.
-		ParticlesContainer[particleIndex].pos = object->GetWorldPosition(); //Vector3();
+		ParticlesContainer[particleIndex].pos = object->node->GetWorldPosition(); //Vector3();
 		//printf("%d p: %f %f %f\n", particleIndex, ParticlesContainer[particleIndex].pos.x, ParticlesContainer[particleIndex].pos.y, ParticlesContainer[particleIndex].pos.z);
 		
 		// Very bad way to generate a random direction; 
@@ -259,9 +256,12 @@ void ParticleSystem::SetSize(float size)
 
 void ParticleSystem::Update()
 {
-	GenerateNewParticles(Times::Instance()->deltaTime);
-	UpdateParticles(Times::Instance()->deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
-	if (!additive) SortParticles();
+	if (!paused)
+	{
+		GenerateNewParticles(Times::Instance()->deltaTime);
+		UpdateParticles(Times::Instance()->deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
+		if (!additive) SortParticles();
+	}
 }
 
 void ParticleSystem::SetLifeTime(double lifetime)

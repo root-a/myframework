@@ -18,11 +18,11 @@ public:
 		}
 	}
 	
-	void CreatePoolParty(){
+	void CreatePoolParty(int num_of_chunks = 100){
 		C* previous_chunk = new C;
 		firstChunk = previous_chunk;
 		this->current_free_chunk = previous_chunk;
-		
+		init_number_of_chunks = num_of_chunks;
 		for(int i = 0; i < init_number_of_chunks; ++i)
 		{
 			C* next_chunk = new C;
@@ -56,8 +56,7 @@ public:
 private:
 	typedef Chunk<T, chunk_length> C;
 	C* current_free_chunk;
-	int init_number_of_chunks = 100;
+	int init_number_of_chunks;
 	C* firstChunk;
-	//next free chunk
 };
 

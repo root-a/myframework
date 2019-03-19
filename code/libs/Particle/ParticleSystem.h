@@ -1,9 +1,11 @@
 #pragma once
 #include "MyMathLib.h"
 #include "Component.h"
+#include "Vao.h"
 
 class Particle;
 class Material;
+struct ParticleData;
 
 class ParticleSystem : public Component
 {
@@ -29,14 +31,10 @@ public:
 	void SetForce(mwm::Vector3& force);
 	void Update();
 	static const mwm::Vector3F g_vertex_buffer_data[4];
-	mwm::Vector4F* g_particule_position_size_data;
-	mwm::Vector4F* g_particule_color_data;
+	static const unsigned short elements[6];
+	ParticleData* g_particule_data;
 
-	GLuint billboard_vertex_buffer;
-	GLuint particles_position_buffer;
-	GLuint particles_color_buffer;
-	GLuint vaoHandle;
-
+	GLuint particles_data_buffer;
 	GLuint TextureID;
 
 	GLuint CameraRightHandle;
@@ -45,7 +43,8 @@ public:
 	GLuint TextureSamplerHandle;
 
 	bool additive;
-	
+	bool paused;
+	Vao vao;
 protected:
 private:
 	int LastUsedParticle;

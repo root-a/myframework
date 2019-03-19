@@ -1,11 +1,16 @@
 #pragma once
 #include "MyMathLib.h"
+struct ParticleData
+{
+	mwm::Vector4F posAndSize;
+	mwm::Vector4F color;
+};
 
 class Particle{
 public:
 	Particle();
 	~Particle();
-
+	
 	mwm::Vector3 pos, speed;
 	mwm::Vector4F color;
 	float size, angle, weight;

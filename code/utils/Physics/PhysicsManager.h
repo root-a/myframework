@@ -154,8 +154,8 @@ inline bool PhysicsManager::overlapOnAxis(const RigidBody* oneObj, const RigidBo
 inline double PhysicsManager::penetrationOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const mwm::Vector3 &axis, const mwm::Vector3 &toCentre)
 {
 	// Project the half-size of one onto axis
-	double oneProject = transformToAxis(oneObj->obb.rot, axis, oneObj->obb.halfExtent);
-	double twoProject = transformToAxis(twoObj->obb.rot, axis, twoObj->obb.halfExtent);
+	double oneProject = transformToAxis(oneObj->object->bounds->obb.rot, axis, oneObj->object->bounds->obb.halfExtents);
+	double twoProject = transformToAxis(twoObj->object->bounds->obb.rot, axis, twoObj->object->bounds->obb.halfExtents);
 
 	// Project this onto the axis
 	double distance = abs(toCentre.dotAKAscalar(axis));

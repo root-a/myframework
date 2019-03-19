@@ -8,19 +8,17 @@
 
 using namespace mwm;
 
-SpotLight::SpotLight(Object* owner)
+SpotLight::SpotLight()
 {
-	object = owner;
 	Quaternion qXangle = Quaternion(108, Vector3(1.0, 0.0, 0.0));
 	Quaternion qYangle = Quaternion(162, Vector3(0.0, 1.0, 0.0));
 	Vector3 lightForward = (qYangle*qXangle).getForward();
 	LightInvDir = -1.0 * lightForward.toFloat();
-
-	SetCutOff(12.5f);
-	SetOuterCutOff(17.5f);
 	shadowMapBuffer = nullptr;
 	pingPongBuffers[0] = nullptr;
 	pingPongBuffers[1] = nullptr;
+	SetCutOff(12.5f);
+	dynamic = true;
 }
 
 SpotLight::~SpotLight()
@@ -29,17 +27,23 @@ SpotLight::~SpotLight()
 
 void SpotLight::Update()
 {
-	Matrix3 rotationMatrix = object->GetWorldRotation3(); 
+	Matrix3 rotationMatrix = object->node->GetWorldRotation3();
 	Vector3 lightForward = rotationMatrix.getForward();
 	LightInvDir = -1.0 * lightForward.toFloat();
 
 	if (shadowMapBuffer != nullptr)
 	{
 		ProjectionMatrix = Matrix4::OpenGLPersp(MathUtils::ToDegrees((outerCutOffClamped) * 2.0), shadowMapTexture->aspect, near, radius*1.3);
-		Matrix4 lightViewMatrix = Matrix4::lookAt(object->GetWorldPosition(), object->GetWorldPosition() + lightForward, Vector3(0, 1, 0));
+		Matrix4 lightViewMatrix = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + lightForward, Vector3(0, 1, 0));
 		LightMatrixVP = lightViewMatrix * ProjectionMatrix;
 		BiasedLightMatrixVP = (LightMatrixVP*Matrix4::biasMatrix()).toFloat();
 	}
+}
+
+void SpotLight::Init(Object* parent)
+{
+	Component::Init(parent);
+	SetOuterCutOff(17.5f);
 }
 
 void SpotLight::SetCutOff(float cutOffInDegrees)
@@ -59,14 +63,14 @@ void SpotLight::SetOuterCutOff(float outerCutOffInDegrees) //5
 	SetCutOff(MathUtils::ToDegrees(innerCutOff)); //update cutoff since it's dependent on outerCutOff, we don't want cutOff to be larger than outerCutOff, or maybe we should allow it?
 
 	float xyScale = tan(outerCutOff) * radius;
-	object->SetScale(Vector3(xyScale, xyScale, radius));
+	object->node->SetScale(Vector3(xyScale, xyScale, radius));
 }
 
 void SpotLight::SetRadius(float newRadius)
 {
 	radius = newRadius;
 	float xyScale = tan(outerCutOff) * radius;
-	object->SetScale(Vector3(xyScale, xyScale, radius));
+	object->node->SetScale(Vector3(xyScale, xyScale, radius));
 }
 
 FrameBuffer * SpotLight::GenerateShadowMapBuffer(int width, int height)

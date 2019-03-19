@@ -6,7 +6,6 @@
 #include "BlurMode.h"
 
 class Material;
-class Mesh;
 class Texture;
 class Object;
 class FrameBuffer;
@@ -14,9 +13,10 @@ class FrameBuffer;
 class SpotLight : public Component
 {
 public:
-	SpotLight(Object* owner);
+	SpotLight();
 	~SpotLight();
 	void Update();
+	void Init(Object* parent);
 	mwm::Matrix4 ProjectionMatrix; //used when drawing depth
 	mwm::Vector3F LightInvDir; //used when drawing light 
 	mwm::Matrix4 LightMatrixVP; //used when drawing depth

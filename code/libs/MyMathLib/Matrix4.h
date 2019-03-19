@@ -51,16 +51,27 @@ public:
 	Matrix3 extractRotation3() const;
 	Matrix4 extractRotation() const;
 	Quaternion toQuaternion() const;
+	void setOrientation(const Quaternion& orientation);
 
 	void setUp(const Vector3& axis);
 	void setRight(const Vector3& axis);
 	void setForward(const Vector3& axis);
-
+	void setScale(const Vector3& scale);
+	void setPosition(const Vector3& position);
+	void translate(const Vector3& position);
+	void operator*=(const Matrix4& rightMatrix);
+	void setIdentity();
+	void clear();
+	void zeroPosition();
+	void resetScale();
+	void resetRotation();
+	
+	static Matrix4 CalculateRelativeTransform(const Matrix4& parent, const Matrix4& child);
 	static Matrix4 perspective(const double &near, const double &far, const double &fov); //!< function returning perspective projection specified with given parameters
 	static Matrix4 orthographic(const double &near, const double &far, const double &left, const double &right, const double &top, const double &bottom); //!< function returninng orthographic projection specified with given parameters
 	static Matrix4 orthographicTopToBottom(const double& near, const double& far, const double& left, const double& right, const double& top, const double& bottom);
-	static Matrix4 translate(const double &x, const double &y, const double &z); //!< returns translation matrix with specified translation values
-	static Matrix4 translate(const Vector3& rightVector); //!< returns translation matrix with specified translation values
+	static Matrix4 translation(const double &x, const double &y, const double &z); //!< returns translation matrix with specified translation values
+	static Matrix4 translation(const Vector3& rightVector); //!< returns translation matrix with specified translation values
 	static Matrix4 scale(const double &x, const double &y, const double &z); //!< function returning new scale matrix with specified scale values
 	static Matrix4 scale(const Vector3& rightVector); //!< function returning new scale matrix with specified scale values
 	static Matrix4 rotateX(const double &angle); //!< function returning rotation matrix with specified rotation angle along X axis

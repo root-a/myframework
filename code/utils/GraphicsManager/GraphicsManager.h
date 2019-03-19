@@ -1,16 +1,9 @@
 #include <vector>
 #include <string>
-class Mesh;
 class Texture;
 class OBJ;
 class Material;
-
-struct ShaderPaths
-{
-	std::string vs;
-	std::string fs;
-	std::string gs;
-};
+class Vao;
 
 class GraphicsManager
 {
@@ -20,11 +13,13 @@ public:
 	~GraphicsManager();
 	static bool LoadOBJs(const char * path);
 	static bool SaveToOBJ(OBJ *objMesh);
-	static Mesh* LoadOBJToVBO(OBJ* object, Mesh* mesh);
-	static void LoadAllOBJsToVBO();
+	static Vao* LoadOBJToVAO(OBJ* object, Vao* vao);
+	static void LoadAllOBJsToVAOs();
 	static bool LoadTextures(const char * path);
 	static bool LoadMaterials(const char * path);
 	static bool LoadShaders(const char * path);
+	static bool ReloadShaders();
+	static bool ReloadShader(const char *name);
 	static void LoadUniforms(GLuint programID);
 	static Texture* LoadBMP(const char *imagepath);
 	static Texture* LoadDDS(const char *imagepath);

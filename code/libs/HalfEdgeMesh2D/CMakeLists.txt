@@ -13,7 +13,7 @@ SET(files_halfedgemesh2d
 SOURCE_GROUP("halfedgemesh2d" FILES ${files_halfedgemesh2d})
 
 ADD_LIBRARY(halfedgemesh2d STATIC ${files_halfedgemesh2d})
-TARGET_LINK_LIBRARIES(halfedgemesh2d mesh poolparty vector obj)
+TARGET_LINK_LIBRARIES(halfedgemesh2d poolparty vector obj)
 SET_TARGET_PROPERTIES(halfedgemesh2d PROPERTIES LINKER_LANGUAGE CXX)
 SET_TARGET_PROPERTIES(halfedgemesh2d PROPERTIES FOLDER "MyLibs")
 TARGET_INCLUDE_DIRECTORIES(halfedgemesh2d PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
