@@ -1,12 +1,14 @@
 # myframework
 A framework containing general code for writing applications with focus on AI, network and graphics.
 ## exts
-External libraries required by my libraries
+External libraries
 - [glew](https://github.com/nigels-com/glew)
 - [glfw](https://github.com/glfw/glfw)
 - [stb_image](https://github.com/nothings/stb)
 - [vector](https://github.com/rkk09c/Vector)
 - [dirent](https://github.com/tronkko/dirent)
+- [imgui](https://github.com/ocornut/imgui)
+- [luajit](http://luajit.org/download.html)
 
 ## libs
 My Libraries
@@ -30,7 +32,7 @@ My Libraries
 - Texture - wrapper class encapsulating OpenGL functionality of textures
 
 ## utils
-Useful utilities that make use of the libraries
+Useful utilities
 - CameraManager - manager for cameras, responsible for calculating and providing various combinations of M V P
 - DebugDraw - manager for rendering basic 2D and 3D shapes (mostly useful with forward rendering)
 - FBOManager - simple fbo manager for storing, deleting and updating of fbos
