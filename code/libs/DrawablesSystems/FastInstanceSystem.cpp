@@ -1,17 +1,17 @@
 #include "FastInstanceSystem.h"
-#include "Vao.h"
-#include "Material.h"
 #include <algorithm>
 #include <GL/glew.h>
 #include "Object.h"
 #include "Frustum.h"
 #include "CameraManager.h"
 #include "GraphicsStorage.h"
+#include "GraphicsManager.h"
 #include "Scene.h"
+#include "OBJ.h"
 
 using namespace mwm;
 
-FastInstanceSystem::FastInstanceSystem(int maxCount)
+FastInstanceSystem::FastInstanceSystem(int maxCount, OBJ* object)
 {
 	MaxCount = maxCount;
 	ActiveCount = 0;
@@ -22,6 +22,8 @@ FastInstanceSystem::FastInstanceSystem(int maxCount)
 	materialProperties = new Vector4F[maxCount];
 	paused = false;
 	indexMap.reserve(maxCount);
+	GraphicsManager::LoadOBJToVAO(object, &vao);
+	SetUpGPUBuffers();
 }
 
 FastInstanceSystem::~FastInstanceSystem()
@@ -64,7 +66,7 @@ void FastInstanceSystem::RetriveObject()
 //this is initial
 void FastInstanceSystem::SetUpGPUBuffers()
 {
-	vao->Bind();
+	vao.Bind();
 
 	glGenBuffers(1, &modelBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
@@ -74,7 +76,7 @@ void FastInstanceSystem::SetUpGPUBuffers()
 		glEnableVertexAttribArray(3 + i);
 		glVertexAttribDivisor(3 + i, 1); // model matrices : one per box
 	}
-	vao->vertexBuffers.push_back(modelBuffer);
+	vao.vertexBuffers.push_back(modelBuffer);
 
 	glGenBuffers(1, &objectIDBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
@@ -91,7 +93,7 @@ void FastInstanceSystem::SetUpGPUBuffers()
 	glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(8);
 	glVertexAttribDivisor(8, 1); // color : one per box
-	vao->vertexBuffers.push_back(materialColorBuffer);
+	vao.vertexBuffers.push_back(materialColorBuffer);
 	
 	glGenBuffers(1, &materialPropertiesBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
@@ -100,10 +102,10 @@ void FastInstanceSystem::SetUpGPUBuffers()
 	glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(9);
 	glVertexAttribDivisor(9, 1); // color : one per box
-	vao->vertexBuffers.push_back(materialPropertiesBuffer);
+	vao.vertexBuffers.push_back(materialPropertiesBuffer);
 	
 	//Unbind the VAO now that the VBOs have been set up
-	vao->Unbind();
+	vao.Unbind();
 }
 
 //this is initial
@@ -134,9 +136,9 @@ int FastInstanceSystem::Draw()
 		dirty = false;
 	}
 	*/
-	vao->Bind();
+	vao.Bind();
 	
-	glDrawElementsInstanced(GL_TRIANGLES, vao->indicesCount, GL_UNSIGNED_INT, (void*)0, ActiveCount);
+	glDrawElementsInstanced(GL_TRIANGLES, vao.indicesCount, GL_UNSIGNED_INT, (void*)0, ActiveCount);
 	
 	return ActiveCount;
 }
@@ -264,14 +266,12 @@ void FastInstanceSystem::Update()
 void FastInstanceSystem::Init(Object * parent)
 {
 	Component::Init(parent);
-	vao = parent->vao;
-	mat = parent->mat;
-	SetUpGPUBuffers();
+
 	for (size_t i = 0; i < MaxCount; i++)
 	{
 		Material* newMaterial = new Material();
 		GraphicsStorage::materials.push_back(newMaterial);
-		*newMaterial = *parent->mat;
+		*newMaterial = mat;
 		objectContainer[i].AssignMaterial(newMaterial);
 		objectContainer[i].node->SetScale(Scene::Instance()->generateRandomIntervallVectorSpherical(1, 15));
 		objectContainer[i].node->SetPosition(Scene::Instance()->generateRandomIntervallVectorSpherical(20, 1000));

@@ -150,7 +150,7 @@ Object* Scene::addInstanceSystemTo(Object * parent, const char * name, int count
 	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
-	InstanceSystem* iSystem = new InstanceSystem(count);
+	InstanceSystem* iSystem = new InstanceSystem(count, GraphicsStorage::objs[name]);
 	instanceSystemComponents.push_back(iSystem);
 	newChild->AddComponent(iSystem);
 	return newChild;
@@ -174,7 +174,7 @@ Object* Scene::addFastInstanceSystemTo(Object * parent, const char * name, int c
 	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
-	FastInstanceSystem* iSystem = new FastInstanceSystem(count);
+	FastInstanceSystem* iSystem = new FastInstanceSystem(count, GraphicsStorage::objs[name]);
 	fastInstanceSystemComponents.push_back(iSystem);
 	newChild->AddComponent(iSystem);
 	return newChild;

@@ -4,14 +4,15 @@
 #include "Node.h"
 #include "MinMax.h"
 #include <unordered_map>
+#include "Vao.h"
+#include "Material.h"
 
-class Material;
-class Vao;
+class OBJ;
 
 class FastInstanceSystem : public Component
 {
 public:
-	FastInstanceSystem(int maxCount);
+	FastInstanceSystem(int maxCount, OBJ* object);
 	~FastInstanceSystem();
 
 	void SetUpGPUBuffers();
@@ -30,9 +31,9 @@ public:
 	int ActiveCount;
 	int MaxCount;
 
-	Vao* vao;
-	Material* mat;
-
+	Vao vao;
+	Material mat;
+	
 	mwm::Matrix4F* M;
 	unsigned int* objectID;
 	mwm::Vector3F* materialColor;

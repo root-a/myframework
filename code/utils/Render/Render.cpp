@@ -123,8 +123,8 @@ int Render::drawInstancedGeometry(const std::vector<InstanceSystem*>& iSystems, 
 
 	for(auto& system : iSystems)
 	{
-		glUniform2fv(tiling, 1, &system->mat->tile.x);
-		system->mat->Bind();
+		glUniform2fv(tiling, 1, &system->mat.tile.x);
+		system->mat.Bind();
 		objectsRendered += system->Draw();
 	}
 	
@@ -150,8 +150,8 @@ int Render::drawFastInstancedGeometry(const std::vector<FastInstanceSystem*>& iS
 
 	for (auto& system : iSystems)
 	{
-		glUniform2fv(tiling, 1, &system->mat->tile.x);
-		system->mat->Bind();
+		glUniform2fv(tiling, 1, &system->mat.tile.x);
+		system->mat.Bind();
 		objectsRendered += system->Draw();
 	}
 

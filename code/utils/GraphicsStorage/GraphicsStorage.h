@@ -22,7 +22,7 @@ class GraphicsStorage
 public:
 	GraphicsStorage();
 	~GraphicsStorage();
-	static std::unordered_map<std::string,Vao*> vaos; //get mesh by name
+	static std::unordered_map<std::string,Vao*> vaos;
 	static std::vector<Texture*> textures;
 	static std::vector<Texture*> cubemaps;
 	static std::vector<Material*> materials;

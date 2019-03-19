@@ -3,13 +3,15 @@
 #include "Component.h"
 #include "Node.h"
 #include "MinMax.h"
-class Material;
-class Vao;
+#include "Vao.h"
+#include "Material.h"
+
+class OBJ;
 
 class InstanceSystem : public Component
 {
 public:
-	InstanceSystem(int maxCount);
+	InstanceSystem(int maxCount, OBJ* object);
 	~InstanceSystem();
 	int FindUnused();
 	void SetUpGPUBuffers();
@@ -25,8 +27,8 @@ public:
 	int ActiveCount;
 	int MaxCount;
 
-	Vao* vao;
-	Material* mat;
+	Vao vao;
+	Material mat;
 
 	mwm::Matrix4F* M;
 	unsigned int* objectID;
