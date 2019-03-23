@@ -24,7 +24,6 @@ public:
 	void UpdateObjects();
 	void ReturnObjects();
 	void UpdateCPUBuffers();
-	void RetriveObject();
 	void Update();
 	void Init(Object* parent);
 
@@ -41,13 +40,14 @@ public:
 
 	Object* objectContainer;
 	std::unordered_map<Object*, int> indexMap;
+	std::vector<Object*> gpuOrderedObjects;
+	std::vector<Object*> objectsToReturn;
+	std::vector<Object*> objectsToUpdate;
 
 	unsigned int modelBuffer;
 	unsigned int objectIDBuffer;
 	unsigned int materialColorBuffer;
 	unsigned int materialPropertiesBuffer;
-	int firstGetAfterUpdate = 0;
-	int nrOfGetsAtUpdate = 0;
 	bool dirty = false;
 	bool paused = true;
 };

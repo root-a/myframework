@@ -30,7 +30,7 @@ void Material::ActivateAndBind() const
 {
 	for (size_t i = 0; i < textures.size(); i++)
 	{
-		textures[i]->ActivateAndBind(0);
+		textures[i]->ActivateAndBind(i);
 	}
 }
 

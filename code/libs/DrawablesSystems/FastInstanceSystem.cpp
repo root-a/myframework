@@ -22,8 +22,10 @@ FastInstanceSystem::FastInstanceSystem(int maxCount, OBJ* object)
 	materialProperties = new Vector4F[maxCount];
 	paused = false;
 	indexMap.reserve(maxCount);
+	gpuOrderedObjects.reserve(maxCount);
 	GraphicsManager::LoadOBJToVAO(object, &vao);
 	SetUpGPUBuffers();
+	mat.AssignTexture(GraphicsStorage::textures.at(0));
 }
 
 FastInstanceSystem::~FastInstanceSystem()
@@ -38,7 +40,7 @@ FastInstanceSystem::~FastInstanceSystem()
 //this is initial
 void FastInstanceSystem::UpdateCPUBuffers()
 {
-	for (int i = 0; i < nrOfGetsAtUpdate; i++)
+	for (int i = 0; i < ActiveCount; i++)
 	{
 		Object& object = objectContainer[i];
 
@@ -46,20 +48,6 @@ void FastInstanceSystem::UpdateCPUBuffers()
 		objectID[i] = object.ID;
 		materialColor[i] = object.mat->color;
 		materialProperties[i] = object.mat->properties;
-	}
-}
-
-void FastInstanceSystem::RetriveObject()
-{
-	Object& object = objectContainer[ActiveCount];
-	M[nrOfGetsAtUpdate] = object.node->TopDownTransform.toFloat();
-	objectID[nrOfGetsAtUpdate] = object.ID;
-	materialColor[nrOfGetsAtUpdate] = object.mat->color;
-	materialProperties[nrOfGetsAtUpdate] = object.mat->properties;
-	
-	if (ActiveCount < MaxCount) {
-		ActiveCount++;
-		nrOfGetsAtUpdate++;
 	}
 }
 
@@ -128,14 +116,16 @@ void FastInstanceSystem::UpdateGPUBuffers()
 
 int FastInstanceSystem::Draw()
 {
-	/*
+	
 	if (dirty)
 	{
-		UpdateCPUBuffers();
-		UpdateGPUBuffers();
+		//UpdateCPUBuffers();
+		//UpdateGPUBuffers();
+		UpdateObjects();
+		ReturnObjects();
 		dirty = false;
 	}
-	*/
+	
 	vao.Bind();
 	
 	glDrawElementsInstanced(GL_TRIANGLES, vao.indicesCount, GL_UNSIGNED_INT, (void*)0, ActiveCount);
@@ -146,110 +136,91 @@ int FastInstanceSystem::Draw()
 //this is for runtime
 Object* FastInstanceSystem::GetObject()
 {
-	Object& object = objectContainer[ActiveCount];
-	indexMap[&object] = ActiveCount;
+	Object* object = &objectContainer[ActiveCount];
+	indexMap[object] = ActiveCount;
+	objectsToUpdate.push_back(object);
+	gpuOrderedObjects.push_back(object);
 	if (ActiveCount < MaxCount) ActiveCount++;
 	dirty = true;
-	nrOfGetsAtUpdate++;
-	return &object;
+	return object;
 }
 
 //this is for runtime
 void FastInstanceSystem::ReturnObject(Object* object)
 {
-	std::unordered_map<Object*, int>::iterator it = indexMap.find(object);
-	if (it == indexMap.end()) return;
-
-	int index = indexMap[object];
-
-	ActiveCount--;
-	Object& lastObject = objectContainer[ActiveCount];
-	//Scene::Instance()->unregisterForPicking(object);
-	indexMap[object] = ActiveCount;
-	indexMap[&lastObject] = index;
-	//update gpu buffers at index
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index*sizeof(Matrix4F), sizeof(Matrix4F), &lastObject.node->TopDownTransform.toFloat());
-
-	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index* sizeof(unsigned int), sizeof(unsigned int), &lastObject.ID);
-
-	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index* sizeof(Vector3F), sizeof(Vector3F), &lastObject.mat->color);
-
-	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index* sizeof(Vector4F), sizeof(Vector4F), &lastObject.mat->properties);
-	
+	objectsToReturn.push_back(object);
+	dirty = true;
 }
 
 //this is for runtime
 void FastInstanceSystem::UpdateObject(Object* object)
 {
-	std::unordered_map<Object*, int>::iterator it = indexMap.find(object);
-	if (it == indexMap.end()) return;
-
-	int index = indexMap[object];
-	Object& objectc = objectContainer[index];
-
-	//update gpu buffers at index
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Matrix4F), sizeof(Matrix4F), &objectc.node->TopDownTransform.toFloat());
-
-	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(unsigned int), sizeof(unsigned int), &objectc.ID);
-
-	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector3F), sizeof(Vector3F), &objectc.mat->color);
-
-	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &objectc.mat->properties);
+	objectsToUpdate.push_back(object);
+	dirty = true;
 }
 
+//this is for runtime
 void FastInstanceSystem::UpdateObjects()
 {
-	if (nrOfGetsAtUpdate == 0) return;
+	for (auto object : objectsToUpdate)
+	{
+		std::unordered_map<Object*, int>::iterator it = indexMap.find(object);
+		if (it == indexMap.end()) continue;
 
-	int startIndexToUpdate = ActiveCount - nrOfGetsAtUpdate;
-	
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, startIndexToUpdate * sizeof(Matrix4F), nrOfGetsAtUpdate * sizeof(Matrix4F), M);
+		int index = it->second;
 
-	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, startIndexToUpdate * sizeof(unsigned int), nrOfGetsAtUpdate * sizeof(unsigned int), objectID);
+		glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Matrix4F), sizeof(Matrix4F), &object->node->TopDownTransform.toFloat());
 
-	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, startIndexToUpdate * sizeof(Vector3F), nrOfGetsAtUpdate * sizeof(Vector3F), materialColor);
+		glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(unsigned int), sizeof(unsigned int), &object->ID);
 
-	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, startIndexToUpdate * sizeof(Vector4F), nrOfGetsAtUpdate * sizeof(Vector4F), materialProperties);
+		glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector3F), sizeof(Vector3F), &object->mat->color);
 
-	nrOfGetsAtUpdate = 0;
+		glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &object->mat->properties);
+	}
+	objectsToUpdate.clear();
 }
 
+//this is for runtime
 void FastInstanceSystem::ReturnObjects()
 {
-	std::unordered_map<Object*, int>::iterator it = indexMap.find(object);
-	if (it == indexMap.end()) return;
+	for (auto object : objectsToReturn)
+	{
+		std::unordered_map<Object*, int>::iterator it = indexMap.find(object);
 
-	int index = indexMap[object];
+		if (it == indexMap.end()) continue;
 
-	ActiveCount--;
-	Object& lastObject = objectContainer[ActiveCount];
-	//Scene::Instance()->unregisterForPicking(object);
-	indexMap[object] = ActiveCount;
-	indexMap[&lastObject] = index;
-	//update gpu buffers at index
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Matrix4F), sizeof(Matrix4F), &lastObject.node->TopDownTransform.toFloat());
+		int index = it->second;
 
-	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(unsigned int), sizeof(unsigned int), &lastObject.ID);
+		ActiveCount--;
 
-	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector3F), sizeof(Vector3F), &lastObject.mat->color);
+		//if (index == ActiveCount) continue;
 
-	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &lastObject.mat->properties);
+		//Scene::Instance()->unregisterForPicking(object);
+		indexMap[object] = ActiveCount;
+		Object* lastObject = gpuOrderedObjects[ActiveCount];
+		indexMap[lastObject] = index; //we have no good way of knowing the last object, i know the order via map
+
+		//update gpu buffers at index
+		glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Matrix4F), sizeof(Matrix4F), &lastObject->node->TopDownTransform.toFloat());
+
+		glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(unsigned int), sizeof(unsigned int), &lastObject->ID);
+
+		glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector3F), sizeof(Vector3F), &lastObject->mat->color);
+
+		glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &lastObject->mat->properties);
+	
+		gpuOrderedObjects[ActiveCount] = object;
+		gpuOrderedObjects[index] = lastObject;
+	}
+	objectsToReturn.clear();
 }
 
 void FastInstanceSystem::Update()
@@ -274,38 +245,18 @@ void FastInstanceSystem::Init(Object * parent)
 		*newMaterial = mat;
 		objectContainer[i].AssignMaterial(newMaterial);
 		objectContainer[i].node->SetScale(Scene::Instance()->generateRandomIntervallVectorSpherical(1, 15));
-		objectContainer[i].node->SetPosition(Scene::Instance()->generateRandomIntervallVectorSpherical(20, 1000));
+		objectContainer[i].node->SetPosition(Scene::Instance()->generateRandomIntervallVectorSpherical(2, 15));
 		objectContainer[i].bounds->SetUp(parent->bounds->centerOfMesh, parent->bounds->dimensions, parent->bounds->name);
 		objectContainer[i].node->UpdateNode(*parent->node);
 		Scene::Instance()->registerForPicking(&objectContainer[i]);
-		
 	}
-	for (size_t i = 0; i < 6003; i++)
+	for (size_t i = 0; i < MaxCount/10; i++)
 	{
 		GetObject();
 	}
 	UpdateCPUBuffers();
-	UpdateObjects();
-
-	//UpdateCPUBuffers(); //this is initial
-	//UpdateGPUBuffers(); //this is initial
+	UpdateGPUBuffers();
+	objectsToUpdate.clear();
+	objectsToReturn.clear();
+	dirty = false;
 }
-//WIP
-
-
-//we can write a function to update the range
-//we don't have to send in any arguments
-//we just need to internally keep track of number of getted objects
-//the first getted object since first update and the last to get the number
-//then we can update a range of objects
-//we can do update per frame this way in the component just by checking first the number of submitted objects
-
-//current update object allows for selective update
-
-//we could do all this with existing scenegraph objects
-//submitting the objects, not having a container in the component
-//or we could store them in the bank
-
-//yes we can make returning possible
-//we just register indexes of objects we want to return,
-//then when we update we do two operations, we remove all returned and we add all requested boom!
