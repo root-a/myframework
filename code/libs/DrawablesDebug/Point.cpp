@@ -26,8 +26,8 @@ Point::~Point()
 
 void Point::SetUpBuffers()
 {
-	//Create VAO
-	glGenVertexArrays(1, &vao.vaoHandle);
+	
+	
 	//Bind VAO
 	vao.Bind();
 

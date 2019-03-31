@@ -69,7 +69,7 @@ void LineSystem::UpdateContainer()
 
 void LineSystem::SetUpBuffers()
 {
-	glGenVertexArrays(1, &vao.vaoHandle);
+	
 	vao.Bind();
 
 	glGenBuffers(1, &vertexBuffer);

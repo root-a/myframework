@@ -28,8 +28,8 @@ Plane::~Plane()
 
 void Plane::SetUpBuffers()
 {
-	//Create VAO
-	glGenVertexArrays(1, &vao.vaoHandle);
+	
+	
 	//Bind VAO
 	vao.Bind();
 

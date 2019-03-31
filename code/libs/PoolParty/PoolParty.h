@@ -7,8 +7,9 @@ class PoolParty
 {
 public:
 	PoolParty(){}
-	~PoolParty(){
-		
+
+	~PoolParty()
+	{
 		C* curChunk = firstChunk;
 		for (int i = 0; i < init_number_of_chunks; i++)
 		{
@@ -18,37 +19,40 @@ public:
 		}
 	}
 	
-	void CreatePoolParty(int num_of_chunks = 100){
+	void CreatePoolParty(int num_of_chunks = 100)
+	{
 		C* previous_chunk = new C;
 		firstChunk = previous_chunk;
-		this->current_free_chunk = previous_chunk;
+		current_free_chunk = previous_chunk;
 		init_number_of_chunks = num_of_chunks;
-		for(int i = 0; i < init_number_of_chunks; ++i)
+		for(int i = 1; i < init_number_of_chunks; i++)
 		{
 			C* next_chunk = new C;
 			previous_chunk->next = next_chunk;
 			previous_chunk = next_chunk;
 		}
 	}
-	T* PoolPartyAlloc(){
-		if(this->current_free_chunk->current_free_index < this->current_free_chunk->data_size){
-			T* element = &this->current_free_chunk->data[this->current_free_chunk->current_free_index];
-			this->current_free_chunk->current_free_index++;
+
+	T* PoolPartyAlloc()
+	{
+		if(current_free_chunk->current_free_index < current_free_chunk->data_size){
+			T* element = &current_free_chunk->data[current_free_chunk->current_free_index];
+			current_free_chunk->current_free_index++;
 			return element;
 		}
-		else if(this->current_free_chunk->next != nullptr){
-			this->current_free_chunk = this->current_free_chunk->next;
-			T* element = &this->current_free_chunk->data[this->current_free_chunk->current_free_index];
-			this->current_free_chunk->current_free_index++;
+		else if(current_free_chunk->next != nullptr){
+			current_free_chunk = current_free_chunk->next;
+			T* element = &current_free_chunk->data[current_free_chunk->current_free_index];
+			current_free_chunk->current_free_index++;
 			return element;
 		}
 		else{
 			C* next_chunk = new C;
-			this->current_free_chunk->next = next_chunk;
-			this->current_free_chunk = next_chunk;
+			current_free_chunk->next = next_chunk;
+			current_free_chunk = next_chunk;
 			init_number_of_chunks++;
-			T* element = &this->current_free_chunk->data[this->current_free_chunk->current_free_index];
-			this->current_free_chunk->current_free_index++;
+			T* element = &current_free_chunk->data[current_free_chunk->current_free_index];
+			current_free_chunk->current_free_index++;
 			return element;
 		}
 	}

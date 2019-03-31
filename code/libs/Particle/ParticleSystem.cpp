@@ -119,9 +119,8 @@ void ParticleSystem::SortParticles(){
 void ParticleSystem::SetUp()
 {
 
-	glGenVertexArrays(1, &vao.vaoHandle);
-	glBindVertexArray(vao.vaoHandle);
-
+	
+	vao.Bind();
 	vao.vertexBuffers.reserve(3);
 
 	GLuint billboard_vertex_buffer;

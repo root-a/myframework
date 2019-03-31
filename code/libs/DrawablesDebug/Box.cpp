@@ -27,7 +27,7 @@ Box::~Box()
 
 void Box::SetUpBuffers()
 {
-	glGenVertexArrays(1, &vao.vaoHandle);
+	
 	vao.Bind();
 
 	vao.vertexBuffers.reserve(2);

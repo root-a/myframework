@@ -28,8 +28,8 @@ Line::~Line()
 
 void Line::SetUpBuffers()
 {
-	//Create VAO
-	glGenVertexArrays(1, &vao.vaoHandle);
+	
+	
 	//Bind VAO
 	vao.Bind();
 

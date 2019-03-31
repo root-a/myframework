@@ -84,7 +84,7 @@ void BoundingBoxSystem::UpdateContainer()
 
 void BoundingBoxSystem::SetUpBuffers()
 {
-	glGenVertexArrays(1, &vao.vaoHandle);
+	
 	vao.Bind();
 
 	vao.vertexBuffers.reserve(4);

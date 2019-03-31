@@ -26,7 +26,7 @@ BoundingBox::~BoundingBox()
 
 void BoundingBox::SetUpBuffers()
 {
-	glGenVertexArrays(1, &vao.vaoHandle);
+	
 	vao.Bind();
 
 	Vector3 vertices[] = {

@@ -3,6 +3,7 @@
 
 Vao::Vao()
 {
+	glGenVertexArrays(1, &vaoHandle);
 }
 
 Vao::~Vao()
