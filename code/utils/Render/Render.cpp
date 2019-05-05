@@ -60,7 +60,6 @@ Render::drawGeometry(const std::vector<Object*>& objects, FrameBuffer * geometry
 	GLuint geometryShader = GraphicsStorage::shaderIDs["geometry"];
 	ShaderManager::Instance()->SetCurrentShader(geometryShader);
 
-	Texture::Activate(0);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboGBVars);
 
 	int objectsRendered = 0;
@@ -84,7 +83,7 @@ Render::drawGeometry(const std::vector<Object*>& objects, FrameBuffer * geometry
 
 			glBufferSubData(GL_UNIFORM_BUFFER, 0, 172, &gb);
 
-			object->mat->Bind();
+			object->mat->ActivateAndBind();
 
 			object->vao->Bind();
 
@@ -124,7 +123,7 @@ int Render::drawInstancedGeometry(const std::vector<InstanceSystem*>& iSystems, 
 	for(auto& system : iSystems)
 	{
 		glUniform2fv(tiling, 1, &system->mat.tile.x);
-		system->mat.Bind();
+		system->mat.ActivateAndBind();
 		objectsRendered += system->Draw();
 	}
 	
@@ -151,7 +150,7 @@ int Render::drawFastInstancedGeometry(const std::vector<FastInstanceSystem*>& iS
 	for (auto& system : iSystems)
 	{
 		glUniform2fv(tiling, 1, &system->mat.tile.x);
-		system->mat.Bind();
+		system->mat.ActivateAndBind();
 		objectsRendered += system->Draw();
 	}
 
@@ -169,8 +168,6 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 	GLuint MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor");
 	GLuint PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
 	GLuint tiling = glGetUniformLocation(currentShaderID, "tiling");
-
-	Texture::Activate(0);
 
 	for (auto& object : objects)
 	{
@@ -191,7 +188,7 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 
 			glUniform1ui(PickingObjectIndexHandle, object->ID);
 
-			object->mat->Bind();
+			object->mat->ActivateAndBind();
 			
 			object->vao->Bind();
 

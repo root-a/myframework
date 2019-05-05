@@ -16,14 +16,12 @@ public:
 	~FastInstanceSystem();
 
 	void SetUpGPUBuffers();
-	void UpdateGPUBuffers();
 	int Draw();
 	Object* GetObject();
 	void ReturnObject(Object* object);
 	void UpdateObject(Object* object);
 	void UpdateObjects();
 	void ReturnObjects();
-	void UpdateCPUBuffers();
 	void Update();
 	void Init(Object* parent);
 
@@ -32,11 +30,6 @@ public:
 
 	Vao vao;
 	Material mat;
-	
-	mwm::Matrix4F* M;
-	unsigned int* objectID;
-	mwm::Vector3F* materialColor;
-	mwm::Vector4F* materialProperties;
 
 	Object* objectContainer;
 	std::unordered_map<Object*, int> indexMap;

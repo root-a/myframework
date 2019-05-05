@@ -46,7 +46,9 @@ float Vector3F::squareMag() const
 /*! \fn function returning new normalized vector*/
 Vector3F Vector3F::vectNormalize() const
 {
-	float length = sqrtf(x*x + y*y + z*z);
+	double squareMag = x * x + y * y + z * z;
+	if (squareMag == 0.0) return Vector3F();
+	double length = sqrt(squareMag);
 	return Vector3F(x / length, y / length, z / length);
 }
 /*! \fn cross product function returning normal vector*/

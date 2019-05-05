@@ -16,13 +16,11 @@ FastInstanceSystem::FastInstanceSystem(int maxCount, OBJ* object)
 	MaxCount = maxCount;
 	ActiveCount = 0;
 	objectContainer = new Object[maxCount];
-	M = new Matrix4F[maxCount];
-	objectID = new unsigned int[maxCount];
-	materialColor = new Vector3F[maxCount];
-	materialProperties = new Vector4F[maxCount];
 	paused = false;
 	indexMap.reserve(maxCount);
 	gpuOrderedObjects.reserve(maxCount);
+	objectsToUpdate.reserve(maxCount);
+	objectsToReturn.reserve(maxCount);
 	GraphicsManager::LoadOBJToVAO(object, &vao);
 	SetUpGPUBuffers();
 	mat.AssignTexture(GraphicsStorage::textures.at(0));
@@ -31,24 +29,6 @@ FastInstanceSystem::FastInstanceSystem(int maxCount, OBJ* object)
 FastInstanceSystem::~FastInstanceSystem()
 {
 	delete[] objectContainer;
-	delete[] M;
-	delete[] objectID;
-	delete[] materialColor;
-	delete[] materialProperties;
-}
-
-//this is initial
-void FastInstanceSystem::UpdateCPUBuffers()
-{
-	for (int i = 0; i < ActiveCount; i++)
-	{
-		Object& object = objectContainer[i];
-
-		M[i] = object.node->TopDownTransform.toFloat();
-		objectID[i] = object.ID;
-		materialColor[i] = object.mat->color;
-		materialProperties[i] = object.mat->properties;
-	}
 }
 
 //this is initial
@@ -94,24 +74,6 @@ void FastInstanceSystem::SetUpGPUBuffers()
 	
 	//Unbind the VAO now that the VBOs have been set up
 	vao.Unbind();
-}
-
-//this is initial
-void FastInstanceSystem::UpdateGPUBuffers()
-{
-	//glBindVertexArray(vao->vaoHandle);
-
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Matrix4F), M);
-
-	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(unsigned int), objectID);
-
-	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3F), materialColor);
-
-	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), materialProperties);
 }
 
 int FastInstanceSystem::Draw()
@@ -254,9 +216,4 @@ void FastInstanceSystem::Init(Object * parent)
 	{
 		GetObject();
 	}
-	UpdateCPUBuffers();
-	UpdateGPUBuffers();
-	objectsToUpdate.clear();
-	objectsToReturn.clear();
-	dirty = false;
 }

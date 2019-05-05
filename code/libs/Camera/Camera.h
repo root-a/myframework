@@ -47,11 +47,10 @@ public:
 	mwm::Vector3 direction;
 	mwm::Vector3 up;
 	mwm::Vector3 right;
+	double speed;
 private:
 	mwm::Vector3 position;
 	double verticalAngle;
 	double horizontalAngle;
-
-	double speed;
 	double mouseSpeed;
 };

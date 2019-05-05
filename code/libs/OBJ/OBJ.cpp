@@ -12,13 +12,19 @@ void OBJ::LoadAndIndexOBJ(char* path)
 	std::vector<Vector3F> normals; // Won't be used at the moment.
 	bool res = LoadOBJ(path, vertices, uvs, normals);
 
-	indexVBO(vertices, uvs, normals);
+	std::vector<Vector3F> tangents;
+	std::vector<Vector3F> bitangents;
+	ComputeTangentBasis(vertices, uvs, normals, tangents, bitangents);
+
+	indexVBO(vertices, uvs, normals, tangents, bitangents);
 }
 
 void OBJ::indexVBO(
 	std::vector<Vector3F> & in_vertices,
 	std::vector<Vector2F> & in_uvs,
-	std::vector<Vector3F> & in_normals
+	std::vector<Vector3F> & in_normals,
+	std::vector<Vector3F> & in_tangents,
+	std::vector<Vector3F> & in_bitangents
 	)
 {
 	std::map<PackedVertex, unsigned int> VertexToOutIndex;
@@ -35,11 +41,17 @@ void OBJ::indexVBO(
 
 		if (found){ // A similar vertex is already in the VBO, use it instead !
 			indices.push_back(index);
+
+			// Average the tangents and the bitangents
+			indexed_tangents[index] += in_tangents[i];
+			indexed_bitangents[index] += in_bitangents[i];
 		}
 		else{ // If not, it needs to be added in the output data.
 			indexed_vertices.push_back(in_vertices[i]);
 			indexed_uvs.push_back(in_uvs[i]);
 			indexed_normals.push_back(in_normals[i]);
+			indexed_tangents.push_back(in_tangents[i]);
+			indexed_bitangents.push_back(in_bitangents[i]);
 			unsigned int newindex = (unsigned int)indexed_vertices.size() - 1;
 			indices.push_back(newindex);
 			VertexToOutIndex[packed] = newindex;
@@ -49,11 +61,8 @@ void OBJ::indexVBO(
 	CalculateDimensions();
 }
 
-bool OBJ::getSimilarVertexIndex_fast(
-	PackedVertex & packed,
-	std::map<PackedVertex, unsigned int> & VertexToOutIndex,
-	unsigned int & result
-	){
+bool OBJ::getSimilarVertexIndex_fast(PackedVertex & packed, std::map<PackedVertex, unsigned int> & VertexToOutIndex, unsigned int & result)
+{
 	std::map<PackedVertex, unsigned int>::iterator it = VertexToOutIndex.find(packed);
 	if (it == VertexToOutIndex.end()){
 		return false;
@@ -159,6 +168,71 @@ bool OBJ::LoadOBJ(
 	printf("Finished loading OBJ");
 	fclose(file);
 	return true;
+}
+
+void OBJ::ComputeTangentBasis(
+	// inputs
+	std::vector<Vector3F> & in_vertices,
+	std::vector<Vector2F> & in_uvs,
+	std::vector<Vector3F> & in_normals,
+	// outputs
+	std::vector<Vector3F> & out_tangents,
+	std::vector<mwm::Vector3F>& out_bitangents
+) {
+
+	for (unsigned int i = 0; i < in_vertices.size(); i += 3) {
+
+		// Shortcuts for vertices
+		Vector3F & v0 = in_vertices[i + 0];
+		Vector3F & v1 = in_vertices[i + 1];
+		Vector3F & v2 = in_vertices[i + 2];
+
+		// Shortcuts for UVs
+		Vector2F & uv0 = in_uvs[i + 0];
+		Vector2F & uv1 = in_uvs[i + 1];
+		Vector2F & uv2 = in_uvs[i + 2];
+
+		// Edges of the triangle : postion delta
+		Vector3F deltaPos1 = v1 - v0;
+		Vector3F deltaPos2 = v2 - v0;
+
+		// UV delta
+		Vector2F deltaUV1 = uv1 - uv0;
+		Vector2F deltaUV2 = uv2 - uv0;
+
+
+		float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
+		if (isinf(r)) printf("invalid UVS\n");
+
+		Vector3F tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y)*r;
+		Vector3F bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x)*r;
+
+		// Set the same tangent for all three vertices of the triangle.
+		// They will be merged later, in vboindexer.cpp
+		out_tangents.push_back(tangent);
+		out_tangents.push_back(tangent);
+		out_tangents.push_back(tangent);
+
+		// Same thing for binormals
+		out_bitangents.push_back(bitangent);
+		out_bitangents.push_back(bitangent);
+		out_bitangents.push_back(bitangent);
+	}
+
+	// See "Going Further"
+	for (unsigned int i = 0; i < in_vertices.size(); i += 1)
+	{
+		Vector3F & n = in_normals[i];
+		Vector3F & t = out_tangents[i];
+		Vector3F & b = out_bitangents[i];
+		// Gram-Schmidt orthogonalize
+		t = (t - n * n.dotAKAscalar(t)).vectNormalize();
+
+		// Calculate handedness
+		if (n.crossProd(t).dotAKAscalar(b) > 0.0f) {
+			t = t * -1.0f;
+		}
+	}
 }
 
 void OBJ::CalculateDimensions()

@@ -34,21 +34,17 @@ void Material::ActivateAndBind() const
 	}
 }
 
-void Material::Bind() const
+void Material::AddTexture(Texture *newTexture)
 {
-	for (size_t i = 0; i < textures.size(); i++)
-	{
-		textures[i]->Bind();
-	}
+	textures.push_back(newTexture);
 }
 
-void Material::AssignTexture(Texture *newTexture)
+void Material::AssignTexture(Texture *newTexture, int textureSlot)
 {
-	if (textures.size() == 0)
-		textures.push_back(newTexture);
-	else
-		textures[0] = newTexture;
+	if (textures.size() == 0) textures.push_back(newTexture);
+	else if (textures.size() > textureSlot) textures[textureSlot] = newTexture;
 }
+
 void Material::SetDiffuseIntensity(float d)
 {
 	this->diffuseIntensity = d;

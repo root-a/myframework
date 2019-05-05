@@ -127,7 +127,8 @@ void Scene::addRandomObject(const Vector3& pos)
 	
 	newChild->AssignMesh(GraphicsStorage::vaos[it->first]);
 	newChild->bounds->SetUp(GraphicsStorage::objs[it->first]->center_of_mesh, GraphicsStorage::objs[it->first]->dimensions, GraphicsStorage::objs[it->first]->name);
-	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
+	newMaterial->AddTexture(GraphicsStorage::textures.at(0));
+	newMaterial->AddTexture(GraphicsStorage::textures.at(1));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
 }
@@ -147,7 +148,8 @@ Object* Scene::addInstanceSystemTo(Object * parent, const char * name, int count
 	newChild->AssignMesh(GraphicsStorage::vaos[name]);
 	newChild->bounds->SetUp(GraphicsStorage::objs[name]->center_of_mesh, GraphicsStorage::objs[name]->dimensions, GraphicsStorage::objs[name]->name);
 	Material* newMaterial = new Material();
-	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
+	newMaterial->AddTexture(GraphicsStorage::textures.at(0));
+	newMaterial->AddTexture(GraphicsStorage::textures.at(1));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
 	InstanceSystem* iSystem = new InstanceSystem(count, GraphicsStorage::objs[name]);
@@ -171,7 +173,8 @@ Object* Scene::addFastInstanceSystemTo(Object * parent, const char * name, int c
 	newChild->AssignMesh(GraphicsStorage::vaos[name]);
 	newChild->bounds->SetUp(GraphicsStorage::objs[name]->center_of_mesh, GraphicsStorage::objs[name]->dimensions, GraphicsStorage::objs[name]->name);
 	Material* newMaterial = new Material();
-	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
+	newMaterial->AddTexture(GraphicsStorage::textures.at(0));
+	newMaterial->AddTexture(GraphicsStorage::textures.at(1));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
 	FastInstanceSystem* iSystem = new FastInstanceSystem(count, GraphicsStorage::objs[name]);
@@ -205,7 +208,8 @@ Object* Scene::addObjectTo(Object* parent, const char* name /*= "cube"*/, const 
 	newChild->AssignMesh(GraphicsStorage::vaos[name]);
 	newChild->bounds->SetUp(GraphicsStorage::objs[name]->center_of_mesh, GraphicsStorage::objs[name]->dimensions, GraphicsStorage::objs[name]->name);
 	Material* newMaterial = new Material();
-	newMaterial->AssignTexture(GraphicsStorage::textures.at(0));
+	newMaterial->AddTexture(GraphicsStorage::textures.at(0));
+	newMaterial->AddTexture(GraphicsStorage::textures.at(1));
 	GraphicsStorage::materials.push_back(newMaterial);
 	newChild->AssignMaterial(newMaterial);
 	return newChild;

@@ -233,7 +233,13 @@ bool GraphicsManager::LoadMaterials(const char * path) {
 			printf("Wrong material information!\n");
 		} else {
 			Material* material = new Material();
-			material->AssignTexture(GraphicsStorage::textures[diffuseID]);
+			
+			if (diffuseID != -1) material->AddTexture(GraphicsStorage::textures[diffuseID]);
+			if (normalID != -1) material->AddTexture(GraphicsStorage::textures[normalID]);
+			if (specID != -1) material->AddTexture(GraphicsStorage::textures[specID]);
+			if (emiID != -1) material->AddTexture(GraphicsStorage::textures[emiID]);
+			if (heighID != -1) material->AddTexture(GraphicsStorage::textures[heighID]);
+
 			GraphicsStorage::materials.push_back(material);
 		}
 		
@@ -773,6 +779,25 @@ Vao* GraphicsManager::LoadOBJToVAO(OBJ* object, Vao* vao)
 	glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
 	glEnableVertexAttribArray(2);
 	vao->vertexBuffers.push_back(normalbuffer);
+
+	if (object->indexed_tangents.size() > 0)
+	{
+		GLuint tangentbuffer;
+		glGenBuffers(1, &tangentbuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, tangentbuffer);
+		glBufferData(GL_ARRAY_BUFFER, object->indexed_tangents.size() * sizeof(Vector3F), &object->indexed_tangents[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
+		glEnableVertexAttribArray(3);
+		vao->vertexBuffers.push_back(tangentbuffer);
+
+		GLuint bitangentbuffer;
+		glGenBuffers(1, &bitangentbuffer);
+		glBindBuffer(GL_ARRAY_BUFFER, bitangentbuffer);
+		glBufferData(GL_ARRAY_BUFFER, object->indexed_bitangents.size() * sizeof(Vector3F), &object->indexed_bitangents[0], GL_STATIC_DRAW);
+		glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
+		glEnableVertexAttribArray(4);
+		vao->vertexBuffers.push_back(bitangentbuffer);
+	}
 
 	GLuint elementbuffer;
 	// 4th element buffer Generate a buffer for the indices as well

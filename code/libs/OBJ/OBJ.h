@@ -10,19 +10,29 @@ public:
 	std::vector<mwm::Vector3F> indexed_vertices;
 	std::vector<mwm::Vector2F> indexed_uvs;
 	std::vector<mwm::Vector3F> indexed_normals;
+	std::vector<mwm::Vector3F> indexed_tangents;
+	std::vector<mwm::Vector3F> indexed_bitangents;
 	int ID;
 	std::string name;
 	bool LoadOBJ(
 		const char * path,
-		std::vector<mwm::Vector3F> & out_vertices,
-		std::vector<mwm::Vector2F> & out_uvs,
-		std::vector<mwm::Vector3F> & out_normals
+		std::vector<mwm::Vector3F>& out_vertices,
+		std::vector<mwm::Vector2F>& out_uvs,
+		std::vector<mwm::Vector3F>& out_normals
 		);
+	void ComputeTangentBasis(
+		std::vector<mwm::Vector3F>& in_vertices,
+		std::vector<mwm::Vector2F>& in_uvs,
+		std::vector<mwm::Vector3F>& in_normals,
+		std::vector<mwm::Vector3F>& out_tangents,
+		std::vector<mwm::Vector3F>& out_bitangents);
 	void indexVBO(
-		std::vector<mwm::Vector3F> & in_vertices,
-		std::vector<mwm::Vector2F> & in_uvs,
-		std::vector<mwm::Vector3F> & in_normals
-		);
+		std::vector<mwm::Vector3F>& in_vertices,
+		std::vector<mwm::Vector2F>& in_uvs,
+		std::vector<mwm::Vector3F>& in_normals,
+		std::vector<mwm::Vector3F>& in_tangents,
+		std::vector<mwm::Vector3F>& in_bitangents
+);
 	void LoadAndIndexOBJ(char* path);
 	
 	mwm::Vector3 GetDimensions();
