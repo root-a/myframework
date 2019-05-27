@@ -2,6 +2,7 @@
 #include "MyMathLib.h"
 #include "Component.h"
 #include "BlurMode.h"
+#include "LightProperties.h"
 
 class Material;
 class Texture;
@@ -23,7 +24,7 @@ public:
 	float blurIntensity = 0.5f;
 	float shadowFadeRange = 10.f;
 	BlurMode blurMode = BlurMode::OneSize;
-
+	LightProperties properties;
 	bool shadowMapActive = false;
 	bool shadowMapBlurActive = false;
 	bool CanCastShadow();

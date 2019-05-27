@@ -32,15 +32,13 @@ public:
 
 	mwm::Matrix4F* M;
 	unsigned int* objectID;
-	mwm::Vector3F* materialColor;
-	mwm::Vector4F* materialProperties;
+	mwm::Vector4F* materialColorShininess;
 
 	Object* objectContainer;
 
 	unsigned int modelBuffer;
 	unsigned int objectIDBuffer;
 	unsigned int materialColorBuffer;
-	unsigned int materialPropertiesBuffer;
 
 	bool dirty = false;
 	bool paused = true;

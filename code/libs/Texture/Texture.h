@@ -33,6 +33,8 @@ public:
 	void AddClampingToBorder(mwm::Vector4F& borderColor);
 	void SetLinear();
 	void SetNearest();
+	void SetFiltering(GLint MIN_FILTER, GLint MAG_FILTER);
+	void GenerateMipMaps();
 	void Update(int windowWidth, int windowHeight);
 	void Generate();
 	void ActivateAndBind(int textureSlot) const;
@@ -54,6 +56,7 @@ public:
 	std::vector<TextureParameterF> parametersF;
 	bool customSize;
 	bool hasBorder;
+	bool hasMipMaps;
 	mwm::Vector4F borderColor;
 private:
 	Texture() {};

@@ -157,7 +157,16 @@ bool GraphicsManager::LoadTextures(const char * path)
 			break; // EOF = End Of File. Quit the loop.
 		}
 		
-		Texture* texture = LoadTexture(texturePath);
+		Texture* texture = nullptr;
+		printf("Loading texture: %s\n", texturePath);
+		std::string fullName = texturePath;
+		size_t pos = fullName.find_last_of(".");
+		//std::string fileName = fullName.substr(0, pos);
+		std::string currentShaderExt = fullName.substr(pos + 1, fullName.length() - 1);
+
+		//if (stbi_is_hdr(path)) 
+		if (!currentShaderExt.compare("hdr")) texture = LoadHDRMap(texturePath);
+		else texture = LoadTexture(texturePath);
 		GraphicsStorage::textures.push_back(texture);
 	}
 	fclose(file);
@@ -881,6 +890,11 @@ unsigned char * GraphicsManager::LoadImage(const char* path, int* x, int* y, int
 	return stbi_load(path, x, y, numOfElements, forcedNumOfEle);
 }
 
+float * GraphicsManager::LoadHDRImage(const char * path, int * x, int * y, int * numOfElements, int forcedNumOfEle)
+{
+	return stbi_loadf(path, x, y, numOfElements, forcedNumOfEle);;
+}
+
 Texture* GraphicsManager::LoadTexture(char* path)
 {
 	return LoadDDS(path);
@@ -913,5 +927,36 @@ Texture* GraphicsManager::GenerateCubeMap(const std::vector<std::string>& textur
 
 	Texture* tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, GL_RGB, x, y, GL_RGB, GL_UNSIGNED_BYTE, NULL, GL_COLOR_ATTACHMENT0);
 	tex->handle = cubeMapTextureID;
+	return tex;
+}
+
+Texture * GraphicsManager::LoadHDRMap(char * path)
+{
+	stbi_set_flip_vertically_on_load(true);
+	int width, height, nrComponents;
+	float *data = GraphicsManager::LoadHDRImage(path, &width, &height, &nrComponents, 0);
+	printf("Is texture HDR %s\n", stbi_is_hdr(path) ? "true" : "false");
+	unsigned int hdrTexture;
+	if (data)
+	{
+		glGenTextures(1, &hdrTexture);
+		glBindTexture(GL_TEXTURE_2D, hdrTexture);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, 0, GL_RGB, GL_FLOAT, data);
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		stbi_image_free(data);
+	}
+	else
+	{
+		printf("Failed to load HDR image\n");
+		return nullptr;
+	}
+	Texture* tex = new Texture(GL_TEXTURE_2D, 0, GL_RGB16F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
+	tex->handle = hdrTexture;
+	stbi_set_flip_vertically_on_load(false);
 	return tex;
 }

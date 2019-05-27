@@ -17,7 +17,7 @@ ImGuiWrapper::ImGuiWrapper(Display::Window* window)
 	//ImGui::StyleColorsClassic();
 
 	// Setup Platform/Renderer bindings
-	ImGui_ImplGlfw_InitForOpenGL(window->GetGLFWWindow(), false);
+	ImGui_ImplGlfw_InitForOpenGL(window->GetGLFWWindow(), true);
 	const char* glsl_version = "#version 430";
 	ImGui_ImplOpenGL3_Init(glsl_version);
 }
@@ -38,6 +38,6 @@ void ImGuiWrapper::NewFrame()
 
 void ImGuiWrapper::Render()
 {
-	ImGui::Render(); // <-- (draw) to screen
+	ImGui::Render();
 	ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }

@@ -40,7 +40,6 @@ public:
 	unsigned int modelBuffer;
 	unsigned int objectIDBuffer;
 	unsigned int materialColorBuffer;
-	unsigned int materialPropertiesBuffer;
 	bool dirty = false;
 	bool paused = true;
 };

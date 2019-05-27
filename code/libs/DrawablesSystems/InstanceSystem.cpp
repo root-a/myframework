@@ -18,8 +18,7 @@ InstanceSystem::InstanceSystem(int maxCount, OBJ* object)
 	objectContainer = new Object[maxCount];
 	M = new Matrix4F[maxCount];
 	objectID = new unsigned int[maxCount];
-	materialColor = new Vector3F[maxCount];
-	materialProperties = new Vector4F[maxCount];
+	materialColorShininess = new Vector4F[maxCount];
 	paused = true;
 	GraphicsManager::LoadOBJToVAO(object, &vao);
 	SetUpGPUBuffers();
@@ -30,8 +29,7 @@ InstanceSystem::~InstanceSystem()
 	delete[] objectContainer;
 	delete[] M;
 	delete[] objectID;
-	delete[] materialColor;
-	delete[] materialProperties;
+	delete[] materialColorShininess;
 }
 
 int InstanceSystem::FindUnused()
@@ -65,9 +63,7 @@ void InstanceSystem::UpdateCPUBuffers()
 			//object.node->UpdateNode(this->object->node);
 			M[ActiveCount] = object.node->TopDownTransform.toFloat();
 			objectID[ActiveCount] = object.ID;
-			materialColor[ActiveCount] = object.mat->color;
-			materialProperties[ActiveCount] = object.mat->properties;
-
+			materialColorShininess[ActiveCount] = object.mat->colorShininess;
 			ActiveCount += 1;
 
 			object.UpdateDrawState();
@@ -85,9 +81,7 @@ void InstanceSystem::UpdateCPUBuffersNoCulling()
 		//object.node->UpdateNode(this->object->node);
 		M[ActiveCount] = object.node->TopDownTransform.toFloat();
 		objectID[ActiveCount] = object.ID;
-		materialColor[ActiveCount] = object.mat->color;
-		materialProperties[ActiveCount] = object.mat->properties;
-
+		materialColorShininess[ActiveCount] = object.mat->colorShininess;
 		ActiveCount += 1;
 
 		object.UpdateDrawState();
@@ -120,20 +114,11 @@ void InstanceSystem::SetUpGPUBuffers()
 	glGenBuffers(1, &materialColorBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
 	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector3F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
+	glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(8);
 	glVertexAttribDivisor(8, 1); // color : one per box
 	vao.vertexBuffers.push_back(materialColorBuffer);
-
-	glGenBuffers(1, &materialPropertiesBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(9);
-	glVertexAttribDivisor(9, 1); // color : one per box
-	vao.vertexBuffers.push_back(materialPropertiesBuffer);
 
 	//Unbind the VAO now that the VBOs have been set up
 	vao.Unbind();
@@ -148,10 +133,7 @@ void InstanceSystem::UpdateGPUBuffers()
 	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(unsigned int), objectID);
 
 	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3F), materialColor);
-
-	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), materialProperties);
+	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), materialColorShininess);
 }
 
 int InstanceSystem::Draw()

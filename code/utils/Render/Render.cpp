@@ -10,7 +10,7 @@
 #include "FBOManager.h"
 #include "FrameBuffer.h"
 #include "ShaderManager.h"
-#include "Attenuation.h"
+#include "LightProperties.h"
 #include <algorithm>
 #include "CameraManager.h"
 #include "Scene.h"
@@ -27,13 +27,22 @@ using namespace mwm;
 
 Render::Render()
 {
-	pb.gamma = 1.2f;
+	pb.gamma = 2.2f;
 	pb.exposure = 1.0f;
 	pb.brightness = 0.0f;
 	pb.contrast = 1.0f;
-	pb.bloomIntensity = 1.f;
+	pb.bloomIntensity = 0.5f;
 	pb.hdrEnabled = GL_TRUE;
 	pb.bloomEnabled = GL_TRUE;
+
+	captureVPs.resize(6);
+	Matrix4F captureProjection = Matrix4F::OpenGLPersp(90, 1.0, 0.1, 10.0);
+	captureVPs[0] = Matrix4F::lookAt(Vector3F(), Vector3F(1.0, 0.0, 0.0), Vector3F(0.0, -1.0, 0.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_POSITIVE_X
+	captureVPs[1] = Matrix4F::lookAt(Vector3F(), Vector3F(-1.0, 0.0, 0.0), Vector3F(0.0, -1.0, 0.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+	captureVPs[2] = Matrix4F::lookAt(Vector3F(), Vector3F(0.0, 1.0, 0.0), Vector3F(0.0, 0.0, 1.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+	captureVPs[3] = Matrix4F::lookAt(Vector3F(), Vector3F(0.0, -1.0, 0.0), Vector3F(0.0, 0.0, -1.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+	captureVPs[4] = Matrix4F::lookAt(Vector3F(), Vector3F(0.0, 0.0, 1.0), Vector3F(0.0, -1.0, 0.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+	captureVPs[5] = Matrix4F::lookAt(Vector3F(), Vector3F(0.0, 0.0, -1.0), Vector3F(0.0, -1.0, 0.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
 }
 
 Render::~Render()
@@ -46,6 +55,84 @@ Render::Instance()
 	static Render instance;
 
 	return &instance;
+}
+
+void Render::captureToTexture2D(GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture* textureToDrawTo)
+{
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO->handle);
+	captureFBO->AttachTexture(textureToDrawTo);
+	glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+	
+	glViewport(0, 0, textureToDrawTo->width, textureToDrawTo->height);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	Plane::Instance()->vao.Bind();
+	glDrawElements(GL_TRIANGLES, Plane::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0);
+
+	glViewport(0, 0, CameraManager::Instance()->GetCurrentCamera()->windowWidth, CameraManager::Instance()->GetCurrentCamera()->windowHeight);
+}
+
+void Render::captureTextureToCubeMapWithMips(GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture * textureToCapture, Texture * textureToDrawTo)
+{
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO->handle);
+	unsigned int maxMipLevels = 5;
+
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
+	GLuint roughnessUniform = glGetUniformLocation(shaderID, "roughness");
+	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
+
+	Box::Instance()->mat->AssignTexture(textureToCapture);
+	Box::Instance()->mat->ActivateAndBind();
+	Box::Instance()->vao.Bind();
+
+	for (unsigned int mip = 0; mip < maxMipLevels; ++mip)
+	{
+		// reisze framebuffer according to mip-level size.
+		unsigned int mipWidth = textureToDrawTo->width * std::pow(0.5, mip);
+		unsigned int mipHeight = textureToDrawTo->height * std::pow(0.5, mip);
+		glViewport(0, 0, mipWidth, mipHeight);
+
+		float roughness = (float)mip / (float)(maxMipLevels - 1);
+		glUniform1f(roughnessUniform, roughness);
+		for (unsigned int i = 0; i < 6; ++i)
+		{
+			glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &captureVPs.at(i)[0][0]);
+			captureFBO->AttachTexture(textureToDrawTo, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, mip);
+			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+			glDrawElements(GL_TRIANGLES, Box::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0);
+		}
+	}
+	glViewport(0, 0, CameraManager::Instance()->GetCurrentCamera()->windowWidth, CameraManager::Instance()->GetCurrentCamera()->windowHeight);
+}
+
+void Render::captureTextureToCubeMap(GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo)
+{
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO->handle);
+
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
+	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
+
+	Box::Instance()->mat->AssignTexture(textureToCapture);
+	Box::Instance()->mat->ActivateAndBind();
+	Box::Instance()->vao.Bind();
+
+	//Quaternion qXangled4 = Quaternion(angleX, Vector3(1.0, 0.0, 0.0));
+	//Quaternion qYangled4 = Quaternion(angleY, Vector3(0.0, 1.0, 0.0));
+	//Quaternion dirTotalRotation4 = qYangled4 * qXangled4;
+	//Matrix4F Model = dirTotalRotation4.ConvertToMatrix().toFloat();
+	glViewport(0, 0, textureToDrawTo->width, textureToDrawTo->height);
+	for (size_t i = 0; i < 6; ++i)
+	{
+		//Matrix4F MVP = Model * captureVPs.at(i);
+		//glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
+		glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &captureVPs.at(i)[0][0]);
+		captureFBO->AttachTexture(textureToDrawTo, GL_TEXTURE_CUBE_MAP_POSITIVE_X + i);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glDrawElements(GL_TRIANGLES, Box::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0);
+	}
+	glViewport(0, 0, CameraManager::Instance()->GetCurrentCamera()->windowWidth, CameraManager::Instance()->GetCurrentCamera()->windowHeight);
 }
 
 int 
@@ -70,18 +157,12 @@ Render::drawGeometry(const std::vector<Object*>& objects, FrameBuffer * geometry
 			object->inFrustum = true;
 			gb.M = object->node->TopDownTransform.toFloat();
 			gb.MVP = (object->node->TopDownTransform*CameraManager::Instance()->ViewProjection).toFloat();
-			gb.MaterialProperties.x = object->mat->metallic;
-			gb.MaterialProperties.y = object->mat->diffuseIntensity;
-			gb.MaterialProperties.z = object->mat->specularIntensity;
-			gb.MaterialProperties.w = object->mat->shininess;
-			gb.MaterialColor.x = object->mat->color.x;
-			gb.MaterialColor.y = object->mat->color.y;
-			gb.MaterialColor.z = object->mat->color.z;
+			gb.MaterialColorShininess = object->mat->colorShininess;
 			gb.objectID = object->ID;
 			gb.tiling.x = object->mat->tileX;
 			gb.tiling.y = object->mat->tileY;
 
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, 172, &gb);
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, 156, &gb);
 
 			object->mat->ActivateAndBind();
 
@@ -164,8 +245,7 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 
 	GLuint MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
 	GLuint ModelMatrixHandle = glGetUniformLocation(currentShaderID, "M");
-	GLuint MaterialPropertiesHandle = glGetUniformLocation(currentShaderID, "MaterialProperties");
-	GLuint MaterialColorHandle = glGetUniformLocation(currentShaderID, "MaterialColor");
+	GLuint MaterialColorShininessHandle = glGetUniformLocation(currentShaderID, "MaterialColorShininess");
 	GLuint PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
 	GLuint tiling = glGetUniformLocation(currentShaderID, "tiling");
 
@@ -183,8 +263,7 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 			glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 			glUniformMatrix4fv(ModelMatrixHandle, 1, GL_FALSE, &ModelMatrix[0][0]);
 
-			glUniform4fv(MaterialPropertiesHandle, 1, &object->mat->properties.x);
-			glUniform3fv(MaterialColorHandle, 1, &object->mat->color.x);
+			glUniform4fv(MaterialColorShininessHandle, 1, &object->mat->colorShininess.x);
 
 			glUniform1ui(PickingObjectIndexHandle, object->ID);
 
@@ -229,18 +308,12 @@ Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjection, c
 
 	gb.M = object->node->TopDownTransform.toFloat();
 	gb.MVP = (object->node->TopDownTransform*CameraManager::Instance()->ViewProjection).toFloat();
-	gb.MaterialProperties.x = object->mat->metallic;
-	gb.MaterialProperties.y = object->mat->diffuseIntensity;
-	gb.MaterialProperties.z = object->mat->specularIntensity;
-	gb.MaterialProperties.w = object->mat->shininess;
-	gb.MaterialColor.x = object->mat->color.x;
-	gb.MaterialColor.y = object->mat->color.y;
-	gb.MaterialColor.z = object->mat->color.z;
+	gb.MaterialColorShininess = object->mat->colorShininess;
 	gb.objectID = object->ID;
 	gb.tiling.x = object->mat->tileX;
 	gb.tiling.y = object->mat->tileY;
 
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, 172, &gb);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, 156, &gb);
 
 	object->mat->ActivateAndBind();
 
@@ -275,7 +348,7 @@ Render::drawPicking(std::unordered_map<unsigned int, Object*>& pickingList, Fram
 			gb.M = object->node->TopDownTransform.toFloat();
 			gb.objectID = object->ID;
 
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, 172, &gb);
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, 156, &gb);
 
 			//bind vao before drawing
 			object->vao->Bind();
@@ -393,7 +466,13 @@ Render::drawSkybox(FrameBuffer * lightFrameBuffer, Texture* texture)
 	View[3][0] = 0;
 	View[3][1] = 0;
 	View[3][2] = 0;
+
+	Quaternion qXangled4 = Quaternion(angleX, Vector3(1.0, 0.0, 0.0));
+	Quaternion qYangled4 = Quaternion(angleY, Vector3(0.0, 1.0, 0.0));
+	Quaternion dirTotalRotation4 = qYangled4 * qXangled4;
+
 	Matrix4 ViewProjection = View * currentCamera->ProjectionMatrix;
+	ViewProjection = dirTotalRotation4.ConvertToMatrix() * ViewProjection;
 
 	Box::Instance()->mat->AssignTexture(texture);
 	Box::Instance()->Draw(ViewProjection, currentShader);
@@ -407,6 +486,7 @@ Render::drawSkybox(FrameBuffer * lightFrameBuffer, Texture* texture)
 
 void Render::drawGSkybox(FrameBuffer * lightFrameBuffer, Texture * texture)
 {
+	glBindBuffer(GL_UNIFORM_BUFFER, uboLBVars);
 	//glDepthRange(0.999999, 1.0);
 	//glDisable(GL_CULL_FACE);
 	GLuint currentShader = GraphicsStorage::shaderIDs["gskybox"];
@@ -427,6 +507,21 @@ void Render::drawGSkybox(FrameBuffer * lightFrameBuffer, Texture * texture)
 	Matrix4 ViewProjection = View * currentCamera->ProjectionMatrix;
 
 	Box::Instance()->mat->AssignTexture(texture);
+	
+	lb.lightColor = Vector3F(1,1,1);
+	lb.lightPower = 10.0;
+
+	glBufferSubData(GL_UNIFORM_BUFFER, 92, 16, &lb.lightPower);
+
+	Matrix4F MVP = ViewProjection.toFloat();
+	GLuint MatrixHandle = glGetUniformLocation(currentShader, "MVPSkybox");
+	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
+
+	Box::Instance()->mat->ActivateAndBind();
+
+	Box::Instance()->vao.Bind();
+	//glDrawElements(GL_TRIANGLES, Box::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, 0);
+
 	Box::Instance()->Draw(ViewProjection, currentShader);
 
 	glDepthFunc(GL_LESS);
@@ -434,6 +529,7 @@ void Render::drawGSkybox(FrameBuffer * lightFrameBuffer, Texture * texture)
 	//glEnable(GL_CULL_FACE);
 	//glDepthRange(0.0, 1.0);
 	//glDepthMask(GL_TRUE);
+	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
 int
@@ -445,8 +541,8 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
 
-	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["directionalLight"];
-	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["directionalLightShadow"];
+	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["directionalLightPBR"];
+	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["directionalLightShadowPBR"];
 	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
 	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 
@@ -454,11 +550,13 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 	geometryTextures[1]->ActivateAndBind(1);
 	geometryTextures[2]->ActivateAndBind(2);
 	geometryTextures[3]->ActivateAndBind(3);
-
+	int uniformBufferUpdateSize = 64;
+	int uniformBufferOffset = 64;
+	void* bufferMemoryStart = &lb.lightInvDir;
 	GLuint lightShader = lightShaderNoShadows;
-	for (auto& directionalLight : lights)
+	for (auto& light : lights)
 	{
-		if (directionalLight->CanCastShadow() && dirShadowMapBuffer != nullptr)
+		if (light->CanCastShadow() && dirShadowMapBuffer != nullptr)
 		{
 			lightShader = lightShaderWithShadows;
 
@@ -471,27 +569,27 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 			glCullFace(GL_FRONT);
 			glUseProgram(depthShader);
 			glViewport(0, 0, dirShadowMapTexture->width, dirShadowMapTexture->height);
-			drawDepth(objects, directionalLight->LightMatrixVP, depthShader);
+			drawDepth(objects, light->LightMatrixVP, depthShader);
 			glViewport(0, 0, currentCamera->windowWidth, currentCamera->windowHeight);
 			glCullFace(GL_BACK);
 			glDepthMask(GL_FALSE);
 			glClearColor(0, 0, 0, 1);
-			if (directionalLight->CanBlurShadowMap())
+			if (light->CanBlurShadowMap())
 			{
 				Texture* blurredShadowMap = nullptr;
-				switch (directionalLight->blurMode)
+				switch (light->blurMode)
 				{
 				case None:
 					break;
 				case OneSize:
 					if (pingPongBuffers[0] != nullptr)
-					blurredShadowMap = BlurTextureAtSameSize(dirShadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], directionalLight->activeBlurLevel, directionalLight->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
-					blurredShadowMap->ActivateAndBind(4);
+					blurredShadowMap = BlurTextureAtSameSize(dirShadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], light->activeBlurLevel, light->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
+					blurredShadowMap->ActivateAndBind(7);
 					break;
 				case MultiSize:
 					if (multiBlurBufferStart[0] != nullptr)
-					blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, directionalLight->activeBlurLevel, directionalLight->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
-					blurredShadowMap->ActivateAndBind(4);
+					blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, light->activeBlurLevel, light->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
+					blurredShadowMap->ActivateAndBind(7);
 					break;
 				default:
 					break;
@@ -499,18 +597,24 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 			}
 			else
 			{
-				dirShadowMapTexture->ActivateAndBind(4);
+				dirShadowMapTexture->ActivateAndBind(7);
 			}
 			
-			lb.shadowTransitionSize = directionalLight->shadowFadeRange;
-			lb.lightRadius = directionalLight->radius;
-			lb.depthBiasMVP = directionalLight->BiasedLightMatrixVP;
+			lb.shadowTransitionSize = light->shadowFadeRange;
+			lb.lightRadius = light->radius;
+			lb.depthBiasMVP = light->BiasedLightMatrixVP;
+			uniformBufferUpdateSize = 120;
+			uniformBufferOffset = 0;
+			bufferMemoryStart = &lb;
 		}
 		else
 		{
 			lightShader = lightShaderNoShadows;
+			uniformBufferUpdateSize = 64;
+			uniformBufferOffset = 64;
+			bufferMemoryStart = &lb.lightInvDir;
 		}
-
+		geometryTextures[0]->ActivateAndBind(0);
 		glUseProgram(lightShader);
 
 		FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, fboToDrawTheLightTO->handle);
@@ -521,12 +625,14 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 		glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ONE, GL_ONE);
 
-		lb.lightInvDir = directionalLight->LightInvDir;
-		lb.lightColor = directionalLight->object->mat->color;
-		lb.lightPower = directionalLight->object->mat->diffuseIntensity;
-		lb.ambient = directionalLight->object->mat->specularIntensity;
+		lb.lightInvDir = light->LightInvDir;
+		lb.lightColor = light->properties.color;
+		lb.lightPower = light->properties.power;
+		lb.ambient = light->properties.ambient;
+		lb.diffuse = light->properties.diffuse;
+		lb.specular = light->properties.specular;
 
-		glBufferSubData(GL_UNIFORM_BUFFER, 0, 112, &lb);
+		glBufferSubData(GL_UNIFORM_BUFFER, uniformBufferOffset, uniformBufferUpdateSize, bufferMemoryStart);
 
 		Plane::Instance()->vao.Bind();
 
@@ -551,8 +657,8 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
 	
-	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["pointLight"];
-	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["pointLightShadow"];
+	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["pointLightPBR"];
+	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["pointLightShadowPBR"];
 	GLuint depthShader = GraphicsStorage::shaderIDs["depthCube"];
 	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
@@ -591,7 +697,7 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 				glDepthMask(GL_FALSE);
 				glClearColor(0, 0, 0, 1);
 
-				light->shadowMapTexture->ActivateAndBind(4);
+				light->shadowMapTexture->ActivateAndBind(7);
 			}
 			else
 			{
@@ -618,14 +724,16 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 			glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
 
 			lb.lightRadius = (float)light->object->bounds->radius;
-			lb.lightPower = light->object->mat->diffuseIntensity;
-			lb.ambient = light->object->mat->specularIntensity;
-			lb.lightColor = light->object->mat->color;
+			lb.lightPower = light->properties.power;
+			lb.ambient = light->properties.ambient;
+			lb.diffuse = light->properties.diffuse;
+			lb.specular = light->properties.specular;
+			lb.lightColor = light->properties.color;
 			lb.MVP = (light->object->node->TopDownTransform*ViewProjection).toFloat();
 			lb.lightPosition = light->object->node->GetWorldPosition().toFloat();
 			lb.attenuation = light->attenuation;
 			
-			glBufferSubData(GL_UNIFORM_BUFFER, 24, 176, &lb.lightRadius);
+			glBufferSubData(GL_UNIFORM_BUFFER, 88, 128, &lb.lightRadius);
 
 
 			light->object->vao->Bind();
@@ -677,14 +785,17 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 	geometryTextures[2]->ActivateAndBind(2);
 	geometryTextures[3]->ActivateAndBind(3);
 
-	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["spotLight"];
-	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["spotLightShadow"];
+	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["spotLightPBR"];
+	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["spotLightShadowPBR"];
 	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
 	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
 
 	GLuint lightShader = lightShaderNoShadows;
 
+	int uniformBufferOffset = 64;
+	int uniformBufferUpdateSize = 152;
+	void* bufferMemoryStart = &lb.lightInvDir;
 	glEnable(GL_STENCIL_TEST);
 	for (auto& light : lights)
 	{
@@ -727,17 +838,23 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 					default:
 						break;
 					}
-					blurredShadowMap->ActivateAndBind(4);
+					blurredShadowMap->ActivateAndBind(7);
 				}
 				else
 				{
-					light->shadowMapTexture->ActivateAndBind(4);
+					light->shadowMapTexture->ActivateAndBind(7);
 				}
 				lb.depthBiasMVP = light->BiasedLightMatrixVP;
+				uniformBufferOffset = 0;
+				uniformBufferUpdateSize = 216;
+				bufferMemoryStart = &lb;
 			}
 			else
 			{
 				lightShader = lightShaderNoShadows;
+				uniformBufferOffset = 64;
+				uniformBufferUpdateSize = 152;
+				bufferMemoryStart = &lb.lightInvDir;
 			}
 
 			FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, fboToDrawTheLightTO->handle);
@@ -762,15 +879,17 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 			lb.outerCutOff = light->cosOuterCutOff;
 			lb.innerCutOff = light->cosInnerCutOff;
 			lb.lightInvDir = light->LightInvDir;
-			lb.lightPower = light->object->mat->diffuseIntensity;
-			lb.lightColor = light->object->mat->color;
-			lb.ambient = light->object->mat->specularIntensity;
+			lb.lightPower = light->properties.power;
+			lb.lightColor = light->properties.color;
+			lb.ambient = light->properties.ambient;
+			lb.diffuse = light->properties.diffuse;
+			lb.specular = light->properties.specular;
 			lb.MVP = (light->object->node->TopDownTransform*ViewProjection).toFloat();
 			lb.lightPosition = light->object->node->GetWorldPosition().toFloat();
 			lb.lightRadius = (float)light->object->node->getScale().z;
 			lb.attenuation = light->attenuation;
 
-			glBufferSubData(GL_UNIFORM_BUFFER, 0, 200, &lb);
+			glBufferSubData(GL_UNIFORM_BUFFER, uniformBufferOffset, uniformBufferUpdateSize, bufferMemoryStart);
 
 			//bind vao before drawing
 			light->object->vao->Bind();
@@ -827,6 +946,52 @@ Render::drawHDR(Texture* colorTexture, Texture* bloomTexture)
 
 	Plane::Instance()->vao.Bind();
 	glDrawElements(GL_TRIANGLES, Plane::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0);
+}
+
+void Render::drawHDRequirectangular(Texture * colorTexture)
+{
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+	GLuint radiance = GraphicsStorage::shaderIDs["radianceHDRSkyboxUnwrwap"];
+	ShaderManager::Instance()->SetCurrentShader(radiance);
+	
+	Box::Instance()->mat->AssignTexture(colorTexture);
+
+	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
+	Matrix4 View = currentCamera->ViewMatrix;
+	View[3][0] = 0;
+	View[3][1] = 0;
+	View[3][2] = 0;
+	Matrix4 ViewProjection = View * currentCamera->ProjectionMatrix;
+
+	//Matrix4F MVP = ViewProjection.toFloat();
+	Matrix4 model = Matrix4();
+	model.setIdentity();
+	model.setScale(Vector3(20, 20, 20));
+	Matrix4F MVP = (model * CameraManager::Instance()->ViewProjection).toFloat();
+	GLuint MatrixHandle = glGetUniformLocation(radiance, "MVPSkybox");
+	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
+
+	//GLuint fastBBShader = GraphicsStorage::shaderIDs["fastBB"];
+	//ShaderManager::Instance()->SetCurrentShader(fastBBShader);
+
+	glDepthMask(GL_TRUE);
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	//glDepthFunc(GL_LEQUAL);
+	glEnable(GL_DEPTH_TEST);
+	//glDepthMask(GL_TRUE);
+
+	Box::Instance()->mat->ActivateAndBind();
+	Vao* vao = GraphicsStorage::vaos["unitCube"];
+	vao->Bind();
+	//Box::Instance()->vao.Bind();
+	//glDrawElements(GL_TRIANGLES, Box::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, 0);
+	glDrawElements(GL_TRIANGLES, vao->indicesCount, GL_UNSIGNED_INT, (void*)0);
+	//Box::Instance()->Draw(ViewProjection, radiance);
+
+	//glDepthFunc(GL_LESS);
+	//glDepthMask(GL_FALSE);
 }
 
 void Render::drawRegion(int posX, int posY, int width, int height, const Texture * texture)
@@ -900,27 +1065,28 @@ Render::AddMultiBlurBuffer(int width, int height, int levels, double scaleX, dou
 
 void Render::GenerateEBOs()
 {
+	//int gbsize = sizeof(GBVars);
 	glGenBuffers(1, &uboGBVars);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboGBVars);
-	glBufferData(GL_UNIFORM_BUFFER, 172, NULL, GL_STATIC_DRAW); // allocate 172 bytes of memory
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(GBVars), NULL, GL_STATIC_DRAW); // allocate 172 bytes of memory
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 0, uboGBVars); //bind uniform buffer to binding point 0
-
+	//int lbsize = sizeof(LightVars);
 	glGenBuffers(1, &uboLBVars);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboLBVars);
-	glBufferData(GL_UNIFORM_BUFFER, 200, NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(LightVars), NULL, GL_STATIC_DRAW);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 1, uboLBVars); //bind uniform buffer to binding point 1
-
+	//int cbsize = sizeof(CamVars);
 	glGenBuffers(1, &uboCBVars);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboCBVars);
-	glBufferData(GL_UNIFORM_BUFFER, 28, NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(CamVars), NULL, GL_STATIC_DRAW);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 2, uboCBVars); //bind uniform buffer to binding point 2
-
+	//int pbsize = sizeof(PostHDRBloom);
 	glGenBuffers(1, &uboPBVars);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboPBVars);
-	glBufferData(GL_UNIFORM_BUFFER, 28, NULL, GL_STATIC_DRAW);
+	glBufferData(GL_UNIFORM_BUFFER, sizeof(PostHDRBloom), NULL, GL_STATIC_DRAW);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 	glBindBufferBase(GL_UNIFORM_BUFFER, 3, uboPBVars); //bind uniform buffer to binding point 3
 }
@@ -934,7 +1100,7 @@ void Render::UpdateEBOs()
 	cb.far = currentCamera->far;
 	cb.near = currentCamera->near;
 	cb.cameraPos = currentCamera->GetPosition2().toFloat();
-	glBufferSubData(GL_UNIFORM_BUFFER, 0, 28, &cb);
+	glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(CamVars), &cb);
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
@@ -987,7 +1153,7 @@ Render::BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*> startFrame
 
 	GLuint offset = glGetUniformLocation(shader, "offset");
 
-	Texture::Activate(5); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
+	Texture::Activate(8); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
 	
 	Plane::Instance()->vao.Bind();
 
@@ -1021,7 +1187,7 @@ Render::BlurTextureAtSameSize(Texture* sourceTexture, FrameBuffer* startFrameBuf
 
 	GLuint offset = glGetUniformLocation(shader, "offset");
 
-	Texture::Activate(5); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
+	Texture::Activate(8); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
 
 	Plane::Instance()->vao.Bind();
 	

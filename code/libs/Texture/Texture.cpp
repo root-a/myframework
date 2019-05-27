@@ -14,6 +14,7 @@ Texture::Texture(GLenum target, GLint level, GLint internalFormat, GLsizei width
 	this->pixels = pixels;
 	this->attachment = attachment;
 	this->hasBorder = false;
+	this->hasMipMaps = false;
 }
 
 Texture::~Texture()
@@ -69,6 +70,17 @@ void Texture::SetNearest()
 	AddTextureParameterI(GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 }
 
+void Texture::SetFiltering(GLint MIN_FILTER, GLint MAG_FILTER)
+{
+	AddTextureParameterI(GL_TEXTURE_MAG_FILTER, MAG_FILTER);
+	AddTextureParameterI(GL_TEXTURE_MIN_FILTER, MIN_FILTER);
+}
+
+void Texture::GenerateMipMaps()
+{
+	glGenerateMipmap(target);
+}
+
 void Texture::Update(int windowWidth, int windowHeight)
 {
 	width = windowWidth;
@@ -107,14 +119,11 @@ void Texture::Generate()
 	}
 	if (hasBorder)
 	{
-		if (target == GL_TEXTURE_CUBE_MAP)
-		{
-			glTexParameterfv(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_BORDER_COLOR, &borderColor.x);
-		}
-		else
-		{
-			glTexParameterfv(GL_TEXTURE_2D, GL_TEXTURE_BORDER_COLOR, &borderColor.x);
-		}
+		glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, &borderColor.x);
+	}
+	if (hasMipMaps)
+	{
+		glGenerateMipmap(target);
 	}
 }
 

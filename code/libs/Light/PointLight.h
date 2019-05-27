@@ -1,7 +1,7 @@
 #pragma once
 #include "MyMathLib.h"
 #include "Component.h"
-#include "Attenuation.h"
+#include "LightProperties.h"
 #include <vector>
 #include "BlurMode.h"
 
@@ -23,6 +23,7 @@ public:
 	float shadowFadeRange = 10.f;
 	BlurMode blurMode = BlurMode::None;
 	Attenuation attenuation;
+	LightProperties properties;
 	void UpdateScale();
 	FrameBuffer* GenerateShadowMapBuffer(int width, int height);
 	void DeleteShadowMapBuffer();

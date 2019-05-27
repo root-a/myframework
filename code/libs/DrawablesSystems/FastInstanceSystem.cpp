@@ -57,20 +57,11 @@ void FastInstanceSystem::SetUpGPUBuffers()
 	glGenBuffers(1, &materialColorBuffer);
 	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
 	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector3F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(8, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
+	glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
 	glEnableVertexAttribArray(8);
 	glVertexAttribDivisor(8, 1); // color : one per box
 	vao.vertexBuffers.push_back(materialColorBuffer);
-	
-	glGenBuffers(1, &materialPropertiesBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(9, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(9);
-	glVertexAttribDivisor(9, 1); // color : one per box
-	vao.vertexBuffers.push_back(materialPropertiesBuffer);
 	
 	//Unbind the VAO now that the VBOs have been set up
 	vao.Unbind();
@@ -138,10 +129,7 @@ void FastInstanceSystem::UpdateObjects()
 		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(unsigned int), sizeof(unsigned int), &object->ID);
 
 		glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector3F), sizeof(Vector3F), &object->mat->color);
-
-		glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &object->mat->properties);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &object->mat->colorShininess);
 	}
 	objectsToUpdate.clear();
 }
@@ -174,10 +162,7 @@ void FastInstanceSystem::ReturnObjects()
 		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(unsigned int), sizeof(unsigned int), &lastObject->ID);
 
 		glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector3F), sizeof(Vector3F), &lastObject->mat->color);
-
-		glBindBuffer(GL_ARRAY_BUFFER, materialPropertiesBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &lastObject->mat->properties);
+		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &lastObject->mat->colorShininess);
 	
 		gpuOrderedObjects[ActiveCount] = object;
 		gpuOrderedObjects[index] = lastObject;

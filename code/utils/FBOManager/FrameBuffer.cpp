@@ -10,6 +10,7 @@ FrameBuffer::FrameBuffer(GLenum target, int scaleX, int scaleY, bool dynamic)
 	scaleXFactor = scaleX;
 	scaleYFactor = scaleY;
 	dynamicSize = dynamic;
+	renderBufferHandle = -1;
 }
 
 FrameBuffer::~FrameBuffer()
@@ -32,6 +33,15 @@ void FrameBuffer::BindBuffer(GLenum target)
 	FBOManager::Instance()->BindFrameBuffer(target, handle);
 }
 
+void FrameBuffer::AddRenderBuffer(GLuint internalFormat, GLsizei width, GLsizei height)
+{
+	this->renderBufferInternalFormat = internalFormat;
+	glGenRenderbuffers(1, &renderBufferHandle);
+	glBindRenderbuffer(GL_RENDERBUFFER, renderBufferHandle);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, renderBufferInternalFormat, GL_RENDERBUFFER, renderBufferHandle);
+}
+
 Texture* FrameBuffer::RegisterTexture(Texture* texture)
 {
 	textures.push_back(texture);
@@ -50,6 +60,12 @@ void FrameBuffer::AttachTexture(Texture * texture)
 	else glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->target, texture->handle, texture->level);
 }
 
+void FrameBuffer::AttachTexture(Texture * texture, GLenum target, GLint level)
+{
+	if (target == GL_TEXTURE_CUBE_MAP) glFramebufferTexture(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->handle, level);
+	else glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, texture->attachment, target, texture->handle, level);
+}
+
 void FrameBuffer::UpdateTextures(int newBufferSizeX, int newBufferSizeY)
 {
 	int newXSize = newBufferSizeX * scaleXFactor;
@@ -61,6 +77,10 @@ void FrameBuffer::UpdateTextures(int newBufferSizeX, int newBufferSizeY)
 	for (auto& child : children)
 	{
 		child->UpdateTextures(newXSize, newYSize);
+	}
+	if (renderBufferHandle != (unsigned int)(-1))
+	{
+		glRenderbufferStorage(GL_RENDERBUFFER, renderBufferInternalFormat, newXSize, newYSize);
 	}
 }
 

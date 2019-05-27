@@ -2,7 +2,7 @@
 #include <vector>
 #include <unordered_map>
 #include "MyMathLib.h"
-#include "Attenuation.h"
+#include "LightProperties.h"
 
 namespace mwm
 {
@@ -44,7 +44,9 @@ class Render
 public:
 
 	static Render* Instance();
-
+	void captureToTexture2D(GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture* textureToDrawTo);
+	void captureTextureToCubeMapWithMips(GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo);
+	void captureTextureToCubeMap(GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo);
 	int drawGeometry(const std::vector<Object*>& objects, FrameBuffer * geometryBuffer, const GLenum * attachmentsToDraw = nullptr, const int countOfAttachments = 0);
 	int drawInstancedGeometry(const std::vector<InstanceSystem*>& iSystems, FrameBuffer * geometryBuffer);
 	int drawFastInstancedGeometry(const std::vector<FastInstanceSystem*>& iSystems, FrameBuffer * geometryBuffer);
@@ -61,6 +63,7 @@ public:
 	int drawPointLights(const std::vector<PointLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
 	int drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
 	void drawHDR(Texture* colorTexture, Texture* bloomTexture);
+	void drawHDRequirectangular(Texture* colorTexture);
 	void drawRegion(int posX, int posY, int width, int height, const Texture* texture);
 	void AddPingPongBuffer(int width, int height);
 	void AddMultiBlurBuffer(int width, int height, int levels = 4, double scaleX = 0.5, double scaleY = 0.5);
@@ -72,6 +75,9 @@ public:
 	FrameBuffer* dirShadowMapBuffer;
 	Texture* dirShadowMapTexture;
 	PostHDRBloom pb;
+	float angleX = 0.f;
+	float angleY = 0.f;
+	std::vector<mwm::Matrix4F> captureVPs; //used when drawing depth
 private:
 	void BlurOnOneAxis(Texture* sourceTexture, FrameBuffer* destinationFbo, float offsetxVal, float offsetyVal, GLuint offsetHandle);
 	Texture* BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*> startFrameBuffer, std::vector<FrameBuffer*> targetFrameBuffer, int outputLevel, float blurSize, GLuint shader, int windowWidth, int windowHeight);
@@ -83,12 +89,12 @@ private:
 	std::vector<FrameBuffer*> multiBlurBufferStart;
 	std::vector<FrameBuffer*> multiBlurBufferTarget;
 	
+	
 	struct GBVars
 	{
 		mwm::Matrix4F MVP;
 		mwm::Matrix4F M;
-		mwm::Vector4F MaterialProperties;
-		mwm::Vector4F MaterialColor;
+		mwm::Vector4F MaterialColorShininess;
 		mwm::Vector2F tiling;
 		unsigned int objectID;
 	};
@@ -97,6 +103,7 @@ private:
 
 	struct LightVars
 	{
+		mwm::Matrix4F depthBiasMVP;
 		mwm::Vector3F lightInvDir;
 		float shadowTransitionSize;
 		float outerCutOff;
@@ -105,7 +112,10 @@ private:
 		float lightPower;
 		mwm::Vector3F lightColor;
 		float ambient;
-		mwm::Matrix4F depthBiasMVP;
+		float diffuse;
+		float specular;
+		float alignmentOffset;
+		float alignmentOffset2;
 		mwm::Matrix4F MVP;
 		mwm::Vector3F lightPosition;
 		Attenuation attenuation;

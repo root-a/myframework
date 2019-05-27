@@ -1,7 +1,7 @@
 #pragma once
 #include "MyMathLib.h"
 #include "Component.h"
-#include "Attenuation.h"
+#include "LightProperties.h"
 #include <vector>
 #include "BlurMode.h"
 
@@ -43,6 +43,7 @@ public:
 	float radius = 30.f;
 	double near = 0.1;
 	Attenuation attenuation;
+	LightProperties properties;
 	FrameBuffer* shadowMapBuffer;
 	Texture* shadowMapTexture;
 	FrameBuffer* pingPongBuffers[2];

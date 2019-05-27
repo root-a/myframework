@@ -11,6 +11,7 @@ class PointLight;
 class InstanceSystem;
 class FastInstanceSystem;
 class Node;
+class Material;
 
 class Scene
 {
@@ -70,7 +71,7 @@ public:
 	Object* addDirectionalLightTo(Object* parent, bool castShadow = false, const mwm::Vector3F& color = mwm::Vector3F(1.f, 1.f, 1.f));
 	void addRandomlyPointLights(int num, int min = -20, int max = 20);
 	void addRandomlyPhysicObjects(const char* name, int num, int min = -20, int max = 20);
-	
+	Material* CreateDefaultMaterial();
 	mwm::Vector3 generateRandomIntervallVectorCubic(int min, int max);
 	mwm::Vector3 generateRandomIntervallVectorFlat(int min, int max, axis axis = x, int axisHeight = 0);
 	mwm::Vector3 generateRandomIntervallVectorSpherical(int min, int max);
@@ -85,6 +86,7 @@ private:
     Scene();
     ~Scene();
 	void Init();
+	
     //copy
     Scene(const Scene&);
     //assign
