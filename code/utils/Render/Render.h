@@ -59,6 +59,7 @@ public:
 	void drawSkyboxWithClipPlane(FrameBuffer * lightFrameBuffer, Texture* texture, const mwm::Vector4F& plane, const mwm::Matrix4& ViewMatrix);
 	void drawSkybox(FrameBuffer * lightFrameBuffer, Texture* texture);
 	void drawGSkybox(FrameBuffer * lightFrameBuffer, Texture* texture);
+	int drawAmbientLight(FrameBuffer* bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures, const std::vector<Texture*> &pbrEnvTextures);
 	int drawDirectionalLights(const std::vector<DirectionalLight*>& lights, const std::vector<Object*>& objects, FrameBuffer* bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
 	int drawPointLights(const std::vector<PointLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
 	int drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);

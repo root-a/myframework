@@ -532,6 +532,41 @@ void Render::drawGSkybox(FrameBuffer * lightFrameBuffer, Texture * texture)
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
+int Render::drawAmbientLight(FrameBuffer * bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures, const std::vector<Texture*>& pbrEnvTextures)
+{
+	glDepthMask(GL_FALSE);
+
+	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
+
+	GLuint ambientLightShader = GraphicsStorage::shaderIDs["ambientLightPBR"];
+
+	geometryTextures[0]->ActivateAndBind(0); 
+	geometryTextures[1]->ActivateAndBind(1);
+	geometryTextures[2]->ActivateAndBind(2);
+	geometryTextures[3]->ActivateAndBind(3);
+	pbrEnvTextures[0]->ActivateAndBind(4);
+	pbrEnvTextures[1]->ActivateAndBind(5);
+	pbrEnvTextures[2]->ActivateAndBind(6);
+
+	glUseProgram(ambientLightShader);
+	
+	FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, bufferToDrawTheLightTO->handle);
+
+	glDisable(GL_DEPTH_TEST);
+
+	glEnable(GL_BLEND);
+	glBlendEquation(GL_FUNC_ADD);
+	glBlendFunc(GL_ONE, GL_ONE);
+
+	Plane::Instance()->vao.Bind();
+
+	glDrawElements(GL_TRIANGLES, Plane::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0);
+
+	glDisable(GL_BLEND);
+
+	return 1;
+}
+
 int
 Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, const std::vector<Object*>& objects, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
 {
@@ -584,12 +619,12 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 				case OneSize:
 					if (pingPongBuffers[0] != nullptr)
 					blurredShadowMap = BlurTextureAtSameSize(dirShadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], light->activeBlurLevel, light->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
-					blurredShadowMap->ActivateAndBind(7);
+					blurredShadowMap->ActivateAndBind(4);
 					break;
 				case MultiSize:
 					if (multiBlurBufferStart[0] != nullptr)
 					blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, light->activeBlurLevel, light->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
-					blurredShadowMap->ActivateAndBind(7);
+					blurredShadowMap->ActivateAndBind(4);
 					break;
 				default:
 					break;
@@ -597,7 +632,7 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 			}
 			else
 			{
-				dirShadowMapTexture->ActivateAndBind(7);
+				dirShadowMapTexture->ActivateAndBind(4);
 			}
 			
 			lb.shadowTransitionSize = light->shadowFadeRange;
@@ -614,7 +649,7 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 			uniformBufferOffset = 64;
 			bufferMemoryStart = &lb.lightInvDir;
 		}
-		geometryTextures[0]->ActivateAndBind(0);
+
 		glUseProgram(lightShader);
 
 		FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, fboToDrawTheLightTO->handle);
@@ -697,7 +732,7 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 				glDepthMask(GL_FALSE);
 				glClearColor(0, 0, 0, 1);
 
-				light->shadowMapTexture->ActivateAndBind(7);
+				light->shadowMapTexture->ActivateAndBind(4);
 			}
 			else
 			{
@@ -838,11 +873,11 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 					default:
 						break;
 					}
-					blurredShadowMap->ActivateAndBind(7);
+					blurredShadowMap->ActivateAndBind(4);
 				}
 				else
 				{
-					light->shadowMapTexture->ActivateAndBind(7);
+					light->shadowMapTexture->ActivateAndBind(4);
 				}
 				lb.depthBiasMVP = light->BiasedLightMatrixVP;
 				uniformBufferOffset = 0;
@@ -1015,8 +1050,7 @@ Render::AddPingPongBuffer(int width, int height)
 {
 	for (int i = 0; i < 2; i++)
 	{
-		FrameBuffer* pingPongBuffer = FBOManager::Instance()->GenerateFBO();
-		pingPongBuffer->dynamicSize = false;
+		FrameBuffer* pingPongBuffer = FBOManager::Instance()->GenerateFBO(false);
 		Texture* blurTexture = pingPongBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
 		blurTexture->SetLinear();
 		blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
@@ -1044,8 +1078,7 @@ Render::AddMultiBlurBuffer(int width, int height, int levels, double scaleX, dou
 		FrameBuffer* parentBuffer = multiBlurBuffer;
 		for (int j = 1; j < levels; j++)
 		{
-			FrameBuffer* childBlurBuffer = FBOManager::Instance()->GenerateFBO();
-			childBlurBuffer->dynamicSize = false;
+			FrameBuffer* childBlurBuffer = FBOManager::Instance()->GenerateFBO(false);
 			Texture* blurTexture = childBlurBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
 			childBlurBuffer->scaleXFactor = scaleX;
 			childBlurBuffer->scaleYFactor = scaleY;
@@ -1121,8 +1154,7 @@ Render::MultiBlur(Texture* sourceTexture, int outputLevel, float blurSize, GLuin
 FrameBuffer*
 Render::AddDirectionalShadowMapBuffer(int width, int height)
 {
-	dirShadowMapBuffer = FBOManager::Instance()->GenerateFBO();
-	dirShadowMapBuffer->dynamicSize = false;
+	dirShadowMapBuffer = FBOManager::Instance()->GenerateFBO(false);
 	dirShadowMapTexture = dirShadowMapBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
 	dirShadowMapTexture->SetLinear();
 	dirShadowMapTexture->AddClampingToBorder(mwm::Vector4F(1.f, 1.f, 1.f, 1.f));
@@ -1153,7 +1185,7 @@ Render::BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*> startFrame
 
 	GLuint offset = glGetUniformLocation(shader, "offset");
 
-	Texture::Activate(8); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
+	Texture::Activate(5); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
 	
 	Plane::Instance()->vao.Bind();
 
@@ -1187,7 +1219,7 @@ Render::BlurTextureAtSameSize(Texture* sourceTexture, FrameBuffer* startFrameBuf
 
 	GLuint offset = glGetUniformLocation(shader, "offset");
 
-	Texture::Activate(8); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
+	Texture::Activate(5); //glActiveTexture(GL_TEXTURE5); //we activate texture bank 5, next time we call bind on texture it will get attached to the active texture bank
 
 	Plane::Instance()->vao.Bind();
 	

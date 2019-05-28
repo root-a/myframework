@@ -108,8 +108,7 @@ void SpotLight::GenerateBlurShadowMapBuffer(BlurMode mode, int blurLevels)
 		case OneSize:
 			for (int i = 0; i < 2; i++)
 			{
-				FrameBuffer* pingPongBuffer = FBOManager::Instance()->GenerateFBO();
-				pingPongBuffer->dynamicSize = false;
+				FrameBuffer* pingPongBuffer = FBOManager::Instance()->GenerateFBO(false);
 				Texture* blurTexture = pingPongBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
 				blurTexture->SetLinear();
 				blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
@@ -136,8 +135,7 @@ void SpotLight::GenerateBlurShadowMapBuffer(BlurMode mode, int blurLevels)
 				FrameBuffer* parentBuffer = multiBlurBuffer;
 				for (int j = 1; j < blurLevels; j++)
 				{
-					FrameBuffer* childBlurBuffer = FBOManager::Instance()->GenerateFBO();
-					childBlurBuffer->dynamicSize = false;
+					FrameBuffer* childBlurBuffer = FBOManager::Instance()->GenerateFBO(false);
 					Texture* blurTexture = childBlurBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
 					blurTexture->SetLinear();
 					blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));

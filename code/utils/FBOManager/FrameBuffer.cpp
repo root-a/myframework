@@ -3,13 +3,12 @@
 #include "FBOManager.h"
 #include <GL/glew.h>
 
-FrameBuffer::FrameBuffer(GLenum target, int scaleX, int scaleY, bool dynamic)
+FrameBuffer::FrameBuffer(GLenum target, int scaleX, int scaleY)
 {
 	glGenFramebuffers(1, &handle);
 	FBOManager::Instance()->BindFrameBuffer(target, handle);
 	scaleXFactor = scaleX;
 	scaleYFactor = scaleY;
-	dynamicSize = dynamic;
 	renderBufferHandle = -1;
 }
 

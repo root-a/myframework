@@ -24,10 +24,9 @@ FBOManager* FBOManager::Instance()
 
 void FBOManager::UpdateTextureBuffers(int windowWidth, int windowHeight)
 {
-	for (auto& buffer: buffers)
+	for (auto& buffer: dynamicBuffers)
 	{
-		if (buffer->dynamicSize)
-			buffer->UpdateTextures(windowWidth, windowHeight);
+		buffer->UpdateTextures(windowWidth, windowHeight);
 	}
 }
 
@@ -85,8 +84,7 @@ void FBOManager::BindFrameBuffer(GLuint readWriteMode, GLuint frameBuffer)
 
 FrameBuffer* FBOManager::Generate2DShadowMapBuffer(int width, int height)
 {
-	FrameBuffer* shadowMapBuffer = GenerateFBO();
-	shadowMapBuffer->dynamicSize = false;
+	FrameBuffer* shadowMapBuffer = GenerateFBO(false);
 	Texture* shadowMapTexture = shadowMapBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
 	shadowMapTexture->SetLinear();
 	shadowMapTexture->AddClampingToBorder(mwm::Vector4F(1.f, 1.f, 1.f, 1.f));
@@ -99,8 +97,7 @@ FrameBuffer* FBOManager::Generate2DShadowMapBuffer(int width, int height)
 
 FrameBuffer* FBOManager::Generate3DShadowMapBuffer(int width, int height)
 {
-	FrameBuffer* shadowMapBuffer = GenerateFBO();
-	shadowMapBuffer->dynamicSize = false;
+	FrameBuffer* shadowMapBuffer = GenerateFBO(false);
 	Texture* shadowDepthTexture = shadowMapBuffer->RegisterTexture(new Texture(GL_TEXTURE_CUBE_MAP, 0, GL_DEPTH_COMPONENT32, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, GL_DEPTH_ATTACHMENT));
 	shadowDepthTexture->AddClampingToEdge();	
 	shadowDepthTexture->SetNearest();	
@@ -109,51 +106,86 @@ FrameBuffer* FBOManager::Generate3DShadowMapBuffer(int width, int height)
 	glReadBuffer(GL_NONE);
 	shadowMapBuffer->CheckAndCleanup();
 	return shadowMapBuffer;
-
-	/*
-	Texture2D* tex = new Texture2D();
-	// Load the texture
-
-	GLuint cubeMapTextureID;
-	glGenTextures(1, &cubeMapTextureID);
-	//glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_CUBE_MAP, cubeMapTextureID);
-
-	for (int i = 0; i < 6; i++)
-	{
-		int x, y, numOfElements;
-		unsigned char* data = GraphicsManager::LoadImage(textures.at(i).c_str(), &x, &y, &numOfElements, 0);
-		glTexImage2D(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, 0, GL_RGB, x, y, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-	}
-
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_CUBE_MAP, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
-
-	glBindTexture(GL_TEXTURE_CUBE_MAP, 0);
-
-	tex->TextureID = cubeMapTextureID;
-	tex->TextureType = GL_TEXTURE_CUBE_MAP;
-	return tex;
-	*/
 }
 
 void FBOManager::DeleteFrameBuffer(FrameBuffer * buffer)
 {
-	std::vector<FrameBuffer*>::iterator iter = std::find(buffers.begin(), buffers.end(), buffer);
-	if (iter != FBOManager::Instance()->buffers.end())
+	for (int i = 0; i < dynamicBuffers.size(); ++i)
 	{
-		buffers.erase(iter);
-		delete buffer;
+		if (dynamicBuffers[i] == buffer)
+		{
+			dynamicBuffers[i] = dynamicBuffers[dynamicBuffers.size()-1];
+			dynamicBuffers.pop_back();
+			delete buffer;
+			return;
+		}
+	}
+	for (int i = 0; i < staticBuffers.size(); ++i)
+	{
+		if (staticBuffers[i] == buffer)
+		{
+			staticBuffers[i] = staticBuffers[staticBuffers.size() - 1];
+			staticBuffers.pop_back();
+			delete buffer;
+			return;
+		}
 	}
 }
 
-FrameBuffer* FBOManager::GenerateFBO()
+void FBOManager::MakeStatic(FrameBuffer * buffer)
 {
-	buffers.push_back(new FrameBuffer(GL_FRAMEBUFFER));
-	return buffers.back();
+	for (int i = 0; i < dynamicBuffers.size(); ++i)
+	{
+		if (dynamicBuffers[i] == buffer)
+		{
+			dynamicBuffers[i] = dynamicBuffers[dynamicBuffers.size() - 1];
+			dynamicBuffers.pop_back();
+			delete buffer;
+		}
+	}
+	for (int i = 0; i < staticBuffers.size(); ++i)
+	{
+		if (staticBuffers[i] == buffer)
+		{
+			return;
+		}
+	}
+	staticBuffers.push_back(buffer);
+	delete buffer;
 }
 
+void FBOManager::MakeDynamic(FrameBuffer * buffer)
+{
+	for (int i = 0; i < staticBuffers.size(); ++i)
+	{
+		if (staticBuffers[i] == buffer)
+		{
+			staticBuffers[i] = staticBuffers[staticBuffers.size() - 1];
+			staticBuffers.pop_back();
+			delete buffer;
+		}
+	}
+	for (int i = 0; i < dynamicBuffers.size(); ++i)
+	{
+		if (dynamicBuffers[i] == buffer)
+		{
+			return;
+		}
+	}
+	dynamicBuffers.push_back(buffer);
+	delete buffer;
+}
 
+FrameBuffer* FBOManager::GenerateFBO(bool dynamic)
+{
+	if (dynamic)
+	{
+		dynamicBuffers.push_back(new FrameBuffer(GL_FRAMEBUFFER));
+		return dynamicBuffers.back();
+	}
+	else
+	{
+		staticBuffers.push_back(new FrameBuffer(GL_FRAMEBUFFER));
+		return staticBuffers.back();
+	}
+}

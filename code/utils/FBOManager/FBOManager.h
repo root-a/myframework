@@ -15,8 +15,11 @@ public:
 	FrameBuffer* Generate2DShadowMapBuffer(int width, int height);
 	FrameBuffer* Generate3DShadowMapBuffer(int width, int height);
 	void DeleteFrameBuffer(FrameBuffer* buffer);
-	std::vector<FrameBuffer*> buffers;
-	FrameBuffer* GenerateFBO();
+	void MakeStatic(FrameBuffer* buffer);
+	void MakeDynamic(FrameBuffer* buffer);
+	std::vector<FrameBuffer*> dynamicBuffers;
+	std::vector<FrameBuffer*> staticBuffers;
+	FrameBuffer* GenerateFBO(bool dynamic = true);
 	GLuint readBuffer;
 	GLuint drawBuffer;
 private:

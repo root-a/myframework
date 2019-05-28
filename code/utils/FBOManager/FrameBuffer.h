@@ -10,7 +10,7 @@ class FrameBuffer
 	typedef int GLint;
 	typedef int GLsizei;
 public:
-	FrameBuffer(GLenum target, int scaleX = 1, int scaleY = 1, bool dynamic = true);
+	FrameBuffer(GLenum target, int scaleX = 1, int scaleY = 1);
 	~FrameBuffer();
 
 	GLuint handle;
@@ -33,7 +33,6 @@ public:
 	std::vector<FrameBuffer*> children;
 	double scaleXFactor;
 	double scaleYFactor;
-	bool dynamicSize;
 	void ActivateDrawBuffers();
 	void DeactivateDrawBuffers();
 private:
