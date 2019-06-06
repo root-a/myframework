@@ -11,6 +11,7 @@
 #include <sstream>
 #include <algorithm>
 #include "dirent.h"
+#include "Shader.h"
 #include <GL/glew.h>
 #include <iosfwd>
 #define STB_IMAGE_IMPLEMENTATION
@@ -359,6 +360,8 @@ bool GraphicsManager::LoadShaders(const char * path)
 		if (programID > 0) 
 		{
 			GraphicsStorage::shaderIDs[program.first] = programID;
+			Shader* shader = new Shader(programID, program.first, program.second);
+			GraphicsStorage::shaders[program.first] = shader;
 			LoadUniforms(programID);
 		}
 	}
@@ -379,6 +382,7 @@ bool GraphicsManager::ReloadShader(const char * name)
 	{
 		glDeleteProgram(GraphicsStorage::shaderIDs[name]);
 		GraphicsStorage::shaderIDs[name] = result;
+		GraphicsStorage::shaders[name]->shaderID = result;
 		return true;
 	}
 	return false;

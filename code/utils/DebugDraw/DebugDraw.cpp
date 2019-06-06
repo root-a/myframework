@@ -90,7 +90,7 @@ void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
 	shape->node->SetPosition(pos);
 	shape->node->SetScale(Vector3(0.5f, 0.5f, 0.5f));
 	shape->node->UpdateNode(Node());
-	Render::Instance()->drawSingle(shape, *View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
+	Render::Instance()->drawSingle(GraphicsStorage::shaderIDs["geometry"], shape, *View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
 }
 
 void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float width)

@@ -18,6 +18,7 @@ class Texture;
 class ParticleSystem;
 class InstanceSystem;
 class FastInstanceSystem;
+class RenderPass;
 
 class Render
 {
@@ -44,28 +45,28 @@ class Render
 public:
 
 	static Render* Instance();
-	void captureToTexture2D(GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture* textureToDrawTo);
-	void captureTextureToCubeMapWithMips(GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo);
-	void captureTextureToCubeMap(GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo);
-	int drawGeometry(const std::vector<Object*>& objects, FrameBuffer * geometryBuffer, const GLenum * attachmentsToDraw = nullptr, const int countOfAttachments = 0);
-	int drawInstancedGeometry(const std::vector<InstanceSystem*>& iSystems, FrameBuffer * geometryBuffer);
-	int drawFastInstancedGeometry(const std::vector<FastInstanceSystem*>& iSystems, FrameBuffer * geometryBuffer);
-	int draw(const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
-	int drawLight(FrameBuffer* lightFrameBuffer, FrameBuffer* geometryBuffer, const GLenum * attachmentsToDraw = nullptr, const int countOfAttachments = 0);
-	void drawSingle(const Object* object, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
-	int drawPicking(std::unordered_map<unsigned int, Object*>& pickingList, FrameBuffer* pickingBuffer, const GLenum * attachmentsToDraw = nullptr, const int countOfAttachments = 0);
-	int drawDepth(const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
-	int drawCubeDepth(const std::vector<Object*>& objects, const std::vector<mwm::Matrix4>& ViewProjection, const GLuint currentShaderID, const Object* light);
-	void drawSkyboxWithClipPlane(FrameBuffer * lightFrameBuffer, Texture* texture, const mwm::Vector4F& plane, const mwm::Matrix4& ViewMatrix);
-	void drawSkybox(FrameBuffer * lightFrameBuffer, Texture* texture);
-	void drawGSkybox(FrameBuffer * lightFrameBuffer, Texture* texture);
-	int drawAmbientLight(FrameBuffer* bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures, const std::vector<Texture*> &pbrEnvTextures);
-	int drawDirectionalLights(const std::vector<DirectionalLight*>& lights, const std::vector<Object*>& objects, FrameBuffer* bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
-	int drawPointLights(const std::vector<PointLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
-	int drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
-	void drawHDR(Texture* colorTexture, Texture* bloomTexture);
-	void drawHDRequirectangular(Texture* colorTexture);
-	void drawRegion(int posX, int posY, int width, int height, const Texture* texture);
+	void captureToTexture2D(const GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture* textureToDrawTo);
+	void captureTextureToCubeMapWithMips(const GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo);
+	void captureTextureToCubeMap(const GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo);
+	int drawGeometry(const GLuint shaderID, const std::vector<Object*>& objects, FrameBuffer * geometryBuffer, const GLenum * attachmentsToDraw = nullptr, const int countOfAttachments = 0);
+	int drawInstancedGeometry(const GLuint shaderID, const std::vector<InstanceSystem*>& iSystems, FrameBuffer * geometryBuffer);
+	int drawFastInstancedGeometry(const GLuint shaderID, const std::vector<FastInstanceSystem*>& iSystems, FrameBuffer * geometryBuffer);
+	int draw(const GLuint shaderID, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection);
+	int drawLight(const GLuint pointLightShader, const GLuint pointLightShadowShader, const GLuint spotLightShader, const GLuint spotLightShadowShader, const GLuint directionalLightShader, const GLuint directionalLightShadowShader, FrameBuffer* lightFrameBuffer, FrameBuffer* geometryBuffer, const GLenum * attachmentsToDraw = nullptr, const int countOfAttachments = 0);
+	void drawSingle(const GLuint shaderID, const Object* object, const mwm::Matrix4& ViewProjection, const GLuint currentShaderID);
+	int drawPicking(const GLuint shaderID, std::unordered_map<unsigned int, Object*>& pickingList, FrameBuffer* pickingBuffer, const GLenum * attachmentsToDraw = nullptr, const int countOfAttachments = 0);
+	int drawDepth(const GLuint shaderID, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection);
+	int drawCubeDepth(const GLuint shaderID, const std::vector<Object*>& objects, const std::vector<mwm::Matrix4>& ViewProjection, const Object* light);
+	void drawSkyboxWithClipPlane(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture* texture, const mwm::Vector4F& plane, const mwm::Matrix4& ViewMatrix);
+	void drawSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture* texture);
+	void drawGSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture* texture);
+	int drawAmbientLight(const GLuint shaderID, FrameBuffer* bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures, const std::vector<Texture*> &pbrEnvTextures);
+	int drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<DirectionalLight*>& lights, const std::vector<Object*>& objects, FrameBuffer* bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
+	int drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<PointLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
+	int drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures);
+	void drawHDR(const GLuint shaderID, Texture* colorTexture, Texture* bloomTexture);
+	void drawHDRequirectangular(const GLuint shaderID, Texture* colorTexture);
+	void drawRegion(const GLuint shaderID, int posX, int posY, int width, int height, const Texture* texture);
 	void AddPingPongBuffer(int width, int height);
 	void AddMultiBlurBuffer(int width, int height, int levels = 4, double scaleX = 0.5, double scaleY = 0.5);
 	void GenerateEBOs();

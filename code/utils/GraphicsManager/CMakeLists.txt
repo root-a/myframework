@@ -13,7 +13,7 @@ SET(files_graphics_manager
 SOURCE_GROUP("graphics_manager" FILES ${files_graphics_manager})
 
 ADD_LIBRARY(graphics_manager STATIC ${files_graphics_manager})
-TARGET_LINK_LIBRARIES(graphics_manager graphics_storage shader_manager gl_core stb dirent vao)
+TARGET_LINK_LIBRARIES(graphics_manager graphics_storage shader_manager gl_core stb dirent vao shader)
 SET_TARGET_PROPERTIES(graphics_manager PROPERTIES LINKER_LANGUAGE CXX)
 SET_TARGET_PROPERTIES(graphics_manager PROPERTIES FOLDER "MyUtils")
 TARGET_INCLUDE_DIRECTORIES(graphics_manager PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

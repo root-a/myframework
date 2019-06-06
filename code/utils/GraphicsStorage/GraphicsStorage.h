@@ -2,19 +2,12 @@
 #include <vector>
 #include <unordered_map>
 #include <string>
-
+#include "Shader.h"
 class Vao;
 class Texture2D;
 class Material;
 class OBJ;
 class Texture;
-
-struct ShaderPaths
-{
-	std::string vs;
-	std::string fs;
-	std::string gs;
-};
 
 class GraphicsStorage
 {
@@ -29,6 +22,7 @@ public:
 	static std::unordered_map<std::string,OBJ*> objs;
 	static std::unordered_map<std::string, GLuint> shaderIDs;
 	static std::unordered_map<std::string, ShaderPaths> shaderPaths;
+	static std::unordered_map<std::string, Shader*> shaders;
 	static void ClearMaterials();
 	static void ClearVaos();
 	static void ClearTextures();

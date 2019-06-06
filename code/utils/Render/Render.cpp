@@ -22,6 +22,7 @@
 #include "Vao.h"
 #include "Plane.h"
 #include "Box.h"
+#include "RenderPass.h"
 
 using namespace mwm;
 
@@ -57,15 +58,16 @@ Render::Instance()
 	return &instance;
 }
 
-void Render::captureToTexture2D(GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture* textureToDrawTo)
+void Render::captureToTexture2D(const GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture* textureToDrawTo)
 {
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO->handle);
 	captureFBO->AttachTexture(textureToDrawTo);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	
 	glViewport(0, 0, textureToDrawTo->width, textureToDrawTo->height);
-	ShaderManager::Instance()->SetCurrentShader(shaderID);
+	
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	Plane::Instance()->vao.Bind();
@@ -74,12 +76,12 @@ void Render::captureToTexture2D(GLuint shaderID, FrameBuffer * captureFBO, GLuin
 	glViewport(0, 0, CameraManager::Instance()->GetCurrentCamera()->windowWidth, CameraManager::Instance()->GetCurrentCamera()->windowHeight);
 }
 
-void Render::captureTextureToCubeMapWithMips(GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture * textureToCapture, Texture * textureToDrawTo)
+void Render::captureTextureToCubeMapWithMips(const GLuint shaderID, FrameBuffer * captureFBO, GLuint captureRBO, Texture * textureToCapture, Texture * textureToDrawTo)
 {
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO->handle);
 	unsigned int maxMipLevels = 5;
-
-	ShaderManager::Instance()->SetCurrentShader(shaderID);
+	
 	GLuint roughnessUniform = glGetUniformLocation(shaderID, "roughness");
 	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
 
@@ -107,11 +109,11 @@ void Render::captureTextureToCubeMapWithMips(GLuint shaderID, FrameBuffer * capt
 	glViewport(0, 0, CameraManager::Instance()->GetCurrentCamera()->windowWidth, CameraManager::Instance()->GetCurrentCamera()->windowHeight);
 }
 
-void Render::captureTextureToCubeMap(GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo)
+void Render::captureTextureToCubeMap(const GLuint shaderID, FrameBuffer* captureFBO, GLuint captureRBO, Texture* textureToCapture, Texture* textureToDrawTo)
 {
-	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO->handle);
-
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO->handle);
+	
 	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
 
 	Box::Instance()->mat->AssignTexture(textureToCapture);
@@ -136,7 +138,7 @@ void Render::captureTextureToCubeMap(GLuint shaderID, FrameBuffer* captureFBO, G
 }
 
 int 
-Render::drawGeometry(const std::vector<Object*>& objects, FrameBuffer * geometryBuffer, const GLenum * attachmentsToDraw, const int countOfAttachments)
+Render::drawGeometry(const GLuint shaderID, const std::vector<Object*>& objects, FrameBuffer * geometryBuffer, const GLenum * attachmentsToDraw, const int countOfAttachments)
 {
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, geometryBuffer->handle);
 	if (countOfAttachments > 0) glDrawBuffers(countOfAttachments, attachmentsToDraw);
@@ -144,8 +146,7 @@ Render::drawGeometry(const std::vector<Object*>& objects, FrameBuffer * geometry
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glEnable(GL_DEPTH_TEST);
 
-	GLuint geometryShader = GraphicsStorage::shaderIDs["geometry"];
-	ShaderManager::Instance()->SetCurrentShader(geometryShader);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	glBindBuffer(GL_UNIFORM_BUFFER, uboGBVars);
 
@@ -184,22 +185,21 @@ Render::drawGeometry(const std::vector<Object*>& objects, FrameBuffer * geometry
 	return objectsRendered;
 }
 
-int Render::drawInstancedGeometry(const std::vector<InstanceSystem*>& iSystems, FrameBuffer * geometryBuffer)
+int Render::drawInstancedGeometry(const GLuint shaderID, const std::vector<InstanceSystem*>& iSystems, FrameBuffer * geometryBuffer)
 {
 	int objectsRendered = 0;
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, geometryBuffer->handle);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 
-	GLuint instanceShader = GraphicsStorage::shaderIDs["geometryInstanced"];
-	ShaderManager::Instance()->SetCurrentShader(instanceShader);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	Matrix4F VP = CameraManager::Instance()->ViewProjection.toFloat();
-	GLuint VPH = glGetUniformLocation(instanceShader, "VP");
+	GLuint VPH = glGetUniformLocation(shaderID, "VP");
 	glUniformMatrix4fv(VPH, 1, GL_FALSE, &VP[0][0]);
 	Texture::Activate(0);
 
-	GLuint tiling = glGetUniformLocation(instanceShader, "tiling");
+	GLuint tiling = glGetUniformLocation(shaderID, "tiling");
 
 	for(auto& system : iSystems)
 	{
@@ -211,22 +211,21 @@ int Render::drawInstancedGeometry(const std::vector<InstanceSystem*>& iSystems, 
 	return objectsRendered;
 }
 
-int Render::drawFastInstancedGeometry(const std::vector<FastInstanceSystem*>& iSystems, FrameBuffer * geometryBuffer)
+int Render::drawFastInstancedGeometry(const GLuint shaderID, const std::vector<FastInstanceSystem*>& iSystems, FrameBuffer * geometryBuffer)
 {
 	int objectsRendered = 0;
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, geometryBuffer->handle);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 
-	GLuint instanceShader = GraphicsStorage::shaderIDs["geometryInstanced"];
-	ShaderManager::Instance()->SetCurrentShader(instanceShader);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	Matrix4F VP = CameraManager::Instance()->ViewProjection.toFloat();
-	GLuint VPH = glGetUniformLocation(instanceShader, "VP");
+	GLuint VPH = glGetUniformLocation(shaderID, "VP");
 	glUniformMatrix4fv(VPH, 1, GL_FALSE, &VP[0][0]);
 	Texture::Activate(0);
 
-	GLuint tiling = glGetUniformLocation(instanceShader, "tiling");
+	GLuint tiling = glGetUniformLocation(shaderID, "tiling");
 
 	for (auto& system : iSystems)
 	{
@@ -239,15 +238,15 @@ int Render::drawFastInstancedGeometry(const std::vector<FastInstanceSystem*>& iS
 }
 
 int 
-Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection, const GLuint currentShaderID)
+Render::draw(const GLuint shaderID, const std::vector<Object*>& objects, const Matrix4& ViewProjection)
 {
 	int objectsRendered = 0;
 
-	GLuint MatrixHandle = glGetUniformLocation(currentShaderID, "MVP");
-	GLuint ModelMatrixHandle = glGetUniformLocation(currentShaderID, "M");
-	GLuint MaterialColorShininessHandle = glGetUniformLocation(currentShaderID, "MaterialColorShininess");
-	GLuint PickingObjectIndexHandle = glGetUniformLocation(currentShaderID, "objectID");
-	GLuint tiling = glGetUniformLocation(currentShaderID, "tiling");
+	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVP");
+	GLuint ModelMatrixHandle = glGetUniformLocation(shaderID, "M");
+	GLuint MaterialColorShininessHandle = glGetUniformLocation(shaderID, "MaterialColorShininess");
+	GLuint PickingObjectIndexHandle = glGetUniformLocation(shaderID, "objectID");
+	GLuint tiling = glGetUniformLocation(shaderID, "tiling");
 
 	for (auto& object : objects)
 	{
@@ -284,7 +283,7 @@ Render::draw(const std::vector<Object*>& objects, const Matrix4& ViewProjection,
 }
 
 int
-Render::drawLight(FrameBuffer * lightFrameBuffer, FrameBuffer * geometryBuffer, const GLenum * attachmentsToDraw, const int countOfAttachments)
+Render::drawLight(const GLuint pointLightShader, const GLuint pointLightShadowShader, const GLuint spotLightShader, const GLuint spotLightShadowShader, const GLuint directionalLightShader, const GLuint directionalLightShadowShader, FrameBuffer * lightFrameBuffer, FrameBuffer * geometryBuffer, const GLenum * attachmentsToDraw, const int countOfAttachments)
 {
 	int lightsRendered = 0;
 	
@@ -292,15 +291,15 @@ Render::drawLight(FrameBuffer * lightFrameBuffer, FrameBuffer * geometryBuffer, 
 	if (countOfAttachments > 0) glDrawBuffers(countOfAttachments, attachmentsToDraw);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	lightsRendered += drawPointLights(Scene::Instance()->pointLightComponents, Scene::Instance()->renderList, CameraManager::Instance()->ViewProjection, lightFrameBuffer, geometryBuffer->textures);
-	lightsRendered += drawSpotLights(Scene::Instance()->spotLightComponents, Scene::Instance()->renderList, CameraManager::Instance()->ViewProjection, lightFrameBuffer, geometryBuffer->textures);
-	lightsRendered += drawDirectionalLights(Scene::Instance()->directionalLightComponents, Scene::Instance()->renderList, lightFrameBuffer, geometryBuffer->textures);
+	lightsRendered += drawPointLights(pointLightShader, pointLightShadowShader, Scene::Instance()->pointLightComponents, Scene::Instance()->renderList, CameraManager::Instance()->ViewProjection, lightFrameBuffer, geometryBuffer->textures);
+	lightsRendered += drawSpotLights(spotLightShader, spotLightShader, Scene::Instance()->spotLightComponents, Scene::Instance()->renderList, CameraManager::Instance()->ViewProjection, lightFrameBuffer, geometryBuffer->textures);
+	lightsRendered += drawDirectionalLights(directionalLightShader, directionalLightShadowShader, Scene::Instance()->directionalLightComponents, Scene::Instance()->renderList, lightFrameBuffer, geometryBuffer->textures);
 
 	return lightsRendered;
 }
 
 void
-Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjection, const GLuint currentShaderID)
+Render::drawSingle(const GLuint shaderID, const Object * object, const mwm::Matrix4 & ViewProjection, const GLuint currentShaderID)
 {
 	glBindBuffer(GL_UNIFORM_BUFFER, uboGBVars);
 	Matrix4F ModelMatrix = object->node->TopDownTransform.toFloat();
@@ -325,12 +324,11 @@ Render::drawSingle(const Object * object, const mwm::Matrix4 & ViewProjection, c
 }
 
 int
-Render::drawPicking(std::unordered_map<unsigned int, Object*>& pickingList, FrameBuffer* pickingBuffer, const GLenum * attachmentsToDraw, const int countOfAttachments)
+Render::drawPicking(const GLuint shaderID, std::unordered_map<unsigned int, Object*>& pickingList, FrameBuffer* pickingBuffer, const GLenum * attachmentsToDraw, const int countOfAttachments)
 {
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
-	GLuint currentShaderID = GraphicsStorage::shaderIDs["picking"];
-	ShaderManager::Instance()->SetCurrentShader(currentShaderID);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, pickingBuffer->handle);
 	if (countOfAttachments > 0) glDrawBuffers(countOfAttachments, attachmentsToDraw);
@@ -364,12 +362,13 @@ Render::drawPicking(std::unordered_map<unsigned int, Object*>& pickingList, Fram
 }
 
 int 
-Render::drawDepth(const std::vector<Object*>& objects, const Matrix4& ViewProjection, const GLuint currentShaderID)
+Render::drawDepth(const const GLuint shaderID, const std::vector<Object*>& objects, const Matrix4& ViewProjection)
 {
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	int objectsRendered = 0;
-	GLuint depthMatrixHandle = glGetUniformLocation(currentShaderID, "depthMVP");
+	GLuint depthMatrixHandle = glGetUniformLocation(shaderID, "depthMVP");
 	//might want to do frustum culling, must extract planes
 	for (auto object : objects)
 	{
@@ -386,23 +385,23 @@ Render::drawDepth(const std::vector<Object*>& objects, const Matrix4& ViewProjec
 }
 
 int
-Render::drawCubeDepth(const std::vector<Object*>& objects, const std::vector<mwm::Matrix4>& ViewProjection, const GLuint currentShaderID, const Object* light)
+Render::drawCubeDepth(const GLuint shaderID, const std::vector<Object*>& objects, const std::vector<mwm::Matrix4>& ViewProjection, const Object* light)
 {
 	for (unsigned int i = 0; i < 6; ++i)
 	{
-		GLuint VPMatrixHandle = glGetUniformLocation(currentShaderID, ("shadowMatrices[" + std::to_string(i) + "]").c_str());
+		GLuint VPMatrixHandle = glGetUniformLocation(shaderID, ("shadowMatrices[" + std::to_string(i) + "]").c_str());
 		Matrix4F VP = ViewProjection[i].toFloat();
 		glUniformMatrix4fv(VPMatrixHandle, 1, GL_FALSE, &VP[0][0]);
 	}
 
-	GLuint lightPosForDepth = glGetUniformLocation(currentShaderID, "lightPos");
+	GLuint lightPosForDepth = glGetUniformLocation(shaderID, "lightPos");
 	Vector3F lightPosDepth = light->node->GetWorldPosition().toFloat();
 	glUniform3fv(lightPosForDepth, 1, &lightPosDepth.x);
 
-	GLuint farPlaneForDepth = glGetUniformLocation(currentShaderID, "far_plane");
+	GLuint farPlaneForDepth = glGetUniformLocation(shaderID, "far_plane");
 	glUniform1f(farPlaneForDepth, (float)light->bounds->radius);
 
-	GLuint ModelHandle = glGetUniformLocation(currentShaderID, "model");
+	GLuint ModelHandle = glGetUniformLocation(shaderID, "model");
 	int objectsRendered = 0;
 
 	double radiusDistance = 0.0;
@@ -424,35 +423,33 @@ Render::drawCubeDepth(const std::vector<Object*>& objects, const std::vector<mwm
 	return objectsRendered;
 }
 
-void Render::drawSkyboxWithClipPlane(FrameBuffer * lightFrameBuffer, Texture* texture, const mwm::Vector4F& plane, const mwm::Matrix4& ViewMatrix)
+void Render::drawSkyboxWithClipPlane(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture* texture, const mwm::Vector4F& plane, const mwm::Matrix4& ViewMatrix)
 {
-	GLuint currentShader = GraphicsStorage::shaderIDs["skyboxWithClipPlane"];
-	ShaderManager::Instance()->SetCurrentShader(currentShader);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, lightFrameBuffer->handle);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	glDepthMask(GL_FALSE);
 	glEnable(GL_CLIP_PLANE0);
-	GLuint planeHandle = glGetUniformLocation(currentShader, "plane");
+	GLuint planeHandle = glGetUniformLocation(shaderID, "plane");
 	glUniform4fv(planeHandle, 1, &plane.x);
 	Matrix4 View = ViewMatrix;
 	View.zeroPosition();
 	Matrix4& ViewProjection = View * CameraManager::Instance()->GetCurrentCamera()->ProjectionMatrix;
 
 	Box::Instance()->mat->AssignTexture(texture);
-	Box::Instance()->Draw(ViewProjection, currentShader);
+	Box::Instance()->Draw(ViewProjection, shaderID);
 	glDisable(GL_CLIP_PLANE0);
 	glDepthMask(GL_TRUE);
 }
 
 void
-Render::drawSkybox(FrameBuffer * lightFrameBuffer, Texture* texture)
+Render::drawSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture* texture)
 {
 	//glDepthRange(0.999999, 1.0);
 	//glDisable(GL_CULL_FACE);
-	GLuint currentShader = GraphicsStorage::shaderIDs["skybox"];
-	ShaderManager::Instance()->SetCurrentShader(currentShader);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, lightFrameBuffer->handle);
 
@@ -475,7 +472,7 @@ Render::drawSkybox(FrameBuffer * lightFrameBuffer, Texture* texture)
 	ViewProjection = dirTotalRotation4.ConvertToMatrix() * ViewProjection;
 
 	Box::Instance()->mat->AssignTexture(texture);
-	Box::Instance()->Draw(ViewProjection, currentShader);
+	Box::Instance()->Draw(ViewProjection, shaderID);
 
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_FALSE);
@@ -484,13 +481,12 @@ Render::drawSkybox(FrameBuffer * lightFrameBuffer, Texture* texture)
 	//glDepthMask(GL_TRUE);
 }
 
-void Render::drawGSkybox(FrameBuffer * lightFrameBuffer, Texture * texture)
+void Render::drawGSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture * texture)
 {
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	glBindBuffer(GL_UNIFORM_BUFFER, uboLBVars);
 	//glDepthRange(0.999999, 1.0);
 	//glDisable(GL_CULL_FACE);
-	GLuint currentShader = GraphicsStorage::shaderIDs["gskybox"];
-	ShaderManager::Instance()->SetCurrentShader(currentShader);
 
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, lightFrameBuffer->handle);
 
@@ -514,7 +510,7 @@ void Render::drawGSkybox(FrameBuffer * lightFrameBuffer, Texture * texture)
 	glBufferSubData(GL_UNIFORM_BUFFER, 92, 16, &lb.lightPower);
 
 	Matrix4F MVP = ViewProjection.toFloat();
-	GLuint MatrixHandle = glGetUniformLocation(currentShader, "MVPSkybox");
+	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 
 	Box::Instance()->mat->ActivateAndBind();
@@ -522,7 +518,7 @@ void Render::drawGSkybox(FrameBuffer * lightFrameBuffer, Texture * texture)
 	Box::Instance()->vao.Bind();
 	//glDrawElements(GL_TRIANGLES, Box::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, 0);
 
-	Box::Instance()->Draw(ViewProjection, currentShader);
+	Box::Instance()->Draw(ViewProjection, shaderID);
 
 	glDepthFunc(GL_LESS);
 	glDepthMask(GL_FALSE);
@@ -532,13 +528,12 @@ void Render::drawGSkybox(FrameBuffer * lightFrameBuffer, Texture * texture)
 	glBindBuffer(GL_UNIFORM_BUFFER, 0);
 }
 
-int Render::drawAmbientLight(FrameBuffer * bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures, const std::vector<Texture*>& pbrEnvTextures)
+int Render::drawAmbientLight(const GLuint shaderID, FrameBuffer * bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures, const std::vector<Texture*>& pbrEnvTextures)
 {
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	glDepthMask(GL_FALSE);
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
-
-	GLuint ambientLightShader = GraphicsStorage::shaderIDs["ambientLightPBR"];
 
 	geometryTextures[0]->ActivateAndBind(0); 
 	geometryTextures[1]->ActivateAndBind(1);
@@ -548,7 +543,7 @@ int Render::drawAmbientLight(FrameBuffer * bufferToDrawTheLightTO, const std::ve
 	pbrEnvTextures[1]->ActivateAndBind(5);
 	pbrEnvTextures[2]->ActivateAndBind(6);
 
-	glUseProgram(ambientLightShader);
+	
 	
 	FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, bufferToDrawTheLightTO->handle);
 
@@ -568,7 +563,7 @@ int Render::drawAmbientLight(FrameBuffer * bufferToDrawTheLightTO, const std::ve
 }
 
 int
-Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, const std::vector<Object*>& objects, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
+Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<DirectionalLight*>& lights, const std::vector<Object*>& objects, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
 {
 	glBindBuffer(GL_UNIFORM_BUFFER, uboLBVars);
 	glDepthMask(GL_FALSE);
@@ -576,8 +571,8 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
 
-	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["directionalLightPBR"];
-	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["directionalLightShadowPBR"];
+	GLuint lightShaderNoShadows = shaderID;
+	GLuint lightShaderWithShadows = shadowShaderID;
 	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
 	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 
@@ -602,9 +597,9 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 			glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 			glEnable(GL_DEPTH_TEST);
 			glCullFace(GL_FRONT);
-			glUseProgram(depthShader);
+			ShaderManager::Instance()->SetCurrentShader(depthShader);
 			glViewport(0, 0, dirShadowMapTexture->width, dirShadowMapTexture->height);
-			drawDepth(objects, light->LightMatrixVP, depthShader);
+			drawDepth(depthShader, objects, light->LightMatrixVP);
 			glViewport(0, 0, currentCamera->windowWidth, currentCamera->windowHeight);
 			glCullFace(GL_BACK);
 			glDepthMask(GL_FALSE);
@@ -650,7 +645,7 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 			bufferMemoryStart = &lb.lightInvDir;
 		}
 
-		glUseProgram(lightShader);
+		ShaderManager::Instance()->SetCurrentShader(lightShader);
 
 		FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, fboToDrawTheLightTO->handle);
 
@@ -683,7 +678,7 @@ Render::drawDirectionalLights(const std::vector<DirectionalLight*>& lights, cons
 }
 
 int
-Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
+Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<PointLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
 {
 	glBindBuffer(GL_UNIFORM_BUFFER, uboLBVars);
 
@@ -692,8 +687,8 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
 	
-	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["pointLightPBR"];
-	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["pointLightShadowPBR"];
+	GLuint lightShaderNoShadows = shaderID;
+	GLuint lightShaderWithShadows = shadowShaderID;
 	GLuint depthShader = GraphicsStorage::shaderIDs["depthCube"];
 	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
@@ -723,10 +718,10 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 				glClear(GL_DEPTH_BUFFER_BIT);
 				glEnable(GL_DEPTH_TEST);
 				glCullFace(GL_FRONT);
-				glUseProgram(depthShader);
+				ShaderManager::Instance()->SetCurrentShader(depthShader);
 
 				glViewport(0, 0, light->shadowMapTexture->width, light->shadowMapTexture->height);
-				drawCubeDepth(objects, light->LightMatrixesVP, depthShader, light->object);
+				drawCubeDepth(depthShader, objects, light->LightMatrixesVP, light->object);
 				glViewport(0, 0, currentCamera->windowWidth, currentCamera->windowHeight);
 				glCullFace(GL_BACK);
 				glDepthMask(GL_FALSE);
@@ -741,7 +736,7 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 			
 			//-----------phase 1 stencil-----------
 			//enable stencil shader 
-			glUseProgram(stencilShader);
+			ShaderManager::Instance()->SetCurrentShader(stencilShader);
 
 			FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, fboToDrawTheLightTO->handle);
 
@@ -776,7 +771,7 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 
 			//-----------phase 2 light-----------
 			//enable light shader
-			glUseProgram(lightShader);
+			ShaderManager::Instance()->SetCurrentShader(lightShader);
 
 			glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
 
@@ -807,7 +802,7 @@ Render::drawPointLights(const std::vector<PointLight*>& lights, const std::vecto
 }
 
 int
-Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4 & ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
+Render::drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const mwm::Matrix4 & ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
 {
 	glBindBuffer(GL_UNIFORM_BUFFER, uboLBVars);
 	glDepthMask(GL_FALSE);
@@ -820,8 +815,8 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 	geometryTextures[2]->ActivateAndBind(2);
 	geometryTextures[3]->ActivateAndBind(3);
 
-	GLuint lightShaderNoShadows = GraphicsStorage::shaderIDs["spotLightPBR"];
-	GLuint lightShaderWithShadows = GraphicsStorage::shaderIDs["spotLightShadowPBR"];
+	GLuint lightShaderNoShadows = shaderID;
+	GLuint lightShaderWithShadows = shadowShaderID;
 	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
 	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
 	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
@@ -849,9 +844,9 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 				glEnable(GL_DEPTH_TEST);
 				glCullFace(GL_FRONT);
-				glUseProgram(depthShader);
+				ShaderManager::Instance()->SetCurrentShader(depthShader);
 				glViewport(0, 0, light->shadowMapTexture->width, light->shadowMapTexture->height);
-				drawDepth(objects, light->LightMatrixVP, depthShader);
+				drawDepth(depthShader, objects, light->LightMatrixVP);
 				glViewport(0, 0, currentCamera->windowWidth, currentCamera->windowHeight);
 				glCullFace(GL_BACK);
 				glDepthMask(GL_FALSE);
@@ -896,7 +891,7 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 
 			//-----------phase 1 stencil-----------
 			//enable stencil shader 
-			glUseProgram(stencilShader);
+			ShaderManager::Instance()->SetCurrentShader(stencilShader);
 
 			glEnable(GL_DEPTH_TEST);
 
@@ -934,7 +929,7 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 
 			//-----------phase 2 light-----------
 			
-			glUseProgram(lightShader);
+			ShaderManager::Instance()->SetCurrentShader(lightShader);
 
 			glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
 
@@ -965,12 +960,11 @@ Render::drawSpotLights(const std::vector<SpotLight*>& lights, const std::vector<
 }
 
 void
-Render::drawHDR(Texture* colorTexture, Texture* bloomTexture)
+Render::drawHDR(const GLuint shaderID, Texture* colorTexture, Texture* bloomTexture)
 {
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-	GLuint hdrBloom = GraphicsStorage::shaderIDs["hdrBloom"];
-	ShaderManager::Instance()->SetCurrentShader(hdrBloom);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	colorTexture->ActivateAndBind(0);
 	bloomTexture->ActivateAndBind(1);
@@ -983,12 +977,10 @@ Render::drawHDR(Texture* colorTexture, Texture* bloomTexture)
 	glDrawElements(GL_TRIANGLES, Plane::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0);
 }
 
-void Render::drawHDRequirectangular(Texture * colorTexture)
+void Render::drawHDRequirectangular(const GLuint shaderID, Texture * colorTexture)
 {
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, 0);
-
-	GLuint radiance = GraphicsStorage::shaderIDs["radianceHDRSkyboxUnwrwap"];
-	ShaderManager::Instance()->SetCurrentShader(radiance);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	
 	Box::Instance()->mat->AssignTexture(colorTexture);
 
@@ -1004,7 +996,7 @@ void Render::drawHDRequirectangular(Texture * colorTexture)
 	model.setIdentity();
 	model.setScale(Vector3(20, 20, 20));
 	Matrix4F MVP = (model * CameraManager::Instance()->ViewProjection).toFloat();
-	GLuint MatrixHandle = glGetUniformLocation(radiance, "MVPSkybox");
+	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 
 	//GLuint fastBBShader = GraphicsStorage::shaderIDs["fastBB"];
@@ -1029,8 +1021,10 @@ void Render::drawHDRequirectangular(Texture * colorTexture)
 	//glDepthMask(GL_FALSE);
 }
 
-void Render::drawRegion(int posX, int posY, int width, int height, const Texture * texture)
+void Render::drawRegion(const GLuint shaderID, int posX, int posY, int width, int height, const Texture * texture)
 {
+	//GLuint shaderID = GraphicsStorage::shaderIDs["depthPanel"];
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	glEnable(GL_SCISSOR_TEST);
 	glScissor(posX, posY, width, height);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1181,7 +1175,7 @@ Render::BlurOnOneAxis(Texture* sourceTexture, FrameBuffer* destinationFbo, float
 Texture*
 Render::BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*> startFrameBuffer, std::vector<FrameBuffer*> targetFrameBuffer, int outputLevel, float blurSize, GLuint shader, int windowWidth, int windowHeight)
 {
-	glUseProgram(shader);
+	ShaderManager::Instance()->SetCurrentShader(shader);
 
 	GLuint offset = glGetUniformLocation(shader, "offset");
 
@@ -1215,7 +1209,7 @@ Render::BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*> startFrame
 Texture*
 Render::BlurTextureAtSameSize(Texture* sourceTexture, FrameBuffer* startFrameBuffer, FrameBuffer* targetFrameBuffer, int outputLevel, float blurSize, GLuint shader, int windowWidth, int windowHeight)
 {
-	glUseProgram(shader);
+	ShaderManager::Instance()->SetCurrentShader(shader);
 
 	GLuint offset = glGetUniformLocation(shader, "offset");
 

@@ -1,5 +1,6 @@
 #include "Material.h"
 #include "Texture.h"
+#include "Vao.h"
 
 using namespace mwm;
 

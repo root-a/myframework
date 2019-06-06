@@ -60,12 +60,13 @@ void GraphicsStorage::ClearOBJs()
 
 void GraphicsStorage::ClearShaders()
 {
-	for (auto& shader : shaderIDs)
+	for (auto& shader : shaders)
 	{
-		glDeleteProgram(shader.second);
+		delete shader.second;
 	}
 	shaderIDs.clear();
 	shaderPaths.clear();
+	shaders.clear();
 }
 
 void GraphicsStorage::Clear()
@@ -85,3 +86,4 @@ std::unordered_map<std::string, OBJ*> GraphicsStorage::objs;
 std::vector<Texture*> GraphicsStorage::cubemaps;
 std::unordered_map<std::string, GLuint> GraphicsStorage::shaderIDs;
 std::unordered_map<std::string, ShaderPaths> GraphicsStorage::shaderPaths;
+std::unordered_map<std::string, Shader*> GraphicsStorage::shaders;
