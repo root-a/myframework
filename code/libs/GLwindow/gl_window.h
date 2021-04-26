@@ -9,6 +9,8 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "config.h"
+#include <string>
+
 namespace Display
 {
 class Window

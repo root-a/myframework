@@ -5,6 +5,7 @@
 #include "Texture.h"
 #include "FBOManager.h"
 #include "FrameBuffer.h"
+#include <cmath>
 
 using namespace mwm;
 

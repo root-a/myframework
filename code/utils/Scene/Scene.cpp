@@ -244,7 +244,8 @@ void Scene::addRandomlyPhysicObjects(const char* name, int num, int min, int max
 {
 	for (int i = 0; i < num; i++)
 	{
-		addPhysicObject(name, generateRandomIntervallVectorCubic(min, max));
+		auto object = addPhysicObject(name, generateRandomIntervallVectorCubic(min, max));
+		object->node->SetMovable(true);
 	}
 }
 
