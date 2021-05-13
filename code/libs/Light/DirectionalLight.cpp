@@ -2,7 +2,7 @@
 #include <algorithm>
 #include "Object.h"
 
-using namespace mwm;
+
 
 DirectionalLight::DirectionalLight()
 {
@@ -13,7 +13,10 @@ DirectionalLight::DirectionalLight()
 	LightInvDir = -1.0 * lightForward.toFloat();
 
 	ProjectionMatrix = Matrix4::orthographic(-radius, radius, radius, -radius, radius, -radius);
-	dynamic = true;
+
+	Matrix4 lightViewMatrix = Matrix4::lookAt(Vector3(0, 0, 0), Vector3(0, 0, 0) + lightForward, Vector3(0, 1, 0));
+	LightMatrixVP = lightViewMatrix * ProjectionMatrix;
+	BiasedLightMatrixVP = (LightMatrixVP*Matrix4::biasMatrix().toFloat());
 }
 
 DirectionalLight::~DirectionalLight()
@@ -22,6 +25,8 @@ DirectionalLight::~DirectionalLight()
 
 void DirectionalLight::Update()
 {
+	//we should calculate this if the light is dynamic
+	//otherwise set it only when changing parameters
 	Matrix3 rotationMatrix = object->node->GetWorldRotation3();
 	Vector3 lightForward = rotationMatrix.getForward();
 	LightInvDir = -1.0 * lightForward.toFloat();
@@ -31,7 +36,7 @@ void DirectionalLight::Update()
 		ProjectionMatrix = Matrix4::orthographic(-radius, radius, radius, -radius, radius, -radius);
 		Matrix4 lightViewMatrix = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + lightForward, Vector3(0, 1, 0));
 		LightMatrixVP = lightViewMatrix * ProjectionMatrix;
-		BiasedLightMatrixVP = (LightMatrixVP*Matrix4::biasMatrix()).toFloat();
+		BiasedLightMatrixVP = (LightMatrixVP*Matrix4::biasMatrix().toFloat());
 	}
 }
 

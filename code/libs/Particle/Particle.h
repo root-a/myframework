@@ -2,8 +2,8 @@
 #include "MyMathLib.h"
 struct ParticleData
 {
-	mwm::Vector4F posAndSize;
-	mwm::Vector4F color;
+	Vector4F posAndSize;
+	Vector4F color;
 };
 
 class Particle{
@@ -11,8 +11,8 @@ public:
 	Particle();
 	~Particle();
 	
-	mwm::Vector3 pos, speed;
-	mwm::Vector4F color;
+	Vector3 pos, speed;
+	Vector4F color;
 	float size, angle, weight;
 	double lifeTime;
 	double cameraDistance;

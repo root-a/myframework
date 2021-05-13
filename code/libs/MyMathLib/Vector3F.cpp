@@ -1,9 +1,9 @@
 #include <cmath>
 #include "Vector2F.h"
 #include "Vector3F.h"
+#include "Vector3.h"
+#include <cstring>
 
-namespace mwm
-{
 Vector3F::Vector3F(float x, float y, float z) : x(x), y(y), z(z) {}
 
 Vector3F::Vector3F(const Vector2F& vec, float zIn)
@@ -14,6 +14,15 @@ Vector3F::Vector3F(const Vector2F& vec, float zIn)
 }
 
 Vector3F::~Vector3F() {}
+
+
+Vector3F& Vector3F::operator=(const Vector3& right)
+{
+	x = (float)right.x;
+	y = (float)right.y;
+	z = (float)right.z;
+	return *this;
+}
 
 /*! \fn add vectors amd return new one*/
 Vector3F Vector3F::operator+ (const Vector3F& right) const
@@ -46,9 +55,9 @@ float Vector3F::squareMag() const
 /*! \fn function returning new normalized vector*/
 Vector3F Vector3F::vectNormalize() const
 {
-	double squareMag = x * x + y * y + z * z;
+	float squareMag = x * x + y * y + z * z;
 	if (squareMag == 0.0) return Vector3F();
-	double length = sqrt(squareMag);
+	float length = sqrt(squareMag);
 	return Vector3F(x / length, y / length, z / length);
 }
 /*! \fn cross product function returning normal vector*/
@@ -64,6 +73,11 @@ Vector3F Vector3F::crossProd(const Vector3F& right) const
 Vector4F Vector3F::vec3TOvec4(const Vector3F& vector, float w)
 {
 	return Vector4F(vector.x, vector.y, vector.z, w);
+}
+
+Vector3 Vector3F::toDouble() const
+{
+	return Vector3(x, y, z);
 }
 
 /*! \fn vector*num returns new matrix*/
@@ -129,13 +143,13 @@ void Vector3F::operator/=(const float& number)
 /*! \fn compares vectors for equality*/
 bool Vector3F::operator==(const Vector3F& v)const
 {
-	if (x != v.x || y != v.y || z != v.z) return false;	
-	else return true;
+	return !std::memcmp((void*)this, (void*)&v, sizeof(Vector3F));
+	//if (x != v.x || y != v.y || z != v.z) return false;	
+	//else return true;
 }
 
 /*! \fn operator[] overload for indexing */
 float& Vector3F::operator[] (int index)
 {
 	return vect[index];
-}
 }

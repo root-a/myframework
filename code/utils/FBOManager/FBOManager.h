@@ -17,6 +17,7 @@ public:
 	void DeleteFrameBuffer(FrameBuffer* buffer);
 	void MakeStatic(FrameBuffer* buffer);
 	void MakeDynamic(FrameBuffer* buffer);
+	bool IsDynamic(FrameBuffer* buffer);
 	std::vector<FrameBuffer*> dynamicBuffers;
 	std::vector<FrameBuffer*> staticBuffers;
 	FrameBuffer* GenerateFBO(bool dynamic = true);

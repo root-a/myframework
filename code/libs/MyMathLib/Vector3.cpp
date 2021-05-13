@@ -3,8 +3,8 @@
 #include "Vector3.h"
 #include "Vector4.h"
 #include "Vector3F.h"
-namespace mwm
-{
+#include <cstring>
+
 Vector3::Vector3(double x, double y, double z) : x(x), y(y), z(z) {}
 
 Vector3::Vector3(const Vector2& vec, double zIn)
@@ -15,6 +15,14 @@ Vector3::Vector3(const Vector2& vec, double zIn)
 }
 
 Vector3::~Vector3() {}
+
+Vector3& Vector3::operator=(const Vector3F& right)
+{
+	x = (float)right.x;
+	y = (float)right.y;
+	z = (float)right.z;
+	return *this;
+}
 
 /*! \fn add vectors amd return new one*/
 Vector3 Vector3::operator+ (const Vector3& right) const
@@ -142,8 +150,9 @@ void Vector3::operator/=(const double& number)
 /*! \fn compares vectors for equality*/
 bool Vector3::operator==(const Vector3& v)const
 {
-	if (x != v.x || y != v.y || z != v.z) return false;	
-	else return true;
+	return !std::memcmp((void*)this, (void*)&v, sizeof(Vector3));
+	//if (x != v.x || y != v.y || z != v.z) return false;	
+	//else return true;
 }
 
 /*! \fn operator[] overload for indexing */
@@ -155,5 +164,4 @@ double& Vector3::operator[] (int index)
 Vector3F Vector3::toFloat() const
 {
 	return Vector3F((float)x, (float)y, (float)z);
-}
 }

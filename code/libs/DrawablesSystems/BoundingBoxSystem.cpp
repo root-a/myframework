@@ -4,7 +4,7 @@
 #include <algorithm>
 #include <GL/glew.h>
 
-using namespace mwm;
+
 
 BoundingBoxSystem::BoundingBoxSystem(int maxCount){
 	MaxCount = maxCount;
@@ -15,6 +15,7 @@ BoundingBoxSystem::BoundingBoxSystem(int maxCount){
 	colors = new Vector3F[maxCount];
 	SetUpBuffers();
 	paused = false;
+	vao.SetPrimitiveMode(Vao::PrimitiveMode::LINES);
 }
 
 BoundingBoxSystem::~BoundingBoxSystem()
@@ -78,81 +79,34 @@ void BoundingBoxSystem::UpdateContainer()
 
 			bb.UpdateDrawState();
 		}
-		
 	}
 }
 
 void BoundingBoxSystem::SetUpBuffers()
 {
-	
-	vao.Bind();
-
 	vao.vertexBuffers.reserve(4);
-
-	GLuint vertexBuffer;
-	glGenBuffers(1, &vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(Vector3F), vertices, GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-	glVertexAttribDivisor(0, 0); // position vertices : always reuse the same vertices -> 0
-	vao.vertexBuffers.push_back(vertexBuffer);
-	
-	vao.indicesCount = 24;
-	GLuint elementBuffer;
-	glGenBuffers(1, &elementBuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementBuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vao.indicesCount * sizeof(GLushort), elements, GL_STATIC_DRAW);
-	vao.vertexBuffers.push_back(elementBuffer);
-
-	glGenBuffers(1, &colorBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector3F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(1);
-	glVertexAttribDivisor(1, 1); // colors : one per box
-	vao.vertexBuffers.push_back(colorBuffer);
-
-	glGenBuffers(1, &modelBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Matrix4F), NULL, GL_STREAM_DRAW);
-	for (unsigned int i = 0; i < 4; i++) {
-		glVertexAttribPointer(2 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Matrix4F), (const GLvoid*)(sizeof(GLfloat) * i * 4));
-		glEnableVertexAttribArray(2 + i);
-		glVertexAttribDivisor(2 + i, 1); // model matrices : one per box
-	}
-	vao.vertexBuffers.push_back(modelBuffer);
-
-	//Unbind the VAO now that the VBOs have been set up
-	vao.Unbind();
+	vao.AddVertexBuffer(vertices, 8 * sizeof(Vector3F), { {ShaderDataType::Float3, "Position"} });
+	vao.AddIndexBuffer(elements, 24, IndicesType::UNSIGNED_SHORT);
+	colorBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector3F), { {ShaderDataType::Float3, "Color", 1} });
+	modelBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Matrix4F), { {ShaderDataType::Mat4, "M", 1} });
 }
 
 void BoundingBoxSystem::UpdateBuffers()
 {
-	glBindVertexArray(vao.vaoHandle);
-
-	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3F), colors);
-
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Matrix4F), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Matrix4F), models);
+	glNamedBufferSubData(modelBuffer, 0, ActiveCount * sizeof(Matrix4F), models);
+	glNamedBufferSubData(colorBuffer, 0, ActiveCount * sizeof(Vector3F), colors);
 }
 
-int BoundingBoxSystem::Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID)
+int BoundingBoxSystem::Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID)
 {
 	UpdateContainer();
 	UpdateBuffers();
 
 	vao.Bind();
 
-	ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
-	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
-
 	glLineWidth(1.f);
-	glDrawElementsInstanced(GL_LINES, vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0, ActiveCount);
+	vao.activeCount = ActiveCount;
+	vao.Draw();
 
 	return ActiveCount;
 }

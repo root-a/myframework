@@ -9,14 +9,13 @@ class Point
 	
 public:
 	static Point* Instance();
-	void Draw(const mwm::Matrix4& Model, const mwm::Matrix4& View, const mwm::Matrix4& Projection, const unsigned int shader, float size = 10.0f);
-	Material* mat;
+	void Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Projection, const unsigned int shader, float size = 10.0f);
 	Vao vao;
+	Vector3F color;
 private:
 	Point();
 	~Point();
 	void SetUpBuffers();
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
-	Material* localMat;
 };

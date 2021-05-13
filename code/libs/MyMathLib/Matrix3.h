@@ -1,8 +1,9 @@
 #pragma once
-namespace mwm
-{
+
 class Vector3;
 class Matrix3F;
+class Matrix4F;
+class Matrix4;
 struct loc;
 class Quaternion;
 
@@ -13,14 +14,15 @@ class Matrix3
 public:
 	double _matrix[3][3];
 
-	Matrix3(const Matrix3&);
 	Matrix3(); //!< in constructor matrix values are set to 0 with memset
 	Matrix3(int identity); //!< in constructor matrix values are set to 0 with memset
 	~Matrix3();
 
 	Matrix3 operator~ (); //!< transpose matrix returns new matrix
 	Matrix3 operator+ (const Matrix3& rightMatrix);
-	Matrix3& operator= (const Matrix3& rightMatrix); //!< copy matrix returns new matrix
+	Matrix3& operator= (const Matrix3F& rightMatrix); //!< assign matrix returns this matrix
+	Matrix3& operator= (const Matrix4& rightMatrix); //!< assign matrix returns this matrix
+	Matrix3& operator= (const Matrix4F& rightMatrix); //!< assign matrix returns this matrix
 	bool operator== (const Matrix3& rightMatrix); //!< check if matrices are identical
 	Matrix3 operator* (const Matrix3& rightMatrix); //!< matrix*matrix returns new matrix
 	double operator() (int row, int col);//!< operator() overload for indexing
@@ -75,4 +77,3 @@ public:
 	//static Matrix3 identityMatrix();
 
 };
-}

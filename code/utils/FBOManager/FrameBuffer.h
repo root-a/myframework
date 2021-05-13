@@ -1,7 +1,9 @@
 #pragma once
 #include <vector>
+#include <string>
 
 class Texture;
+class RenderBuffer;
 
 class FrameBuffer
 {
@@ -14,27 +16,27 @@ public:
 	~FrameBuffer();
 
 	GLuint handle;
-	GLuint renderBufferHandle;
-	GLuint renderBufferInternalFormat;
-	void GenerateAndAddTextures();
+	std::vector<RenderBuffer*> renderBuffers;
+	void SpecifyTextures();
 	void BindBuffer(GLenum target);
-	void AddRenderBuffer(GLuint internalFormat, GLsizei width, GLsizei height);
 	std::vector<Texture*> textures;
 	std::vector<GLenum> attachments;
-	Texture* RegisterTexture(Texture* texture);
-	void AttachTexture(Texture* texture);
-	void AttachTexture(Texture* texture, GLenum target, GLint level = 0);
+	RenderBuffer* RegisterRenderBuffer(RenderBuffer* buffer);
+	void RegisterTexture(Texture* texture);
+	void SpecifyTexture(Texture* texture);
+	void SpecifyRenderBuffer(RenderBuffer* texture);
+	void SpecifyTextureAndMip(Texture* texture, GLenum target, GLint level = 0);
 	void RegisterChildBuffer(FrameBuffer* child);
 	void UpdateTextures(int newBufferSizeX, int newBufferSizeY);
-	void AddDefaultTextureParameters();
 	void CheckAndCleanup();
 	void ReadPixelData(GLuint x, GLuint y, GLuint width, GLuint height, GLenum sendDataType, void * data, Texture* texture);
 	void DeleteAllTextures();
 	std::vector<FrameBuffer*> children;
 	double scaleXFactor;
 	double scaleYFactor;
-	void ActivateDrawBuffers();
 	void DeactivateDrawBuffers();
+	void ActivateDrawBuffers();
+	std::string name;
 private:
 	FrameBuffer() {};
 };

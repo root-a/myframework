@@ -3,7 +3,7 @@
 #include <map>
 #include "Vertex.h"
 
-using namespace mwm;
+
 
 Face::Face()
 {

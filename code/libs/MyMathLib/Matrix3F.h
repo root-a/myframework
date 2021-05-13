@@ -1,23 +1,27 @@
 #pragma once
-namespace mwm
-{
+
 class Vector3F;
 struct loc;
 class QuaternionF;
+class Matrix3;
+class Matrix4;
+class Matrix4F;
 
 class Matrix3F
 {
 public:
 	float _matrix[3][3];
 
-	Matrix3F(const Matrix3F&);
 	Matrix3F();
 	Matrix3F(int identity);
 	~Matrix3F();
 
 	Matrix3F operator~ (); //!< transpose matrix returns new matrix
 	Matrix3F operator+ (const Matrix3F& rightMatrix);
-	Matrix3F& operator= (const Matrix3F& rightMatrix); //!< copy matrix returns new matrix
+	Matrix3F& operator= (const Matrix3& rightMatrix); //!< assign matrix returns this matrix
+	Matrix3F& operator= (const Matrix4F& rightMatrix); //!< assign matrix returns this matrix
+	Matrix3F& operator= (const Matrix4& rightMatrix); //!< assign matrix returns this matrix
+	Matrix3 toDouble() const;
 	bool operator== (const Matrix3F& rightMatrix); //!< check if matrices are identical
 	Matrix3F operator* (const Matrix3F& rightMatrix); //!< matrix*matrix returns new matrix
 	float operator() (int row, int col);//!< operator() overload for indexing
@@ -63,4 +67,3 @@ public:
 private:
 
 };
-}

@@ -12,8 +12,8 @@ class FastLine
 public:
 	FastLine()
 	{ 
-		colorA = mwm::Vector4F(0.f, 3.f, 3.f, 0.1f);
-		colorB = mwm::Vector4F(3.f, 3.f, 0.f, 0.1f);
+		colorA = Vector4F(0.f, 3.f, 3.f, 0.1f);
+		colorB = Vector4F(3.f, 3.f, 0.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 		nodeA = &localNodeA;
@@ -24,13 +24,13 @@ public:
 	void AttachEndB(Node* node);
 	void DetachEndA();
 	void DetachEndB();
-	mwm::Vector3 GetPositionA();
-	mwm::Vector3 GetPositionB();
-	void SetPositionA(mwm::Vector3& pos);
-	void SetPositionB(mwm::Vector3& pos);
+	Vector3 GetPositionA();
+	Vector3 GetPositionB();
+	void SetPositionA(Vector3& pos);
+	void SetPositionB(Vector3& pos);
 
-	mwm::Vector4F colorA;
-	mwm::Vector4F colorB;
+	Vector4F colorA;
+	Vector4F colorB;
 	LineNode localNodeA;
 	LineNode localNodeB;
 	Node* nodeA;
@@ -48,7 +48,6 @@ protected:
 private:
 	bool draw;
 	bool drawAlways;
-	
 };
 
 
@@ -62,13 +61,13 @@ public:
 	int FindUnused();
 	void SetUpBuffers();
 	void UpdateBuffers();
-	void Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID, float width = 4.f);
+	void Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID);
 	FastLine* GetLine();
 	FastLine* GetLineOnce();
 	void UpdateContainer();
 	void Update();
 
-	static const mwm::Vector3F vertices[2];
+	static const Vector3F vertices[2];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
@@ -76,8 +75,8 @@ public:
 	int LastUsed;
 	int ActiveCount;
 	int MaxCount;
-	mwm::Vector3F* positions;
-	mwm::Vector4F* colors;
+	Vector3F* positions;
+	Vector4F* colors;
 	FastLine* linesContainer;
 	
 	Vao vao;

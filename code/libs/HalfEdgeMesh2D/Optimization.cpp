@@ -4,7 +4,7 @@
 #include "Vertex.h"
 
 using namespace cop4530;
-using namespace mwm;
+
 
 Face* Optimization::findNode(const Vector2& point, Vector<Face*>& faces)
 {

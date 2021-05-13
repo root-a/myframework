@@ -17,20 +17,21 @@ public:
 	Particle* ParticlesContainer;
 	int FindUnusedParticle();
 	void GenerateNewParticles(double deltaTime);
-	void UpdateParticles(double deltaTime, const mwm::Vector3& camPos);
+	void UpdateParticles(double deltaTime, const Vector3& camPos);
 	void SortParticles();
 	void UpdateBuffers();
-	int Draw(mwm::Matrix4F& ViewProjection, GLuint currentShaderID, const mwm::Vector3F& cameraUp, const mwm::Vector3F& cameraRight);
+	int Draw();
 	void SetTexture(GLuint textureID);
 	void SetEmissionRate(int emissionRate);
-	void SetColor(const mwm::Vector4F& color);
+	void SetColor(const Vector4F& color);
 	void SetSize(float size);
 	void SetLifeTime(double lifetime);
-	void SetDirection(const mwm::Vector3F& direction);
+	void SetDirection(const Vector3F& direction);
 	void SetSpread(float spread);
-	void SetForce(mwm::Vector3& force);
+	void SetForce(Vector3& force);
+	void SetAdditive(bool isAdditiveMode);
 	void Update();
-	static const mwm::Vector3F g_vertex_buffer_data[4];
+	static const Vector3F g_vertex_buffer_data[4];
 	static const unsigned short elements[6];
 	ParticleData* g_particule_data;
 
@@ -50,14 +51,14 @@ private:
 	int LastUsedParticle;
 	int MaxParticles;
 	int EmissionRate;
-	mwm::Vector4F Color;
+	Vector4F Color;
 	void SetUp();
 	int aliveParticles;
 	int newparticles;
 	float Size;
 	double LifeTime;
-	mwm::Vector3F Direction;
+	Vector3F Direction;
 	float Spread;
-	mwm::Vector3 Force;
+	Vector3 Force;
 };
 

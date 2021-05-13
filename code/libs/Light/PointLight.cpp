@@ -6,12 +6,11 @@
 #include "FBOManager.h"
 #include "FrameBuffer.h"
 
-using namespace mwm;
+
 
 PointLight::PointLight()
 {
 	shadowMapBuffer = nullptr;
-	dynamic = true;
 }
 
 PointLight::~PointLight()
@@ -36,7 +35,7 @@ void PointLight::UpdateScale()
 {
 	//bizzare size results
 	//we could calculate the radius from the light attenuation but it's more convinient to set scale ourselves and in shader always fade out to the radius
-	float MaxChannel = fmax(fmax(object->mat->color.x, object->mat->color.y), object->mat->color.z);
+	float MaxChannel = 0.5f;// fmax(fmax(object->mat->color.x, object->mat->color.y), object->mat->color.z);
 	
 	float ret = (-attenuation.Linear + sqrtf(attenuation.Linear * attenuation.Linear - 4 * attenuation.Exponential * (attenuation.Constant - (256.0 / 5) * MaxChannel))) / (2 * attenuation.Exponential);
 

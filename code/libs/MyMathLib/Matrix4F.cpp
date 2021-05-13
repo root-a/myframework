@@ -1,19 +1,14 @@
 #include <cmath>
 #include <memory.h>
 #include "Matrix3.h"
+#include "Matrix4.h"
 #include "Matrix4F.h"
 #include "Matrix3F.h"
 #include "Vector3F.h"
 #include "Vector4F.h"
 #include "mLoc.h"
 #include "QuaternionF.h"
-
-namespace mwm
-{
-Matrix4F::Matrix4F(const Matrix4F& matrix)
-{
-	*this = matrix;
-}
+#include <cstring>
 
 Matrix4F::Matrix4F()
 {
@@ -73,7 +68,7 @@ Matrix4F operator*(const float& left, const Matrix4F& right)
 }
 
 /*! \fn matrix*num returns new matrix*/
-Matrix4F Matrix4F::operator* (const float& right)
+Matrix4F Matrix4F::operator* (const float& right) const
 {
 	Matrix4F temp;
 	for (int i = 0; i < 4; i++)
@@ -89,7 +84,7 @@ Matrix4F Matrix4F::operator* (const float& right)
 }
 
 /*! \fn matrix*matrix returns new matrix*/
-Matrix4F Matrix4F::operator* (const Matrix4F& right) // matrix multi
+Matrix4F Matrix4F::operator* (const Matrix4F& right) const// matrix multi
 {
 	Matrix4F temp;
 
@@ -109,7 +104,7 @@ Matrix4F Matrix4F::operator* (const Matrix4F& right) // matrix multi
 }
 
 /*! \fn matrix*vector returns new vector*/
-Vector4F Matrix4F::operator* (const Vector4F& right) // matrix multi
+Vector4F Matrix4F::operator* (const Vector4F& right) const// matrix multi
 {
 	float vx = right.x;
 	float vy = right.y;
@@ -123,24 +118,38 @@ Vector4F Matrix4F::operator* (const Vector4F& right) // matrix multi
 	return Vector4F(_x, _y, _z, _w);
 }
 
-/*! \fn copy matrix returns new matrix*/
-Matrix4F& Matrix4F::operator= (const Matrix4F& right)
+/*! \fn matrix*vector returns new vector*/
+Vector3F Matrix4F::operator* (const Vector3F& right) const// matrix multi
+{
+	//row major
+	float vx = right.x;
+	float vy = right.y;
+	float vz = right.z;
+
+	float _x = _matrix[0][0] * vx + _matrix[1][0] * vy + _matrix[2][0] * vz;
+	float _y = _matrix[0][1] * vx + _matrix[1][1] * vy + _matrix[2][1] * vz;
+	float _z = _matrix[0][2] * vx + _matrix[1][2] * vy + _matrix[2][2] * vz;
+	return Vector3F(_x, _y, _z);
+}
+
+Matrix4F& Matrix4F::operator=(const Matrix4 & right)
 {
 	for (int r = 0; r < 4; r++)
 	{
 		for (int c = 0; c < 4; c++)
 		{
-			_matrix[r][c] = right._matrix[r][c];
+			_matrix[r][c] = (float)right._matrix[r][c];
 
 		}
 	}
 	return *this;
-
 }
 
 /*! \fn check if matrices are identical*/
-bool Matrix4F::operator== (const Matrix4F& right)
+bool Matrix4F::operator== (const Matrix4F& right) const
 {
+	return !std::memcmp((void*)this, (void*)&right, sizeof(Matrix4F));
+	/*
 	for (int r = 0; r < 4; r++)
 	{
 		for (int c = 0; c < 4; c++)
@@ -152,6 +161,7 @@ bool Matrix4F::operator== (const Matrix4F& right)
 		}
 	}
 	return true;
+	*/
 }
 
 /*! \fn function returning rotation matrix with specified rotation angle along X axis*/
@@ -269,9 +279,9 @@ Matrix4F Matrix4F::translate(float x, float y, float z)
 	translation._matrix[1][1] = 1.f;
 	translation._matrix[2][2] = 1.f;
 	translation._matrix[3][3] = 1.f;
-	translation._matrix[0][3] = x;
-	translation._matrix[1][3] = y;
-	translation._matrix[2][3] = z;
+	translation._matrix[3][0] = x;
+	translation._matrix[3][1] = y;
+	translation._matrix[3][2] = z;
 	return translation;
 }
 
@@ -679,6 +689,52 @@ void Matrix4F::setForward(const Vector3F& axis)
 	_matrix[2][2] = axis.z;
 }
 
+void Matrix4F::setScale(const Vector3F & scale)
+{
+	_matrix[0][0] = scale.x;
+	_matrix[1][1] = scale.y;
+	_matrix[2][2] = scale.z;
+}
+
+void Matrix4F::setPosition(const Vector3F & position)
+{
+	_matrix[3][0] = position.x;
+	_matrix[3][1] = position.y;
+	_matrix[3][2] = position.z;
+}
+
+void Matrix4F::translate(const Vector3F & position)
+{
+	_matrix[3][0] += position.x;
+	_matrix[3][1] += position.y;
+	_matrix[3][2] += position.z;
+}
+
+void Matrix4F::operator*=(const Matrix4F & right)
+{
+	Matrix4F temp;
+	for (int r = 0; r < 4; r++)
+	{
+		for (int c = 0; c < 4; c++)
+		{
+			for (int k = 0; k < 4; k++)
+			{
+				temp._matrix[r][c] = temp._matrix[r][c] + _matrix[r][k] * right._matrix[k][c];
+			}
+		}
+	}
+	*this = temp;
+}
+
+void Matrix4F::setIdentity()
+{
+	memset(_matrix, 0, sizeof _matrix);
+	_matrix[0][0] = 1.f;
+	_matrix[1][1] = 1.f;
+	_matrix[2][2] = 1.f;
+	_matrix[3][3] = 1.f;
+}
+
 void Matrix4F::clear()
 {
 	memset(_matrix, 0, sizeof _matrix);
@@ -766,5 +822,14 @@ QuaternionF Matrix4F::toQuaternion() const
 	}
 	return temp;
 }
-}
 
+/*! \fn converts float matrix to double */
+Matrix4 Matrix4F::toDouble() const
+{
+	Matrix4 temp;
+	temp._matrix[0][0] = _matrix[0][0]; 	temp._matrix[0][1] = _matrix[0][1]; 	temp._matrix[0][2] = _matrix[0][2]; 	temp._matrix[0][3] = _matrix[0][3];
+	temp._matrix[1][0] = _matrix[1][0]; 	temp._matrix[1][1] = _matrix[1][1]; 	temp._matrix[1][2] = _matrix[1][2]; 	temp._matrix[1][3] = _matrix[1][3];
+	temp._matrix[2][0] = _matrix[2][0]; 	temp._matrix[2][1] = _matrix[2][1]; 	temp._matrix[2][2] = _matrix[2][2]; 	temp._matrix[2][3] = _matrix[2][3];
+	temp._matrix[3][0] = _matrix[3][0]; 	temp._matrix[3][1] = _matrix[3][1]; 	temp._matrix[3][2] = _matrix[3][2]; 	temp._matrix[3][3] = _matrix[3][3];
+	return temp;
+}

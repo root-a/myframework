@@ -1,8 +1,7 @@
 #pragma once
-namespace mwm
-{
 class Vector2F;
 class Vector3F;
+class Vector4;
 
 class Vector4F
 {
@@ -18,12 +17,14 @@ public:
 	Vector4F(const Vector2F& v1, const Vector2F& v2);
 	Vector4F(const Vector3F& v1, float w = 0);
 	~Vector4F();
+	Vector4F& operator= (const Vector4& right);
 	Vector4F operator+ (const Vector4F& right) const;
 	Vector4F operator- (const Vector4F& right) const;
 	float dotAKAscalar(const Vector4F& right) const;
 	float vectLengt() const;
 	float squareMag() const;
 	Vector4F vectNormalize() const;
+	Vector4 toDouble() const;
 
 	Vector4F operator* (const float& right) const;
 	friend Vector4F operator* (const float& left, const Vector4F& right);
@@ -33,6 +34,3 @@ public:
 	float& operator[] (int index);
 protected:
 };
-}
-
-

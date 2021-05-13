@@ -1,9 +1,9 @@
 #pragma once
-namespace mwm
-{
+
 class Vector3F;
 class Matrix4F;
 class Matrix3F;
+class Quaternion;
 
 class QuaternionF
 {
@@ -19,6 +19,7 @@ public:
 	QuaternionF();
 	/// Constructor to set up a QuaternionF
 	QuaternionF(float angle, const Vector3F &axis);
+	QuaternionF(float yaw, float pitch, float roll);
 	QuaternionF(const float x, const float y, const float z, const float w);
 	~QuaternionF(void);
 
@@ -28,6 +29,7 @@ public:
 	QuaternionF operator*(const QuaternionF& v) const;
 	void operator*=(const QuaternionF& v);
 	QuaternionF operator*(const float& number)const;
+	QuaternionF& operator= (const Quaternion& right);
 
 	float Magnitude();
 	/// Normalize this vector
@@ -44,9 +46,8 @@ public:
 	Vector3F getInvBack() const;
 	Vector3F getForward() const;
 	Vector3F getInvForward() const;
-
+	Quaternion toDouble() const;
+	Vector3F toEulerAngles() const;
 	/// Overloaded access operator for Vector
 	float& operator[](unsigned int index);
 };
-}
-

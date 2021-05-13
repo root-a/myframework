@@ -7,13 +7,7 @@
 #include "Vector4.h"
 #include "mLoc.h"
 #include "Quaternion.h"
-
-namespace mwm
-{
-Matrix4::Matrix4(const Matrix4& matrix)
-{
-	*this = matrix;
-}
+#include <cstring>
 
 /*! \fn in constructor matrix values are set to 0 with memset*/
 Matrix4::Matrix4()
@@ -135,7 +129,7 @@ Vector4 Matrix4::operator* (const Vector4& right) const// matrix multi
 	double vx = right.x;
 	double vy = right.y;
 	double vz = right.z;
-	double vw = right.vect[3];
+	double vw = right.w;
 
 	double _x = _matrix[0][0] * vx + _matrix[1][0] * vy + _matrix[2][0] * vz + _matrix[3][0] * vw;
 	double _y = _matrix[0][1] * vx + _matrix[1][1] * vy + _matrix[2][1] * vz + _matrix[3][1] * vw;
@@ -144,8 +138,21 @@ Vector4 Matrix4::operator* (const Vector4& right) const// matrix multi
 	return Vector4(_x, _y, _z, _w);
 }
 
-/*! \fn copy matrix returns new matrix*/
-Matrix4& Matrix4::operator= (const Matrix4& right)
+/*! \fn matrix*vector returns new vector*/
+Vector3 Matrix4::operator* (const Vector3& right) const// matrix multi
+{
+	//row major
+	double vx = right.x;
+	double vy = right.y;
+	double vz = right.z;
+
+	double _x = _matrix[0][0] * vx + _matrix[1][0] * vy + _matrix[2][0] * vz;
+	double _y = _matrix[0][1] * vx + _matrix[1][1] * vy + _matrix[2][1] * vz;
+	double _z = _matrix[0][2] * vx + _matrix[1][2] * vy + _matrix[2][2] * vz;
+	return Vector3(_x, _y, _z);
+}
+
+Matrix4& Matrix4::operator=(const Matrix4F & right)
 {
 	for (int r = 0; r < 4; r++)
 	{
@@ -156,12 +163,13 @@ Matrix4& Matrix4::operator= (const Matrix4& right)
 		}
 	}
 	return *this;
-
 }
 
 /*! \fn check if matrices are identical*/
 bool Matrix4::operator== (const Matrix4& right) const
 {
+	return !std::memcmp((void*)this, (void*)&right, sizeof(Matrix4));
+	/*
 	for (int r = 0; r < 4; r++)
 	{
 		for (int c = 0; c < 4; c++)
@@ -173,6 +181,7 @@ bool Matrix4::operator== (const Matrix4& right) const
 		}
 	}
 	return true;
+	*/
 }
 
 /*! \fn function returning rotation matrix with specified rotation angle along X axis*/
@@ -995,6 +1004,4 @@ void Matrix4::setOrientation(const Quaternion & q)
 	_matrix[0][2] = (2.0 * q.x * q.z) - (2.0 * q.w * q.y);
 	_matrix[1][2] = (2.0 * q.y * q.z) + (2.0 * q.w * q.x);
 	_matrix[2][2] = 1.0 - 2.0 * q.x*q.x - 2.0 * q.y*q.y;
-}
-
 }

@@ -10,10 +10,10 @@ public:
 	Face* previousFace;
 	Face();
 	~Face();
-	mwm::Vector2 getMidPointAverage();
-	mwm::Vector2 getMidPointMiniMaxi();
-	mwm::Vector2 min(mwm::Vector2 &v1, mwm::Vector2 &v2);
-	mwm::Vector2 max(mwm::Vector2 &v1, mwm::Vector2 &v2);
+	Vector2 getMidPointAverage();
+	Vector2 getMidPointMiniMaxi();
+	Vector2 min(Vector2 &v1, Vector2 &v2);
+	Vector2 max(Vector2 &v1, Vector2 &v2);
 	unsigned int id;
 private:
 	

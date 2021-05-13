@@ -2,7 +2,7 @@
 #include "Texture.h"
 #include "Vao.h"
 
-using namespace mwm;
+
 
 Material::Material()
 {
@@ -37,8 +37,8 @@ void Material::AddTexture(Texture *newTexture)
 
 void Material::AssignTexture(Texture *newTexture, int textureSlot)
 {
-	if (textures.size() == 0) textures.push_back(newTexture);
-	else if (textures.size() > textureSlot) textures[textureSlot] = newTexture;
+	if (textures.size() > textureSlot) textures[textureSlot] = newTexture;
+	else textures.resize(textureSlot + 1); textures[textureSlot] = newTexture;
 }
 
 void Material::SetColor(float r, float g, float b)
@@ -48,7 +48,7 @@ void Material::SetColor(float r, float g, float b)
 	this->color.vect[2] = b;
 }
 
-void Material::SetColor(const mwm::Vector3F& colorC)
+void Material::SetColor(const Vector3F& colorC)
 {
 	color = colorC;
 }

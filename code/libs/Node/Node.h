@@ -1,9 +1,10 @@
 #pragma once
-#include <string>
 #include <vector>
 #include "MyMathLib.h"
+#include <string>
 
 class Component;
+class Object;
 
 class Node
 {
@@ -12,46 +13,46 @@ public:
 	Node();
 	~Node();
 	Node* parent;
+	Object* owner;
 	std::vector<Node*> children;
 	void addChild(Node* child);
 	void removeChild(Node* child);
-	mwm::Matrix4 TopDownTransform;
-	mwm::Matrix4 LocalizedTopDown;
+	Matrix4 TopDownTransform;
 	
-	mwm::Matrix4 LocalScaleM;
-	mwm::Matrix4 LocalPositionM;
-	mwm::Matrix4 LocalOrientationM;
-	mwm::Vector3 localPosition;
-	mwm::Quaternion localOrientation;
-	mwm::Vector3 localScale;
+	Matrix4 LocalScaleM;
+	Matrix4 LocalPositionM;
+	Matrix4 LocalOrientationM;
+	Vector3 localPosition;
+	Quaternion localOrientation;
+	Vector3 localScale;
 	std::string name;
 	virtual void UpdateNode(const Node& parentNode);
 	
-	mwm::Vector3 totalScale;
+	Vector3 totalScale;
 	
-	void SetPosition(const mwm::Vector3& vector);
-	void SetScale(const mwm::Vector3& vector);
-	void Translate(const mwm::Vector3& vector);
-	void SetOrientation(const mwm::Quaternion& q);
-	void SetRotation(const mwm::Matrix4& m);
+	void SetPosition(const Vector3& vector);
+	void SetScale(const Vector3& vector);
+	void Translate(const Vector3& vector);
+	void SetOrientation(const Quaternion& q);
+	void SetRotation(const Matrix4& m);
 	
-	mwm::Vector3& GetLocalPosition();
-	mwm::Quaternion& GetLocalOrientation();
-	mwm::Vector3& GetLocalScale();
+	Vector3& GetLocalPosition();
+	Quaternion& GetLocalOrientation();
+	Vector3& GetLocalScale();
 
-	mwm::Matrix3 GetWorldRotation3();
-	mwm::Matrix4 GetWorldRotation();
-	mwm::Quaternion GetWorldOrientation();
+	Matrix3 GetWorldRotation3();
+	Matrix4 GetWorldRotation();
+	Quaternion GetWorldOrientation();
 	
-	mwm::Vector3 extractScale();
-	mwm::Vector3 getScale();
+	Vector3 extractScale();
+	Vector3 getScale();
 	
-	mwm::Vector3 GetWorldPosition() const;
+	Vector3 GetWorldPosition() const;
 	
 	
 	void Parent(Node* newParent);
-	void ParentWithOffset(Node* newParent, mwm::Vector3& newLocalPos, mwm::Quaternion& newLocalOri, mwm::Vector3& newLocalScale);
-	void ParentWithOffset(Node* newParent, mwm::Matrix4& newLocalTransform);
+	void ParentWithOffset(Node* newParent, Vector3& newLocalPos, Quaternion& newLocalOri, Vector3& newLocalScale);
+	void ParentWithOffset(Node* newParent, Matrix4& newLocalTransform);
 	void ParentInPlace(Node* newParent);
 	void Unparent();
 	void UnparentInPlace();

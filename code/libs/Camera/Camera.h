@@ -1,9 +1,12 @@
 #pragma once
-
+#include <string>
+#include "Vector3.h"
+#include "Vector2F.h"
+#include "Matrix4.h"
 class Camera
 {
 public:
-	Camera(const mwm::Vector3& initPos, int windowWidth, int windowHeight, double newNearPlane = 0.1, double newFarPlane = 100.0, double newFov = 45.0);
+	Camera(const Vector3& initPos = Vector3(0,0,0), int windowWidth = 1024, int windowHeight = 768, double newNearPlane = 0.1, double newFarPlane = 2000.0, double newFov = 45.0);
 	~Camera();
 	void Update(double deltaTime);
 
@@ -19,13 +22,14 @@ public:
 
 	void UpdateSize(int width, int height);
 
-	mwm::Vector3 ConvertMousePosToWorldDir(double mousePosX, double mousePosY);
+	Vector3 ConvertMousePosToWorldDir(double mousePosX, double mousePosY);
 
-	mwm::Vector3 GetInitPos();
-	mwm::Vector3 GetPosition();
-	mwm::Vector3 GetPosition2();
+	Vector3 GetInitPos();
+	Vector3 GetPosition();
+	Vector3 GetPosition2();
 
-	void SetPosition(mwm::Vector3& pos);
+	void SetPosition(Vector3& pos);
+	void SetTarget(Vector3& target);
 
 	bool holdingForward;
 	bool holdingBackward;
@@ -34,22 +38,30 @@ public:
 	bool holdingUp;
 	bool holdingDown;
 
-	mwm::Matrix4 ProjectionMatrix;
-	mwm::Matrix4 ViewMatrix;
-	int windowWidth;
-	int windowHeight;
+	Matrix4 ProjectionMatrix;
+	Matrix4 ProjectionInverseMatrix;
+	Matrix4 ViewMatrix;
+	Matrix4 ViewInverseMatrix;
+	union
+	{
+		struct { float windowWidth, windowHeight; };
+		Vector2F screenSize;
+	};
+	
 	double windowMidX;
 	double windowMidY;
 
-	double fov;
-	double near;
-	double far;
-	mwm::Vector3 direction;
-	mwm::Vector3 up;
-	mwm::Vector3 right;
-	double speed;
+	float fov;
+	float near;
+	float far;
+	Vector3 target;
+	Vector3 up;
+	Vector3 right;
+	Vector3 forward;
+	float speed;
+	std::string name;
 private:
-	mwm::Vector3 position;
+	Vector3 position;
 	double verticalAngle;
 	double horizontalAngle;
 	double mouseSpeed;

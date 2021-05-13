@@ -2,7 +2,7 @@
 // Created by marwac-9 on 9/17/15.
 //
 #include "Frustum.h"
-using namespace mwm;
+
 
 FrustumManager::FrustumManager()
 {

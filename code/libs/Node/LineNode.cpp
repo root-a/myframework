@@ -1,6 +1,6 @@
 #include "LineNode.h"
 
-using namespace mwm;
+
 LineNode::LineNode()
 {
 	this->TopDownTransform = Matrix4(1);

@@ -1,3 +1,4 @@
+#pragma once
 #include "MyMathLib.h"
 #include <map>
 #include <string>
@@ -11,7 +12,17 @@ public:
 	Camera* GetCurrentCamera();
 	void SetCurrentCamera(const char* name);
 	void Update(double deltaTime);
-	mwm::Matrix4 ViewProjection;
+	Matrix4 ViewProjection;
+	Matrix4F ViewProjectionF;
+	Matrix4F ViewF;
+	Matrix4F ProjectionF;
+	Vector2F screenSize;
+	Vector3F cameraPos;
+	Vector3F cameraUp;
+	Vector3F cameraRight;
+	Vector3F cameraForward;
+	float far;
+	float near;
 private:
 	
 	CameraManager();

@@ -7,7 +7,7 @@
 #include "Face.h"
 
 using namespace cop4530;
-using namespace mwm;
+
 
 HalfEdgeMesh::HalfEdgeMesh()
 {

@@ -1,16 +1,13 @@
 #include <cmath>
 #include <memory.h>
 #include "Matrix3F.h"
+#include "Matrix4F.h"
 #include "Vector3F.h"
 #include "mLoc.h"
 #include "QuaternionF.h"
-
-namespace mwm
-{
-Matrix3F::Matrix3F(const Matrix3F& matrix)
-{
-	*this = matrix;
-}
+#include "Matrix3.h"
+#include "Matrix4.h"
+#include <cstring>
 
 /*! \fn in constructor matrix values are set to 0 with memset*/
 Matrix3F::Matrix3F()
@@ -152,8 +149,34 @@ Vector3F Matrix3F::operator* (const Vector3F& right) // matrix multi
 	return Vector3F(_x, _y, _z);
 }
 
-/*! \fn copy matrix returns new matrix*/
-Matrix3F& Matrix3F::operator= (const Matrix3F& right)
+Matrix3F & Matrix3F::operator=(const Matrix3 & right)
+{
+	for (int r = 0; r < 3; r++)
+	{
+		for (int c = 0; c < 3; c++)
+		{
+			_matrix[r][c] = (float)right._matrix[r][c];
+
+		}
+	}
+	return *this;
+}
+
+/*! \fn assign matrix returns this matrix*/
+Matrix3F& Matrix3F::operator= (const Matrix4& right)
+{
+	for (int r = 0; r < 3; r++)
+	{
+		for (int c = 0; c < 3; c++)
+		{
+			_matrix[r][c] = (float)right._matrix[r][c];
+
+		}
+	}
+	return *this;
+}
+
+Matrix3F& Matrix3F::operator= (const Matrix4F& right)
 {
 	for (int r = 0; r < 3; r++)
 	{
@@ -164,12 +187,13 @@ Matrix3F& Matrix3F::operator= (const Matrix3F& right)
 		}
 	}
 	return *this;
-
 }
 
 /*! \fn check if matrices are identical*/
 bool Matrix3F::operator== (const Matrix3F& right)
 {
+	return !std::memcmp((void*)this, (void*)&right, sizeof(Matrix3F));
+	/*
 	for (int r = 0; r < 3; r++)
 	{
 		for (int c = 0; c < 3; c++)
@@ -181,6 +205,7 @@ bool Matrix3F::operator== (const Matrix3F& right)
 		}
 	}
 	return true;
+	*/
 }
 
 /*! \fn function returning rotation matrix with specified rotation angle along X axis*/
@@ -504,4 +529,13 @@ QuaternionF Matrix3F::toQuaternion() const
 	}
 	return temp;
 }
+
+/*! \fn converts float matrix to double */
+Matrix3 Matrix3F::toDouble() const
+{
+	Matrix3 temp;
+	temp._matrix[0][0] = _matrix[0][0]; 	temp._matrix[0][1] = _matrix[0][1]; 	temp._matrix[0][2] = _matrix[0][2]; 	temp._matrix[0][3] = _matrix[0][3];
+	temp._matrix[1][0] = _matrix[1][0]; 	temp._matrix[1][1] = _matrix[1][1]; 	temp._matrix[1][2] = _matrix[1][2]; 	temp._matrix[1][3] = _matrix[1][3];
+	temp._matrix[2][0] = _matrix[2][0]; 	temp._matrix[2][1] = _matrix[2][1]; 	temp._matrix[2][2] = _matrix[2][2]; 	temp._matrix[2][3] = _matrix[2][3];
+	return temp;
 }

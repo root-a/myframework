@@ -7,7 +7,6 @@
 #include "FrameBuffer.h"
 #include <cmath>
 
-using namespace mwm;
 
 SpotLight::SpotLight()
 {
@@ -19,7 +18,6 @@ SpotLight::SpotLight()
 	pingPongBuffers[0] = nullptr;
 	pingPongBuffers[1] = nullptr;
 	SetCutOff(12.5f);
-	dynamic = true;
 }
 
 SpotLight::~SpotLight()
@@ -37,7 +35,7 @@ void SpotLight::Update()
 		ProjectionMatrix = Matrix4::OpenGLPersp(MathUtils::ToDegrees((outerCutOffClamped) * 2.0), shadowMapTexture->aspect, near, radius*1.3);
 		Matrix4 lightViewMatrix = Matrix4::lookAt(object->node->GetWorldPosition(), object->node->GetWorldPosition() + lightForward, Vector3(0, 1, 0));
 		LightMatrixVP = lightViewMatrix * ProjectionMatrix;
-		BiasedLightMatrixVP = (LightMatrixVP*Matrix4::biasMatrix()).toFloat();
+		BiasedLightMatrixVP = (LightMatrixVP*Matrix4::biasMatrix().toFloat());
 	}
 }
 
@@ -110,11 +108,17 @@ void SpotLight::GenerateBlurShadowMapBuffer(BlurMode mode, int blurLevels)
 			for (int i = 0; i < 2; i++)
 			{
 				FrameBuffer* pingPongBuffer = FBOManager::Instance()->GenerateFBO(false);
-				Texture* blurTexture = pingPongBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
+				Texture* blurTexture = new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
+				blurTexture->GenerateBindSpecify();
 				blurTexture->SetLinear();
-				blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
-				pingPongBuffer->GenerateAndAddTextures();
+				blurTexture->SetClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
+
+				pingPongBuffer->RegisterTexture(blurTexture);
+
+				pingPongBuffer->SpecifyTextures();
+
 				pingPongBuffer->CheckAndCleanup();
+
 				pingPongBuffers[i] = pingPongBuffer;
 			}
 			break;
@@ -125,10 +129,14 @@ void SpotLight::GenerateBlurShadowMapBuffer(BlurMode mode, int blurLevels)
 			{
 				FrameBuffer* multiBlurBuffer = FBOManager::Instance()->GenerateFBO();
 				//multiBlurBuffer->dynamicSize = false;
-				Texture* blurTexture = multiBlurBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
+				Texture* blurTexture = new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
+				blurTexture->GenerateBindSpecify();
 				blurTexture->SetLinear();
-				blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
-				multiBlurBuffer->GenerateAndAddTextures();
+				blurTexture->SetClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
+
+				multiBlurBuffer->RegisterTexture(blurTexture);
+
+				multiBlurBuffer->SpecifyTextures();
 
 				multiBlurBuffer->CheckAndCleanup();
 
@@ -137,12 +145,17 @@ void SpotLight::GenerateBlurShadowMapBuffer(BlurMode mode, int blurLevels)
 				for (int j = 1; j < blurLevels; j++)
 				{
 					FrameBuffer* childBlurBuffer = FBOManager::Instance()->GenerateFBO(false);
-					Texture* blurTexture = childBlurBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
+					Texture* blurTexture = new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
+					blurTexture->GenerateBindSpecify();
 					blurTexture->SetLinear();
-					blurTexture->AddClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
-					childBlurBuffer->GenerateAndAddTextures();
+					blurTexture->SetClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
+
+					childBlurBuffer->RegisterTexture(blurTexture);
+
+					childBlurBuffer->SpecifyTextures();
 
 					childBlurBuffer->CheckAndCleanup();
+
 					bufferStorage->push_back(childBlurBuffer);
 
 					parentBuffer->RegisterChildBuffer(childBlurBuffer);

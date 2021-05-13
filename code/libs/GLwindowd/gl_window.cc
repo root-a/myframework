@@ -17,40 +17,49 @@ namespace Display
 /**
 */
 static void GLAPIENTRY
-GLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* userParam)
+GLDebugCallback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, GLchar const* message, void const* user_param)
 {
-	std::string msg("[OPENGL DEBUG MESSAGE] ");
+	auto const src_str = [source]() {
+		switch (source)
+		{
+		case GL_DEBUG_SOURCE_API: return "API";
+		case GL_DEBUG_SOURCE_WINDOW_SYSTEM: return "WINDOW SYSTEM";
+		case GL_DEBUG_SOURCE_SHADER_COMPILER: return "SHADER COMPILER";
+		case GL_DEBUG_SOURCE_THIRD_PARTY: return "THIRD PARTY";
+		case GL_DEBUG_SOURCE_APPLICATION: return "APPLICATION";
+		case GL_DEBUG_SOURCE_OTHER: return "OTHER";
+		default:
+			return "UNKNOWN SOURCE";
+		}
+	}();
 
-	// print error severity
-	switch (severity)
-	{
-	case GL_DEBUG_SEVERITY_LOW:
-		msg.append("<Low severity> ");
-		break;
-	case GL_DEBUG_SEVERITY_MEDIUM:
-		msg.append("<Medium severity> ");
-		break;
-	case GL_DEBUG_SEVERITY_HIGH:
-		msg.append("<High severity> ");
-		break;
-	}
+	auto const type_str = [type]() {
+		switch (type)
+		{
+		case GL_DEBUG_TYPE_ERROR: return "ERROR";
+		case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR: return "DEPRECATED_BEHAVIOR";
+		case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR: return "UNDEFINED_BEHAVIOR";
+		case GL_DEBUG_TYPE_PORTABILITY: return "PORTABILITY";
+		case GL_DEBUG_TYPE_PERFORMANCE: return "PERFORMANCE";
+		case GL_DEBUG_TYPE_MARKER: return "MARKER";
+		case GL_DEBUG_TYPE_OTHER: return "OTHER";
+		default:
+			return "UNKNOWN TYPE";
+		}
+	}();
 
-	// append message to output
-	msg.append(message);
+	auto const severity_str = [severity]() {
+		switch (severity) {
+		case GL_DEBUG_SEVERITY_NOTIFICATION: return "NOTIFICATION";
+		case GL_DEBUG_SEVERITY_LOW: return "LOW";
+		case GL_DEBUG_SEVERITY_MEDIUM: return "MEDIUM";
+		case GL_DEBUG_SEVERITY_HIGH: return "HIGH";
+		default:
+			return "UNKNOWN SEVERITY";
+		}
+	}();
 
-	// print message
-	switch (type)
-	{
-	case GL_DEBUG_TYPE_ERROR:
-	case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
-		printf("Error: %s\n", msg.c_str());
-		break;
-	case GL_DEBUG_TYPE_PERFORMANCE:
-		printf("Performance issue: %s\n", msg.c_str());
-		break;
-	default:		// Portability, Deprecated, Other
-		break;
-	}
+	printf("%s, %s, %s, %d: %s\n", src_str, type_str, severity_str, id, message);
 }
 int32 Window::WindowCount = 0;
 //------------------------------------------------------------------------------
@@ -183,7 +192,7 @@ Window::Resize()
 void
 Window::Retitle()
 {
-	if (nullptr != this->window) glfwSetWindowTitle(this->window, this->title.c_str());
+	if (nullptr != this->window) glfwSetWindowTitle(this->window, this->title);
 }
 
 //------------------------------------------------------------------------------
@@ -208,7 +217,7 @@ Window::Open()
 	glfwWindowHint(GLFW_SAMPLES, 8);
 
 	// open window
-	this->window = glfwCreateWindow(this->width, this->height, this->title.c_str(), nullptr, nullptr);
+	this->window = glfwCreateWindow(this->width, this->height, this->title, nullptr, nullptr);
 	glfwMakeContextCurrent(this->window);
 
 	if (nullptr != this->window && WindowCount == 0)
@@ -227,8 +236,8 @@ Window::Open()
 		glEnable(GL_DEBUG_OUTPUT);
 		glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
 		glDebugMessageCallback(GLDebugCallback, NULL);
-		GLuint unusedIds;
-		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unusedIds, true);
+		//GLuint unusedIds;
+		glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DEBUG_SEVERITY_NOTIFICATION, 0, nullptr, GL_FALSE);
 		
 		// setup stuff
 		//glEnable(GL_FRAMEBUFFER_SRGB);

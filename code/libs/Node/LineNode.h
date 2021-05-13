@@ -10,7 +10,7 @@ public:
 	~LineNode();
 
 	void UpdateNode(const LineNode& parentNode);
-	mwm::Vector3 localPosition;
+	Vector3 localPosition;
 
 private:
 

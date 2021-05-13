@@ -2,7 +2,7 @@
 #include "Material.h"
 #include <algorithm>
 #include <GL/glew.h>
-using namespace mwm;
+
 PointSystem::PointSystem(int maxCount){
 
 	MaxCount = maxCount;
@@ -11,6 +11,7 @@ PointSystem::PointSystem(int maxCount){
 	pointsContainer = new FastPoint[maxCount];
 	positions = new Vector3F[maxCount];
 	colors = new Vector4F[maxCount];
+	vao.SetPrimitiveMode(Vao::PrimitiveMode::POINTS);
 	SetUpBuffers();
 }
 
@@ -65,39 +66,18 @@ void PointSystem::UpdateContainer()
 
 void PointSystem::SetUpBuffers()
 {
-	
-	vao.Bind();
-
-	glGenBuffers(1, &vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector3F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-	vao.vertexBuffers.push_back(vertexBuffer);
-
-	glGenBuffers(1, &colorBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(1);
-	vao.vertexBuffers.push_back(colorBuffer);
-
-	vao.Unbind();
+	vertexBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector3F), { {ShaderDataType::Float3, "Position"} });
+	colorBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector4F), { {ShaderDataType::Float4, "Color"} });
 }
 
 void PointSystem::UpdateBuffers()
 {
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3F), positions);
-
-	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), colors);
+	glNamedBufferSubData(vertexBuffer, 0, ActiveCount * sizeof(Vector3F), positions);
+	glNamedBufferSubData(colorBuffer, 0, ActiveCount * sizeof(Vector4F), colors);
 }
 
 
-void PointSystem::Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID, float size)
+void PointSystem::Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID, float size)
 {
 	if (dirty)
 	{
@@ -107,11 +87,12 @@ void PointSystem::Draw(const mwm::Matrix4& ViewProjection, const unsigned int cu
 	}
 	vao.Bind();
 
-	ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
-	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
+	//ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
+	//glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
 
 	glPointSize(size);
-	glDrawArrays(GL_POINTS, 0, ActiveCount);
+	vao.activeCount = ActiveCount;
+	vao.Draw();
 	glPointSize(1.f);
 }
 

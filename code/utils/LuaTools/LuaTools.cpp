@@ -1,6 +1,13 @@
 #include "LuaTools.h"
 #define luajit_c
-#include "luajit.hpp"
+extern "C" {
+	//#include "include/lua.h"
+#include "lauxlib.h"
+#include "lualib.h"
+#include "luajit.h"
+//#include "include/luaconf.h"
+}
+//#include "luajit.hpp"
 
 
 //#include "lj_arch.h"

@@ -2,22 +2,19 @@
 #include "MyMathLib.h"
 #include "MinMax.h"
 
-namespace mwm
-{
 struct OBB
 {
-	mwm::Vector3 extents;
-	mwm::Vector3 halfExtents;
-	mwm::Matrix3 rot;
-	mwm::Matrix4 model;
-	mwm::MinMax mm;
-	mwm::Vector3F color;
+	Vector3 extents;
+	Vector3 halfExtents;
+	Matrix3 rot;
+	Matrix4 model;
+	MinMax mm;
+	Vector3F color;
 };
 
 struct AABB
 {
-	mwm::Matrix4 model = Matrix4(1);
-	mwm::Vector3F color;
-	mwm::Vector3 extents;
+	Matrix4 model = Matrix4(1);
+	Vector3F color;
+	Vector3 extents;
 };
-}

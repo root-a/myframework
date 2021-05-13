@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <chrono>
 
-using namespace mwm;
+
 
 const Vector3 Bounds::vertices[8] = {
 	Vector3(-0.5, -0.5, 0.5),
@@ -31,7 +31,13 @@ Bounds::Bounds(){
 	MeshCenterM.setIdentity();
 	centeredPosition.zero();
 	CenteredTopDownTransform.setIdentity();
-	dynamic = true;
+}
+
+void Bounds::Init(Object * parent)
+{
+	Component::Init(parent);
+
+	parent->bounds = this;
 }
 
 void Bounds::Update()
@@ -45,8 +51,8 @@ void Bounds::Update()
 	obb.extents = dimensions * object->node->totalScale;
 	obb.halfExtents = obb.extents*0.5;
 	
-	radius = std::max(std::max(obb.halfExtents.x, obb.halfExtents.y), obb.halfExtents.z); //perfect for sphere
-	circumRadius = obb.halfExtents.vectLengt(); //perfect for cuboid
+	radius = std::max(std::max(obb.halfExtents.x, obb.halfExtents.y), obb.halfExtents.z); //perfect for sphere, radius around geometry
+	circumRadius = obb.halfExtents.vectLengt(); //perfect for cuboid, radius inside geometry
 
 	obb.rot = CenteredTopDownTransform.extractRotation3(); //no scaling
 	obb.model.setIdentity();
@@ -57,7 +63,7 @@ void Bounds::Update()
 	
 	std::chrono::time_point<std::chrono::high_resolution_clock> startMinMax, endMinMax;
 	startMinMax = std::chrono::high_resolution_clock::now();
-	UpdateMinMax(obb.model.ConvertToMatrix3(), centeredPosition); //we could just send the obb.model(4x4) but 3x3 + pos is faster
+	UpdateMinMax(obb.model, centeredPosition); //we could just send the obb.model(4x4) but 3x3 + pos is faster
 
 	endMinMax = std::chrono::high_resolution_clock::now();
 	elapsed_seconds = endMinMax - startMinMax;
@@ -72,33 +78,33 @@ void Bounds::Update()
 	updateBoundsTime += elapsed_seconds.count();
 }
 
-void Bounds::SetBoundsCenter(const mwm::Vector3 & center)
+void Bounds::SetBoundsCenter(const Vector3 & center)
 {
 	MeshCenterM.setPosition(center);
 	centerOfMesh = center;
 }
 
-void Bounds::SetBoundsDimensions(const mwm::Vector3 & newDimensions)
+void Bounds::SetBoundsDimensions(const Vector3 & newDimensions)
 {
 	dimensions = newDimensions;
 }
 
-mwm::Vector3 Bounds::GetBoundsCenter()
+Vector3 Bounds::GetBoundsCenter()
 {
 	return centerOfMesh;
 }
 
-mwm::Vector3 Bounds::GetBoundsDimensions()
+Vector3 Bounds::GetBoundsDimensions()
 {
 	return dimensions;
 }
 
-std::string Bounds::GetMeshName()
+std::string& Bounds::GetMeshName()
 {
 	return name;
 }
 
-mwm::Vector3 Bounds::GetExtents()
+Vector3 Bounds::GetExtents()
 {
 	return obb.extents;
 }
@@ -113,10 +119,19 @@ void Bounds::SetUp(Vector3& newCenter, Vector3& newDimensions, std::string& newN
 
 void Bounds::UpdateMinMax(const Matrix3& modelM, const Vector3& position)
 {
-	obb.mm.max = modelM * vertices[0];
-	obb.mm.min = obb.mm.max;
-	Vector3 currentVertex;
-	for (int i = 0; i < 8; ++i)
+	currentVertex = modelM * vertices[0];
+	obb.mm.max = currentVertex;
+	obb.mm.min = currentVertex;
+
+	if (currentVertex.x > obb.mm.max.x) obb.mm.max.x = currentVertex.x;
+	if (currentVertex.y > obb.mm.max.y) obb.mm.max.y = currentVertex.y;
+	if (currentVertex.z > obb.mm.max.z) obb.mm.max.z = currentVertex.z;
+
+	if (currentVertex.x < obb.mm.min.x) obb.mm.min.x = currentVertex.x;
+	if (currentVertex.y < obb.mm.min.y) obb.mm.min.y = currentVertex.y;
+	if (currentVertex.z < obb.mm.min.z) obb.mm.min.z = currentVertex.z;
+
+	for (int i = 1; i < 8; ++i)
 	{
 		currentVertex = modelM * vertices[i];
 		if (currentVertex.x > obb.mm.max.x) obb.mm.max.x = currentVertex.x;
@@ -131,12 +146,50 @@ void Bounds::UpdateMinMax(const Matrix3& modelM, const Vector3& position)
 	obb.mm.min += position;
 }
 
-void Bounds::UpdateMinMax(const mwm::Matrix4 & modelMatrix)
+void Bounds::UpdateMinMax(const Matrix4& modelM, const Vector3& position)
+{
+	currentVertex = modelM * vertices[0];
+	obb.mm.max = currentVertex;
+	obb.mm.min = currentVertex;
+
+	if (currentVertex.x > obb.mm.max.x) obb.mm.max.x = currentVertex.x;
+	if (currentVertex.y > obb.mm.max.y) obb.mm.max.y = currentVertex.y;
+	if (currentVertex.z > obb.mm.max.z) obb.mm.max.z = currentVertex.z;
+
+	if (currentVertex.x < obb.mm.min.x) obb.mm.min.x = currentVertex.x;
+	if (currentVertex.y < obb.mm.min.y) obb.mm.min.y = currentVertex.y;
+	if (currentVertex.z < obb.mm.min.z) obb.mm.min.z = currentVertex.z;
+
+	for (int i = 1; i < 8; ++i)
+	{
+		currentVertex = modelM * vertices[i];
+		if (currentVertex.x > obb.mm.max.x) obb.mm.max.x = currentVertex.x;
+		if (currentVertex.y > obb.mm.max.y) obb.mm.max.y = currentVertex.y;
+		if (currentVertex.z > obb.mm.max.z) obb.mm.max.z = currentVertex.z;
+
+		if (currentVertex.x < obb.mm.min.x) obb.mm.min.x = currentVertex.x;
+		if (currentVertex.y < obb.mm.min.y) obb.mm.min.y = currentVertex.y;
+		if (currentVertex.z < obb.mm.min.z) obb.mm.min.z = currentVertex.z;
+	}
+	obb.mm.max += position;
+	obb.mm.min += position;
+}
+
+void Bounds::UpdateMinMax(const Matrix4 & modelMatrix)
 {
 	Vector4 maxValuesW = modelMatrix * vertices[0];
 	Vector4 minValuesW = maxValuesW;
-	Vector4 currentVertex;
-	for (int i = 0; i < 8; ++i)
+	Vector4 currentVertex = maxValuesW;
+
+	if (currentVertex.x > obb.mm.max.x) obb.mm.max.x = currentVertex.x;
+	if (currentVertex.y > obb.mm.max.y) obb.mm.max.y = currentVertex.y;
+	if (currentVertex.z > obb.mm.max.z) obb.mm.max.z = currentVertex.z;
+
+	if (currentVertex.x < obb.mm.min.x) obb.mm.min.x = currentVertex.x;
+	if (currentVertex.y < obb.mm.min.y) obb.mm.min.y = currentVertex.y;
+	if (currentVertex.z < obb.mm.min.z) obb.mm.min.z = currentVertex.z;
+
+	for (int i = 1; i < 8; ++i)
 	{
 		currentVertex = modelMatrix * vertices[i];
 		if (currentVertex.x > obb.mm.max.x) obb.mm.max.x = currentVertex.x;

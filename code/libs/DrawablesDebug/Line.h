@@ -9,14 +9,13 @@ class Line
 	
 public:
 	static Line* Instance();	
-	void Draw(const mwm::Matrix4& Model, const mwm::Matrix4& View, const mwm::Matrix4& Projection, const unsigned int shader, float width = 4.0f);
-	Material* mat;
+	void Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Projection, const unsigned int shader);
 	Vao vao;
+	Vector3F color;
 private:
 	Line();
 	~Line();
 	void SetUpBuffers();
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
-	Material* localMat;
 };

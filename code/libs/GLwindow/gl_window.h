@@ -9,8 +9,6 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "config.h"
-#include <string>
-
 namespace Display
 {
 class Window
@@ -24,7 +22,7 @@ public:
 	/// set size of window
 	void SetSize(int32 width, int32 height);
 	/// set title of window
-	void SetTitle(const std::string& title);
+	void SetTitle(const char* title);
 
 	/// open window
 	bool Open();
@@ -124,7 +122,7 @@ private:
 
 	int32 width;
 	int32 height;
-	std::string title;
+	const char* title;
 
 	GLFWwindow* window;
 };
@@ -144,7 +142,7 @@ Window::SetSize(int32 newWidth, int32 newHeight)
 /**
 */
 inline void
-Window::SetTitle(const std::string& newTitle)
+Window::SetTitle(const char* newTitle)
 {
 	this->title = newTitle;
 	if (nullptr != this->window) this->Retitle();

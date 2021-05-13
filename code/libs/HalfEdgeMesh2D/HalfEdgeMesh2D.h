@@ -25,15 +25,15 @@ public:
 	cop4530::Vector<Face*> faces;
 	cop4530::Vector<Face*> goals;
 	
-	cop4530::Vector<mwm::Vector2> goalsPos;
+	cop4530::Vector<Vector2> goalsPos;
 
 	Face* startFace;
 	Face* endFace;
-	mwm::Vector2 startFacePos;
-	mwm::Vector2 endFacePos;
+	Vector2 startFacePos;
+	Vector2 endFacePos;
 
-	Face* findNode(const mwm::Vector2& position);
-	bool isPointInNode(const mwm::Vector2& point, Face* node);
+	Face* findNode(const Vector2& position);
+	bool isPointInNode(const Vector2& point, Face* node);
 	void quadrangulate();
 	void optimizeMesh();
 

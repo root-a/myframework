@@ -1,53 +1,55 @@
-#include <string>
+#pragma once
+#include <string.h>
 #include <vector>
 #include <map>
 #include "MyMathLib.h"
+#include <string>
 
 class OBJ
 {
 public:
 	std::vector<unsigned int> indices;
-	std::vector<mwm::Vector3F> indexed_vertices;
-	std::vector<mwm::Vector2F> indexed_uvs;
-	std::vector<mwm::Vector3F> indexed_normals;
-	std::vector<mwm::Vector3F> indexed_tangents;
-	std::vector<mwm::Vector3F> indexed_bitangents;
+	std::vector<Vector3F> indexed_vertices;
+	std::vector<Vector2F> indexed_uvs;
+	std::vector<Vector3F> indexed_normals;
+	std::vector<Vector3F> indexed_tangents;
+	std::vector<Vector3F> indexed_bitangents;
 	int ID;
 	std::string name;
 	bool LoadOBJ(
 		const char * path,
-		std::vector<mwm::Vector3F>& out_vertices,
-		std::vector<mwm::Vector2F>& out_uvs,
-		std::vector<mwm::Vector3F>& out_normals
+		std::vector<Vector3F>& out_vertices,
+		std::vector<Vector2F>& out_uvs,
+		std::vector<Vector3F>& out_normals
 		);
 	void ComputeTangentBasis(
-		std::vector<mwm::Vector3F>& in_vertices,
-		std::vector<mwm::Vector2F>& in_uvs,
-		std::vector<mwm::Vector3F>& in_normals,
-		std::vector<mwm::Vector3F>& out_tangents,
-		std::vector<mwm::Vector3F>& out_bitangents);
+		std::vector<Vector3F>& in_vertices,
+		std::vector<Vector2F>& in_uvs,
+		std::vector<Vector3F>& in_normals,
+		std::vector<Vector3F>& out_tangents,
+		std::vector<Vector3F>& out_bitangents);
 	void indexVBO(
-		std::vector<mwm::Vector3F>& in_vertices,
-		std::vector<mwm::Vector2F>& in_uvs,
-		std::vector<mwm::Vector3F>& in_normals,
-		std::vector<mwm::Vector3F>& in_tangents,
-		std::vector<mwm::Vector3F>& in_bitangents
+		std::vector<Vector3F>& in_vertices,
+		std::vector<Vector2F>& in_uvs,
+		std::vector<Vector3F>& in_normals,
+		std::vector<Vector3F>& in_tangents,
+		std::vector<Vector3F>& in_bitangents
 );
-	void LoadAndIndexOBJ(char* path);
+	void LoadAndIndexOBJ(const char* path);
 	
-	mwm::Vector3 GetDimensions();
-	mwm::Vector3 CenterOfOMesh();
+	Vector3 GetDimensions();
+	Vector3 CenterOfOMesh();
 	
-	mwm::Vector3 dimensions;
-	mwm::Vector3 center_of_mesh;
+	Vector3 dimensions;
+	Vector3 center_of_mesh;
 
 	void CalculateDimensions();
 private:
 	struct PackedVertex{
-		mwm::Vector3F position;
-		mwm::Vector2F uv;
-		mwm::Vector3F normal;
-		bool operator<(const PackedVertex that) const{
+		Vector3F position;
+		Vector2F uv;
+		Vector3F normal;
+		bool operator<(const PackedVertex &that) const{
 			return memcmp((void*)this, (void*)&that, sizeof(PackedVertex))>0;
 		};
 	};

@@ -3,9 +3,10 @@
 #include "Vector3.h"
 #include "Matrix4.h"
 #include "Matrix3.h"
+#include "QuaternionF.h"
+#define _USE_MATH_DEFINES
+#include <cmath>
 
-namespace mwm
-{
 Quaternion::Quaternion()
 {
 	x = 0;
@@ -24,9 +25,34 @@ Quaternion::Quaternion(double angle, const Vector3 &axis)
 	w = cos((dAngle) / 2.0);
 }
 
+Quaternion::Quaternion(double pitch, double yaw, double roll)
+{
+	double cy = cos(yaw * 0.5);
+	double sy = sin(yaw * 0.5);
+	double cp = cos(roll * 0.5);
+	double sp = sin(roll * 0.5);
+	double cr = cos(pitch * 0.5);
+	double sr = sin(pitch * 0.5);
+	double c1c2 = cy * cp;
+	double s1s2 = sy * sp;
+	w = c1c2 * cr - s1s2 * sr;
+	x = c1c2 * sr + s1s2 * cr;
+	y = sy * cp*cr + cy * sp*sr;
+	z = cy * sp*cr - sy * cp*sr;
+}
+
 Quaternion::Quaternion(const double x, const double y, const double z, const double w) : x(x), y(y), z(z), w(w) {}
 
 Quaternion::~Quaternion(void) {}
+
+Quaternion& Quaternion::operator=(const QuaternionF & right)
+{
+	x = right.x;
+	y = right.y;
+	z = right.z;
+	w = right.w;
+	return *this;
+}
 
 void Quaternion::InsertAt(unsigned int index, double value)
 {
@@ -192,4 +218,38 @@ Vector3 Quaternion::getInvForward() const
 	return Vector3(x1, y1, z1).vectNormalize();
 }
 
+QuaternionF Quaternion::toFloat() const
+{
+	return QuaternionF((float)x, (float)y, (float)z, (float)w);
+}
+
+Vector3 Quaternion::toEulerAngles() const
+{
+	double yaw = 0.0;
+	double pitch = 0.0;
+	double roll = 0.0;
+
+	double sqw = w * w;
+	double sqx = x * x;
+	double sqy = y * y;
+	double sqz = z * z;
+	double unit = sqx + sqy + sqz + sqw; // if normalised is one, otherwise is correction factor
+	double test = x * y + z * w;
+	if (test > 0.499*unit) { // singularity at north pole
+		yaw = 2.0 * atan2(x, w);
+		pitch = 0.0;
+		roll = M_PI / 2.0;
+		return Vector3(pitch, yaw, roll);
+	}
+	if (test < -0.499*unit) { // singularity at south pole
+		yaw = -2.0 * atan2(x, w);
+		pitch = 0.0;
+		roll = -M_PI / 2.0;
+		return Vector3(pitch, yaw, roll);
+	}
+	yaw = atan2(2.0 * y*w - 2.0 * x*z, sqx - sqy - sqz + sqw);
+	pitch = atan2(2.0 * x*w - 2.0 * y*z, -sqx + sqy - sqz + sqw);
+	roll = asin(2.0 * test / unit);
+
+	return Vector3(pitch, yaw, roll);
 }

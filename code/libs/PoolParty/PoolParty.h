@@ -5,6 +5,7 @@
 template <typename T, int chunk_length = 5>
 class PoolParty
 {
+typedef Chunk<T, chunk_length> C;
 public:
 	PoolParty(){}
 
@@ -18,6 +19,9 @@ public:
 			curChunk = nextChunk;
 		}
 	}
+
+	C* GetFirstChunk() { return firstChunk; }
+	C* GetLastChunk() { return current_free_chunk; }
 	
 	void CreatePoolParty(int num_of_chunks = 100)
 	{
@@ -56,9 +60,7 @@ public:
 			return element;
 		}
 	}
-
 private:
-	typedef Chunk<T, chunk_length> C;
 	C* current_free_chunk;
 	int init_number_of_chunks;
 	C* firstChunk;

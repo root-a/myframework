@@ -15,7 +15,7 @@ public:
 
 	Edge();
 	~Edge();
-	mwm::Vector2 Midpoint();
+	Vector2 Midpoint();
 private:
 
 };

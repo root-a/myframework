@@ -20,8 +20,8 @@ public:
 	Face* faces;
 	int mapSize;
 
-	Face * findNode(const mwm::Vector2& position);
-	bool isPointInNode(const mwm::Vector2& point, Face* node);
+	Face * findNode(const Vector2& position);
+	bool isPointInNode(const Vector2& point, Face* node);
 	void quadrangulate();
 	void optimizeMesh();
 private:

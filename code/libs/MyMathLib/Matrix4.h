@@ -1,6 +1,5 @@
 #pragma once
-namespace mwm
-{
+
 class Vector4;
 class Vector3;
 class Matrix4F;
@@ -15,18 +14,18 @@ class Matrix4
 public:
 	double _matrix[4][4];
 
-	Matrix4(const Matrix4&);
 	Matrix4(); //!< in constructor matrix values are set to 0 with memset
 	Matrix4(int identity); //!< in constructor matrix values are set to 0 with memset
 	~Matrix4();
 
 	Matrix4 operator~ () const; //!< transpose matrix returns new matrix
-	Matrix4& operator= (const Matrix4& rightMatrix); //!< copy matrix returns new matrix
+	Matrix4& operator= (const Matrix4F& rightMatrix); //!< copy matrix returns this matrix
 	bool operator== (const Matrix4& rightMatrix) const; //!< check if matrices are identical
 	Matrix4 operator* (const Matrix4& rightMatrix) const; //!< matrix*matrix returns new matrix
-	double operator() (int row, int col) const;//!< operator() overload for indexing
+	double operator() (int row, int col) const; //!< operator() overload for indexing
 	Matrix4 operator* (const double& rightDouble) const; //!< matrix*num returns new matrix
 	Vector4 operator* (const Vector4& rightVector) const; //!< matrix*vector returns new vector
+	Vector3 operator* (const Vector3& rightVector) const; //!< matrix*vector returns new vector
 	double operator[] (loc const& cLoc) const; //!< operator[] overload for indexing
 	double* operator[] (int index); //!< operator[] overload for indexing
 
@@ -94,4 +93,3 @@ public:
 	//static Matrix4 identityMatrix(); //!< identity matrix 
 	static Matrix4 biasMatrix(); //!< bias shadowmap matrix 
 };
-}

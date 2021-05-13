@@ -1,7 +1,5 @@
 #include "MathUtils.h"
 
-namespace mwm
-{
 MathUtils::MathUtils()
 {
 }
@@ -20,4 +18,3 @@ MathUtils::ToDegrees(double radians)
 	return (radians * 180.0) / PI;
 }
 double MathUtils::PI = 3.14159265359;
-}

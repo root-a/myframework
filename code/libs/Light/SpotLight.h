@@ -17,10 +17,10 @@ public:
 	~SpotLight();
 	void Update();
 	void Init(Object* parent);
-	mwm::Matrix4 ProjectionMatrix; //used when drawing depth
-	mwm::Vector3F LightInvDir; //used when drawing light 
-	mwm::Matrix4 LightMatrixVP; //used when drawing depth
-	mwm::Matrix4F BiasedLightMatrixVP; //used when drawing lights to sample depth
+	Matrix4 ProjectionMatrix; //used when drawing depth
+	Vector3F LightInvDir; //used when drawing light 
+	Matrix4F LightMatrixVP; //used when drawing depth
+	Matrix4F BiasedLightMatrixVP; //used when drawing lights to sample depth
 	void SetCutOff(float cutOffInDegrees);
 	void SetOuterCutOff(float outerCutOffInDegrees);
 	void SetRadius(float newRadius);

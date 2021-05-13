@@ -11,6 +11,7 @@ public:
 	T data[length];
 	Chunk<T,length>* next = nullptr;
 	
+	int GetCurrentLength() { return current_free_index; }
 	int current_free_index = 0;
 	int data_size = length;
 private:

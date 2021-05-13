@@ -85,12 +85,19 @@ void FBOManager::BindFrameBuffer(GLuint readWriteMode, GLuint frameBuffer)
 FrameBuffer* FBOManager::Generate2DShadowMapBuffer(int width, int height)
 {
 	FrameBuffer* shadowMapBuffer = GenerateFBO(false);
-	Texture* shadowMapTexture = shadowMapBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0));
+	Texture* shadowMapTexture = new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
+	shadowMapTexture->GenerateBindSpecify();
 	shadowMapTexture->SetLinear();
-	shadowMapTexture->AddClampingToBorder(mwm::Vector4F(1.f, 1.f, 1.f, 1.f));
-	Texture* shadowDepthTexture = shadowMapBuffer->RegisterTexture(new Texture(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, GL_DEPTH_ATTACHMENT));
-	shadowDepthTexture->AddDefaultTextureParameters();
-	shadowMapBuffer->GenerateAndAddTextures();
+	shadowMapTexture->SetClampingToBorder(Vector4F(1.f, 1.f, 1.f, 1.f));
+	Texture* shadowDepthTexture = new Texture(GL_TEXTURE_2D, 0, GL_DEPTH_COMPONENT32, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, GL_DEPTH_ATTACHMENT);
+	shadowDepthTexture->GenerateBindSpecify();
+	shadowDepthTexture->SetDefaultParameters();
+
+	shadowMapBuffer->RegisterTexture(shadowMapTexture);
+	shadowMapBuffer->RegisterTexture(shadowDepthTexture);
+
+	shadowMapBuffer->SpecifyTextures();
+	
 	shadowMapBuffer->CheckAndCleanup();
 	return shadowMapBuffer;
 }
@@ -98,12 +105,18 @@ FrameBuffer* FBOManager::Generate2DShadowMapBuffer(int width, int height)
 FrameBuffer* FBOManager::Generate3DShadowMapBuffer(int width, int height)
 {
 	FrameBuffer* shadowMapBuffer = GenerateFBO(false);
-	Texture* shadowDepthTexture = shadowMapBuffer->RegisterTexture(new Texture(GL_TEXTURE_CUBE_MAP, 0, GL_DEPTH_COMPONENT32, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, GL_DEPTH_ATTACHMENT));
-	shadowDepthTexture->AddClampingToEdge();	
-	shadowDepthTexture->SetNearest();	
-	shadowMapBuffer->GenerateAndAddTextures();
+	Texture* shadowDepthTexture = new Texture(GL_TEXTURE_CUBE_MAP, 0, GL_DEPTH_COMPONENT32, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, GL_DEPTH_ATTACHMENT);
+	shadowDepthTexture->GenerateBindSpecify();
+	shadowDepthTexture->SetClampingToEdge();
+	shadowDepthTexture->SetNearest();
+
+	shadowMapBuffer->RegisterTexture(shadowDepthTexture);
+	
+	shadowMapBuffer->SpecifyTextures();
+	
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
+	
 	shadowMapBuffer->CheckAndCleanup();
 	return shadowMapBuffer;
 }
@@ -114,7 +127,7 @@ void FBOManager::DeleteFrameBuffer(FrameBuffer * buffer)
 	{
 		if (dynamicBuffers[i] == buffer)
 		{
-			dynamicBuffers[i] = dynamicBuffers[dynamicBuffers.size()-1];
+			dynamicBuffers[i] = dynamicBuffers.back();
 			dynamicBuffers.pop_back();
 			delete buffer;
 			return;
@@ -124,7 +137,7 @@ void FBOManager::DeleteFrameBuffer(FrameBuffer * buffer)
 	{
 		if (staticBuffers[i] == buffer)
 		{
-			staticBuffers[i] = staticBuffers[staticBuffers.size() - 1];
+			staticBuffers[i] = staticBuffers.back();
 			staticBuffers.pop_back();
 			delete buffer;
 			return;
@@ -138,9 +151,8 @@ void FBOManager::MakeStatic(FrameBuffer * buffer)
 	{
 		if (dynamicBuffers[i] == buffer)
 		{
-			dynamicBuffers[i] = dynamicBuffers[dynamicBuffers.size() - 1];
+			dynamicBuffers[i] = dynamicBuffers.back();
 			dynamicBuffers.pop_back();
-			delete buffer;
 		}
 	}
 	for (int i = 0; i < staticBuffers.size(); ++i)
@@ -151,7 +163,6 @@ void FBOManager::MakeStatic(FrameBuffer * buffer)
 		}
 	}
 	staticBuffers.push_back(buffer);
-	delete buffer;
 }
 
 void FBOManager::MakeDynamic(FrameBuffer * buffer)
@@ -160,9 +171,8 @@ void FBOManager::MakeDynamic(FrameBuffer * buffer)
 	{
 		if (staticBuffers[i] == buffer)
 		{
-			staticBuffers[i] = staticBuffers[staticBuffers.size() - 1];
+			staticBuffers[i] = staticBuffers.back();
 			staticBuffers.pop_back();
-			delete buffer;
 		}
 	}
 	for (int i = 0; i < dynamicBuffers.size(); ++i)
@@ -173,7 +183,18 @@ void FBOManager::MakeDynamic(FrameBuffer * buffer)
 		}
 	}
 	dynamicBuffers.push_back(buffer);
-	delete buffer;
+}
+
+bool FBOManager::IsDynamic(FrameBuffer * buffer)
+{
+	for (int i = 0; i < dynamicBuffers.size(); ++i)
+	{
+		if (dynamicBuffers[i] == buffer)
+		{
+			return true;
+		}
+	}
+	return false;
 }
 
 FrameBuffer* FBOManager::GenerateFBO(bool dynamic)

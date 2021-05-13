@@ -6,9 +6,9 @@
 #include "CameraManager.h"
 #include "GraphicsStorage.h"
 #include "GraphicsManager.h"
-#include "Scene.h"
+#include "SceneGraph.h"
 
-using namespace mwm;
+
 
 InstanceSystem::InstanceSystem(int maxCount, OBJ* object)
 {
@@ -63,7 +63,7 @@ void InstanceSystem::UpdateCPUBuffers()
 			//object.node->UpdateNode(this->object->node);
 			M[ActiveCount] = object.node->TopDownTransform.toFloat();
 			objectID[ActiveCount] = object.ID;
-			materialColorShininess[ActiveCount] = object.mat->colorShininess;
+			//materialColorShininess[ActiveCount] = object.mat->colorShininess;
 			ActiveCount += 1;
 
 			object.UpdateDrawState();
@@ -81,59 +81,26 @@ void InstanceSystem::UpdateCPUBuffersNoCulling()
 		//object.node->UpdateNode(this->object->node);
 		M[ActiveCount] = object.node->TopDownTransform.toFloat();
 		objectID[ActiveCount] = object.ID;
-		materialColorShininess[ActiveCount] = object.mat->colorShininess;
+		//materialColorShininess[ActiveCount] = object.mat->colorShininess;
 		ActiveCount += 1;
 
 		object.UpdateDrawState();
 	}
+	ActiveCount = std::min(MaxCount, ActiveCount);
 }
 
 void InstanceSystem::SetUpGPUBuffers()
 {
-	vao.Bind();
-
-	glGenBuffers(1, &modelBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Matrix4F), NULL, GL_STREAM_DRAW);
-	for (unsigned int i = 0; i < 4; i++) {
-		glVertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Matrix4F), (const GLvoid*)(sizeof(GLfloat) * i * 4));
-		glEnableVertexAttribArray(3 + i);
-		glVertexAttribDivisor(3 + i, 1); // model matrices : one per box
-	}
-	vao.vertexBuffers.push_back(modelBuffer);
-
-	glGenBuffers(1, &objectIDBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(unsigned int), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(7, 1, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(7);
-	glVertexAttribDivisor(7, 1); // id : one per box
-	vao.vertexBuffers.push_back(objectIDBuffer);
-
-	glGenBuffers(1, &materialColorBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(8);
-	glVertexAttribDivisor(8, 1); // color : one per box
-	vao.vertexBuffers.push_back(materialColorBuffer);
-
-	//Unbind the VAO now that the VBOs have been set up
-	vao.Unbind();
+	modelBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Matrix4F), { {ShaderDataType::Mat4, "Model", 1} });
+	objectIDBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(unsigned int), { {ShaderDataType::Int, "ID", 1} });
+	materialColorBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector4F), { {ShaderDataType::Float4, "MaterialColor", 1} });
 }
 
 void InstanceSystem::UpdateGPUBuffers()
 {
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Matrix4F), M);
-
-	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(unsigned int), objectID);
-
-	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), materialColorShininess);
+	glNamedBufferSubData(modelBuffer, 0, ActiveCount * sizeof(Matrix4F), M);
+	glNamedBufferSubData(objectIDBuffer, 0, ActiveCount * sizeof(unsigned int), objectID);
+	glNamedBufferSubData(materialColorBuffer, 0, ActiveCount * sizeof(Vector4F), materialColorShininess);
 }
 
 int InstanceSystem::Draw()
@@ -146,7 +113,8 @@ int InstanceSystem::Draw()
 	}
 	vao.Bind();
 	
-	glDrawElementsInstanced(GL_TRIANGLES, vao.indicesCount, GL_UNSIGNED_INT, (void*)0, ActiveCount);
+	vao.activeCount = ActiveCount;
+	vao.Draw();
 	
 	return ActiveCount;
 }
@@ -186,12 +154,12 @@ void InstanceSystem::Init(Object * parent)
 		GraphicsStorage::materials.push_back(newMaterial);
 		*newMaterial = mat;
 		objectContainer[i].AssignMaterial(newMaterial);
-		objectContainer[i].node->SetScale(Scene::Instance()->generateRandomIntervallVectorSpherical(5, 15));
+		objectContainer[i].node->SetScale(SceneGraph::Instance()->generateRandomIntervallVectorSpherical(5, 15));
 		objectContainer[i].DrawAlways();
-		objectContainer[i].node->SetPosition(Scene::Instance()->generateRandomIntervallVectorSpherical(20, 1000));
+		objectContainer[i].node->SetPosition(SceneGraph::Instance()->generateRandomIntervallVectorSpherical(20, 1000));
 		objectContainer[i].bounds->SetUp(parent->bounds->centerOfMesh, parent->bounds->dimensions, parent->bounds->name);
 		objectContainer[i].node->UpdateNode(*parent->node);
-		Scene::Instance()->registerForPicking(&objectContainer[i]);
+		SceneGraph::Instance()->registerForPicking(&objectContainer[i]);
 	}
 	UpdateCPUBuffersNoCulling();
 	UpdateGPUBuffers();

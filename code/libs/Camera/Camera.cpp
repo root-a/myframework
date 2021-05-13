@@ -2,9 +2,9 @@
 #include "MyMathLib.h"
 #include "Camera.h"
 #include <stdio.h>
-using namespace mwm;
 
-Camera::Camera(const mwm::Vector3& initPos, int windowW, int windowH, double newNearPlane, double newFarPlane, double newFov)
+
+Camera::Camera(const Vector3& initPos, int windowW, int windowH, double newNearPlane, double newFarPlane, double newFov)
 {
 	// Initial horizontal angle : toward -Z
 	horizontalAngle = 3.14;
@@ -51,7 +51,7 @@ Vector3 Camera::GetPosition() //no scaling of view
 
 Vector3 Camera::GetPosition2() //if scaled view
 {
-	return ViewMatrix.inverse().getPosition();
+	return ViewInverseMatrix.getPosition();
 }
 
 void Camera::Update(double deltaTime){
@@ -68,7 +68,6 @@ void Camera::Update(double deltaTime){
 void Camera::UpdateOrientation(double mouseX, double mouseY)
 {
 	// Compute new orientation
-
 	horizontalAngle += mouseSpeed * (windowMidX - mouseX);
 	verticalAngle += mouseSpeed * (windowMidY - mouseY);
 }
@@ -77,11 +76,11 @@ void Camera::UpdatePosition(double deltaTime)
 {
 	// Move forward
 	if (holdingForward){
-		position = position + (direction * deltaTime * speed);
+		position = position + (forward * deltaTime * speed);
 	}
 	// Move backward
 	if (holdingBackward){
-		position = position - (direction * deltaTime * speed);
+		position = position - (forward * deltaTime * speed);
 	}
 	// Strafe right
 	if (holdingRight){
@@ -115,10 +114,10 @@ Vector3 Camera::ConvertMousePosToWorldDir(double mousePosX, double mousePosY)
 	mouse_p0s.z = -1.0;
 	mouse_p0s.w = 1.0;
 
-	Vector4 my_mouse_in_world_space = ProjectionMatrix.inverse() * mouse_p0s;
+	Vector4 my_mouse_in_world_space = ProjectionInverseMatrix * mouse_p0s;
 	my_mouse_in_world_space.z = -1;
 	my_mouse_in_world_space.w = 0;
-	my_mouse_in_world_space = ViewMatrix.inverse() * my_mouse_in_world_space;
+	my_mouse_in_world_space = ViewInverseMatrix * my_mouse_in_world_space;
 
 	return my_mouse_in_world_space.get_xyz().vectNormalize();
 }
@@ -126,9 +125,9 @@ Vector3 Camera::ConvertMousePosToWorldDir(double mousePosX, double mousePosY)
 void Camera::ComputeVectors()
 {
 	// Direction : Spherical coordinates to Cartesian coordinates conversion
-	direction.x = cos(verticalAngle) * sin(horizontalAngle);
-	direction.y = sin(verticalAngle);
-	direction.z = cos(verticalAngle) * cos(horizontalAngle);
+	forward.x = cos(verticalAngle) * sin(horizontalAngle);
+	forward.y = sin(verticalAngle);
+	forward.z = cos(verticalAngle) * cos(horizontalAngle);
 
 	// Right vector
 	right.x = sin(horizontalAngle - 3.14 / 2.0),
@@ -136,31 +135,41 @@ void Camera::ComputeVectors()
 	right.z = cos(horizontalAngle - 3.14 / 2.0);
 
 	// Up vector
-	up = right.crossProd(direction);
+	up = right.crossProd(forward);
+
+	forward = forward.vectNormalize();
+	right = right.vectNormalize();
+	up = up.vectNormalize();
 }
 
 void Camera::CalculateViewMatrix()
 {
-
 	ViewMatrix = Matrix4::lookAt(
 		position,           // Camera is here
-		position + direction, // and looks here : at the same position, plus "direction"
+		position + forward, // and looks here : at the same position, plus "direction"
 		up                  // Head is up (set to 0,-1,0 to look upside-down)
 		);
+	ViewInverseMatrix = ViewMatrix.inverse();
 }
 
 void Camera::UpdateProjection()
 {
 	ProjectionMatrix = Matrix4::OpenGLPersp(fov, (double)windowWidth/(double)windowHeight, near, far);
+	ProjectionInverseMatrix = ProjectionMatrix.inverse();
 }
 
-void Camera::SetPosition(mwm::Vector3& pos)
+void Camera::SetPosition(Vector3& pos)
 {
 	//proper way to set position would be to get the position from matrix via inverse
 	//then new position - camera pos -> vector with direction to new position 
 	//then we translate the initial position with that vector -> initialPosition += new vector with dir
 	//this would be required if one did change the camera matrix directly rather than changing the position variable 
 	position = pos;
+}
+
+void Camera::SetTarget(Vector3 & target)
+{
+	this->target = target;
 }
 
 

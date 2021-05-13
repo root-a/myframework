@@ -1,8 +1,7 @@
 #pragma once
-namespace mwm
-{
 class Vector2;
 class Vector3;
+class Vector4F;
 
 class Vector4
 {
@@ -18,6 +17,7 @@ public:
 	Vector4(const Vector2& v1, const Vector2& v2);
 	Vector4(const Vector3& v1, double w = 0);
 	~Vector4();
+	Vector4& operator= (const Vector4F& right);
 	Vector4 operator+ (const Vector4& right) const;
 	Vector4 operator- (const Vector4& right) const;
 	double dotAKAscalar(const Vector4& right) const;
@@ -34,6 +34,3 @@ public:
 
 protected:
 };
-}
-
-

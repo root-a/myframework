@@ -2,8 +2,8 @@
 #include "Vector4F.h"
 #include "Vector2F.h"
 #include "Vector3F.h"
-namespace mwm
-{
+#include "Vector4.h"
+
 /*! \fn Vector4F constructor*/
 Vector4F::Vector4F(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) {}
 
@@ -25,6 +25,15 @@ Vector4F::Vector4F(const Vector3F& v1, float wIn)
 
 Vector4F::~Vector4F()
 {
+}
+
+Vector4F& Vector4F::operator=(const Vector4& right)
+{
+	x = (float)right.x;
+	y = (float)right.y;
+	z = (float)right.x;
+	w = (float)right.y;
+	return *this;
 }
 
 /*! \fn add vectors amd return new one*/
@@ -82,13 +91,19 @@ Vector3F Vector4F::get_xyz() const
 /*! \fn function returning new normalized vector*/
 Vector4F Vector4F::vectNormalize() const
 {
-	float length = sqrtf(x*x + y*y + z*z + w*w);
+	float squareMag = x * x + y * y + z * z + w * w;
+	if (squareMag == 0.0) return Vector4F();
+	float length = sqrt(squareMag);
 	return Vector4F(x / length, y / length, z / length, w / length);
+}
+
+Vector4 Vector4F::toDouble() const
+{
+	return Vector4(x, y, z, w);
 }
 
 /*! \fn operator[] overload for indexing */
 float& Vector4F::operator[] (int index)
 {
 	return vect[index];
-}
 }

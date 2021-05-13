@@ -1,5 +1,6 @@
 #include "FrameBuffer.h"
 #include "Texture.h"
+#include "RenderBuffer.h"
 #include "FBOManager.h"
 #include <GL/glew.h>
 
@@ -9,7 +10,6 @@ FrameBuffer::FrameBuffer(GLenum target, int scaleX, int scaleY)
 	FBOManager::Instance()->BindFrameBuffer(target, handle);
 	scaleXFactor = scaleX;
 	scaleYFactor = scaleY;
-	renderBufferHandle = -1;
 }
 
 FrameBuffer::~FrameBuffer()
@@ -17,13 +17,16 @@ FrameBuffer::~FrameBuffer()
 	glDeleteFramebuffers(1, &handle);
 }
 
-void FrameBuffer::GenerateAndAddTextures()
+void FrameBuffer::SpecifyTextures()
 {
 	for (auto& texture : textures)
 	{
-		texture->Generate();
 		if (texture->target == GL_TEXTURE_CUBE_MAP) glFramebufferTexture(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->handle, texture->level);
 		else glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->target, texture->handle, texture->level);
+	}
+	for (auto& buffer : renderBuffers)
+	{
+		glFramebufferRenderbuffer(GL_FRAMEBUFFER, buffer->attachment, GL_RENDERBUFFER, buffer->handle);
 	}
 }
 
@@ -32,34 +35,35 @@ void FrameBuffer::BindBuffer(GLenum target)
 	FBOManager::Instance()->BindFrameBuffer(target, handle);
 }
 
-void FrameBuffer::AddRenderBuffer(GLuint internalFormat, GLsizei width, GLsizei height)
+RenderBuffer* FrameBuffer::RegisterRenderBuffer(RenderBuffer* buffer)
 {
-	this->renderBufferInternalFormat = internalFormat;
-	glGenRenderbuffers(1, &renderBufferHandle);
-	glBindRenderbuffer(GL_RENDERBUFFER, renderBufferHandle);
-	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, width, height);
-	glFramebufferRenderbuffer(GL_FRAMEBUFFER, renderBufferInternalFormat, GL_RENDERBUFFER, renderBufferHandle);
+	renderBuffers.push_back(buffer);
+	return buffer;
 }
 
-Texture* FrameBuffer::RegisterTexture(Texture* texture)
+void FrameBuffer::RegisterTexture(Texture* texture)
 {
 	textures.push_back(texture);
 	if (texture->format != GL_DEPTH_COMPONENT) attachments.push_back(texture->attachment);
-	return texture;
 }
 
-void FrameBuffer::RegisterChildBuffer(FrameBuffer * child)
-{
-	children.push_back(child);
-}
-
-void FrameBuffer::AttachTexture(Texture * texture)
+void FrameBuffer::SpecifyTexture(Texture * texture)
 {
 	if (texture->target == GL_TEXTURE_CUBE_MAP) glFramebufferTexture(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->handle, texture->level);
 	else glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->target, texture->handle, texture->level);
 }
 
-void FrameBuffer::AttachTexture(Texture * texture, GLenum target, GLint level)
+void FrameBuffer::SpecifyRenderBuffer(RenderBuffer * rbuffer)
+{
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, rbuffer->attachment, GL_RENDERBUFFER, rbuffer->handle);
+}
+
+void FrameBuffer::RegisterChildBuffer(FrameBuffer* child)
+{
+	children.push_back(child);
+}
+
+void FrameBuffer::SpecifyTextureAndMip(Texture * texture, GLenum target, GLint level)
 {
 	if (target == GL_TEXTURE_CUBE_MAP) glFramebufferTexture(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->handle, level);
 	else glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, texture->attachment, target, texture->handle, level);
@@ -69,25 +73,19 @@ void FrameBuffer::UpdateTextures(int newBufferSizeX, int newBufferSizeY)
 {
 	int newXSize = newBufferSizeX * scaleXFactor;
 	int newYSize = newBufferSizeY * scaleYFactor;
+	if (newXSize == 0) newXSize = 1;
+	if (newYSize == 0) newXSize = 1;
 	for (auto& texture : textures)
 	{
 		texture->Update(newXSize, newYSize);
 	}
+	for (auto& rbuffer : renderBuffers)
+	{
+		rbuffer->Update(newXSize, newYSize);
+	}
 	for (auto& child : children)
 	{
 		child->UpdateTextures(newXSize, newYSize);
-	}
-	if (renderBufferHandle != (unsigned int)(-1))
-	{
-		glRenderbufferStorage(GL_RENDERBUFFER, renderBufferInternalFormat, newXSize, newYSize);
-	}
-}
-
-void FrameBuffer::AddDefaultTextureParameters()
-{
-	for (auto& texture : textures)
-	{
-		texture->AddDefaultTextureParameters();
 	}
 }
 
@@ -132,6 +130,12 @@ void FrameBuffer::DeleteAllTextures()
 		delete texture;
 	}
 	textures.clear();
+	for (auto& rbuffer : renderBuffers)
+	{
+		delete rbuffer;
+	}
+	renderBuffers.clear();
+	attachments.clear();
 }
 
 void FrameBuffer::ActivateDrawBuffers()

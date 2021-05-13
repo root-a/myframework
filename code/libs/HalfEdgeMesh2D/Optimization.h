@@ -13,10 +13,10 @@ public:
 	Optimization();
 	~Optimization();
 
-	static Face* findNode(const mwm::Vector2& position, cop4530::Vector<Face*>& faces);
-	static Face* findNode(const mwm::Vector2& point, Face* faces, int mapSize);
+	static Face* findNode(const Vector2& position, cop4530::Vector<Face*>& faces);
+	static Face* findNode(const Vector2& point, Face* faces, int mapSize);
 
-	static bool isPointInNode(const mwm::Vector2& point, Face* node);
+	static bool isPointInNode(const Vector2& point, Face* node);
 
 	static void quadrangulate(cop4530::Vector<Face*>& faces);
 	static int quadrangulate(Face* faces, int mapSize);

@@ -1,9 +1,9 @@
 #pragma once
-namespace mwm
-{
+
 class Vector4F;
 class Vector3F;
 class Matrix3F;
+class Matrix4;
 class QuaternionF;
 
 struct loc;
@@ -13,17 +13,18 @@ class Matrix4F
 public:
 	float _matrix[4][4];
 
-	Matrix4F(const Matrix4F&);
 	Matrix4F();
 	~Matrix4F();
 
 	Matrix4F operator~ (); //!< transpose matrix returns new matrix
-	Matrix4F& operator= (const Matrix4F& rightMatrix); //!< copy matrix returns new matrix
-	bool operator== (const Matrix4F& rightMatrix); //!< check if matrices are identical
-	Matrix4F operator* (const Matrix4F& rightMatrix); //!< matrix*matrix returns new matrix
-	float operator() (int row, int col);//!< operator() overload for indexing
-	Matrix4F operator* (const float& rightFloat); //!< matrix*num returns new matrix
-	Vector4F operator* (const Vector4F& rightVector); //!< matrix*vector returns new vector
+	Matrix4F& operator= (const Matrix4& rightMatrix); //!< copy matrix returns this matrix
+	Matrix4 toDouble() const;//!< copy matrix returns this matrix
+	bool operator== (const Matrix4F& rightMatrix) const; //!< check if matrices are identical
+	Matrix4F operator* (const Matrix4F& rightMatrix) const; //!< matrix*matrix returns new matrix
+	float operator() (int row, int col); //!< operator() overload for indexing
+	Matrix4F operator* (const float& rightFloat) const; //!< matrix*num returns new matrix
+	Vector4F operator* (const Vector4F& rightVector) const; //!< matrix*vector returns new vector
+	Vector3F operator* (const Vector3F& rightVector) const; //!< matrix*vector returns new vector
 	float operator[] (loc const& cLoc); //!< operator[] overload for indexing
 	float* operator[] (int index); //!< operator[] overload for indexing
 	Matrix4F inverse() const; //!< calculates inverse of matrix4x4 and returns as new one
@@ -48,6 +49,11 @@ public:
 	void setUp(const Vector3F& axis);
 	void setRight(const Vector3F& axis);
 	void setForward(const Vector3F& axis);
+	void setScale(const Vector3F& scale);
+	void setPosition(const Vector3F& position);
+	void translate(const Vector3F& position);
+	void operator*=(const Matrix4F& rightMatrix);
+	void setIdentity();
 	void clear();
 	void zeroPosition();
 	void zeroScale();
@@ -79,6 +85,3 @@ public:
 private:
 
 };
-}
-
-

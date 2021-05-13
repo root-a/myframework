@@ -11,7 +11,7 @@
 #include "Optimization.h"
 
 using namespace cop4530;
-using namespace mwm;
+
 
 HalfEdgeMesh2DSquared::HalfEdgeMesh2DSquared()
 {

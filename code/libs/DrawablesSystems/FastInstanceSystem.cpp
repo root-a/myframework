@@ -6,10 +6,10 @@
 #include "CameraManager.h"
 #include "GraphicsStorage.h"
 #include "GraphicsManager.h"
-#include "Scene.h"
+#include "SceneGraph.h"
 #include "OBJ.h"
 
-using namespace mwm;
+
 
 FastInstanceSystem::FastInstanceSystem(int maxCount, OBJ* object)
 {
@@ -23,7 +23,7 @@ FastInstanceSystem::FastInstanceSystem(int maxCount, OBJ* object)
 	objectsToReturn.reserve(maxCount);
 	GraphicsManager::LoadOBJToVAO(object, &vao);
 	SetUpGPUBuffers();
-	mat.AssignTexture(GraphicsStorage::textures.at(0));
+	///mat.AssignTexture(GraphicsStorage::textures.at(0));
 }
 
 FastInstanceSystem::~FastInstanceSystem()
@@ -34,42 +34,13 @@ FastInstanceSystem::~FastInstanceSystem()
 //this is initial
 void FastInstanceSystem::SetUpGPUBuffers()
 {
-	vao.Bind();
-
-	glGenBuffers(1, &modelBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Matrix4F), NULL, GL_STREAM_DRAW);
-	for (unsigned int i = 0; i < 4; i++) {
-		glVertexAttribPointer(3 + i, 4, GL_FLOAT, GL_FALSE, sizeof(Matrix4F), (const GLvoid*)(sizeof(GLfloat) * i * 4));
-		glEnableVertexAttribArray(3 + i);
-		glVertexAttribDivisor(3 + i, 1); // model matrices : one per box
-	}
-	vao.vertexBuffers.push_back(modelBuffer);
-
-	glGenBuffers(1, &objectIDBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(unsigned int), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(7, 1, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(7);
-	glVertexAttribDivisor(7, 1); // id : one per box
-	
-	glGenBuffers(1, &materialColorBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-	// Initialize with empty (NULL) buffer : it will be updated later, each frame.
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(8, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(8);
-	glVertexAttribDivisor(8, 1); // color : one per box
-	vao.vertexBuffers.push_back(materialColorBuffer);
-	
-	//Unbind the VAO now that the VBOs have been set up
-	vao.Unbind();
+	modelBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Matrix4F), { {ShaderDataType::Mat4, "M", 1} });
+	objectIDBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(unsigned int), { {ShaderDataType::Int, "ID", 1} });
+	materialColorBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector4F), { {ShaderDataType::Float4, "MaterialColor", 1} });
 }
 
 int FastInstanceSystem::Draw()
 {
-	
 	if (dirty)
 	{
 		//UpdateCPUBuffers();
@@ -80,8 +51,8 @@ int FastInstanceSystem::Draw()
 	}
 	
 	vao.Bind();
-	
-	glDrawElementsInstanced(GL_TRIANGLES, vao.indicesCount, GL_UNSIGNED_INT, (void*)0, ActiveCount);
+	vao.activeCount = ActiveCount;
+	vao.Draw();
 	
 	return ActiveCount;
 }
@@ -89,13 +60,23 @@ int FastInstanceSystem::Draw()
 //this is for runtime
 Object* FastInstanceSystem::GetObject()
 {
-	Object* object = &objectContainer[ActiveCount];
-	indexMap[object] = ActiveCount;
-	objectsToUpdate.push_back(object);
-	gpuOrderedObjects.push_back(object);
-	if (ActiveCount < MaxCount) ActiveCount++;
-	dirty = true;
-	return object;
+	if (ActiveCount < MaxCount)
+	{
+		Object* object = &objectContainer[ActiveCount];
+		indexMap[object] = ActiveCount;
+		objectsToUpdate.push_back(object);
+		gpuOrderedObjects.push_back(object);
+		dirty = true;
+		ActiveCount++;
+		return object;
+	}
+	else
+	{
+		Object* object = &objectContainer[MaxCount - 1];
+		objectsToUpdate.push_back(object);
+		dirty = true;
+		return object;
+	}
 }
 
 //this is for runtime
@@ -122,14 +103,9 @@ void FastInstanceSystem::UpdateObjects()
 
 		int index = it->second;
 
-		glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Matrix4F), sizeof(Matrix4F), &object->node->TopDownTransform.toFloat());
-
-		glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(unsigned int), sizeof(unsigned int), &object->ID);
-
-		glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &object->mat->colorShininess);
+		glNamedBufferSubData(modelBuffer, index * sizeof(Matrix4F), sizeof(Matrix4F), &object->node->TopDownTransform.toFloat());
+		glNamedBufferSubData(objectIDBuffer, index * sizeof(unsigned int), sizeof(unsigned int), &object->ID);
+		glNamedBufferSubData(materialColorBuffer, index * sizeof(Vector4F), sizeof(Vector4F), &object->materials[0]->colorShininess);
 	}
 	objectsToUpdate.clear();
 }
@@ -149,20 +125,15 @@ void FastInstanceSystem::ReturnObjects()
 
 		//if (index == ActiveCount) continue;
 
-		//Scene::Instance()->unregisterForPicking(object);
+		//SceneGraph::Instance()->unregisterForPicking(object);
 		indexMap[object] = ActiveCount;
 		Object* lastObject = gpuOrderedObjects[ActiveCount];
 		indexMap[lastObject] = index; //we have no good way of knowing the last object, i know the order via map
 
-		//update gpu buffers at index
-		glBindBuffer(GL_ARRAY_BUFFER, modelBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Matrix4F), sizeof(Matrix4F), &lastObject->node->TopDownTransform.toFloat());
 
-		glBindBuffer(GL_ARRAY_BUFFER, objectIDBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(unsigned int), sizeof(unsigned int), &lastObject->ID);
-
-		glBindBuffer(GL_ARRAY_BUFFER, materialColorBuffer);
-		glBufferSubData(GL_ARRAY_BUFFER, index * sizeof(Vector4F), sizeof(Vector4F), &lastObject->mat->colorShininess);
+		glNamedBufferSubData(modelBuffer, index * sizeof(Matrix4F), sizeof(Matrix4F), &lastObject->node->TopDownTransform.toFloat());
+		glNamedBufferSubData(objectIDBuffer, index * sizeof(unsigned int), sizeof(unsigned int), &lastObject->ID);
+		//glNamedBufferSubData(materialColorBuffer, index * sizeof(Vector4F), sizeof(Vector4F), &lastObject->mat->colorShininess);
 	
 		gpuOrderedObjects[ActiveCount] = object;
 		gpuOrderedObjects[index] = lastObject;
@@ -191,11 +162,12 @@ void FastInstanceSystem::Init(Object * parent)
 		GraphicsStorage::materials.push_back(newMaterial);
 		*newMaterial = mat;
 		objectContainer[i].AssignMaterial(newMaterial);
-		objectContainer[i].node->SetScale(Scene::Instance()->generateRandomIntervallVectorSpherical(1, 15));
-		objectContainer[i].node->SetPosition(Scene::Instance()->generateRandomIntervallVectorSpherical(2, 15));
+		objectContainer[i].node->SetScale(SceneGraph::Instance()->generateRandomIntervallVectorSpherical(1, 15));
+		objectContainer[i].node->SetPosition(SceneGraph::Instance()->generateRandomIntervallVectorSpherical(2, 15));
+		objectContainer[i].bounds = new Bounds();
 		objectContainer[i].bounds->SetUp(parent->bounds->centerOfMesh, parent->bounds->dimensions, parent->bounds->name);
 		objectContainer[i].node->UpdateNode(*parent->node);
-		Scene::Instance()->registerForPicking(&objectContainer[i]);
+		SceneGraph::Instance()->registerForPicking(&objectContainer[i]);
 	}
 	for (size_t i = 0; i < MaxCount/10; i++)
 	{

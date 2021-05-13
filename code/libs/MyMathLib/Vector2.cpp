@@ -1,15 +1,10 @@
 #include <cmath>
 #include "Vector2.h"
+#include "Vector2F.h"
 #include "Vector3.h"
-namespace mwm
-{
-Vector2::Vector2(double x, double y) : x(x), y(y) {}
+#include <cstring>
 
-Vector2::Vector2(const Vector2& vec)
-{
-	x = vec.x;
-	y = vec.y;
-}
+Vector2::Vector2(double x, double y) : x(x), y(y) {}
 
 Vector2::~Vector2()
 {
@@ -24,8 +19,14 @@ Vector2 Vector2::operator+ (const Vector2& right) const
 /*! \fn substract vectors and return new one*/
 Vector2 Vector2::operator- (const Vector2& right) const
 {
-
 	return Vector2(x - right.x, y - right.y);
+}
+
+Vector2& Vector2::operator=(const Vector2F& right)
+{
+	x = right.x;
+	y = right.y;
+	return *this;
 }
 /*! \fn dot product returns scalar*/
 double Vector2::dotAKAscalar(const Vector2& right) const
@@ -71,9 +72,7 @@ Vector2 Vector2::operator/ (const double& right) const
 
 bool Vector2::operator==(const Vector2& v) const
 {
-	if (x != v.x || y != v.y) return false;
-	else return true;
+	return !std::memcmp((void*)this, (void*)&v, sizeof(Vector2));
+	//if (x != v.x || y != v.y) return false;
+	//else return true;
 }
-}
-
-

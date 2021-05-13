@@ -1,15 +1,8 @@
-//------------------------------------------------------------------------------
-/**
-	Manages the opening and closing of a window.
-	
-	(C) 2015 Individual contributors, see AUTHORS file
-*/
-//------------------------------------------------------------------------------
+#pragma once
 #include <functional>
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 #include "config.h"
-#include <string>
 namespace Display
 {
 class Window
@@ -23,7 +16,7 @@ public:
 	/// set size of window
 	void SetSize(int32 width, int32 height);
 	/// set title of window
-	void SetTitle(const std::string& title);
+	void SetTitle(const char* title);
 
 	/// open window
 	bool Open();
@@ -123,7 +116,7 @@ private:
 
 	int32 width;
 	int32 height;
-	std::string title;
+	const char* title;
 
 	GLFWwindow* window;
 };
@@ -143,7 +136,7 @@ Window::SetSize(int32 width, int32 height)
 /**
 */
 inline void
-Window::SetTitle(const std::string& title)
+Window::SetTitle(const char* title)
 {
 	this->title = title;
 	if (nullptr != this->window) this->Retitle();

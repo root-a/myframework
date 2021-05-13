@@ -18,8 +18,8 @@ public:
 		inFrustum = &localInFrustum;
 	};
 	~FastBoundingBox(){};
-	mwm::Matrix4* model;
-	mwm::Vector3F* color;
+	Matrix4* model;
+	Vector3F* color;
 	bool* inFrustum;
 	bool localInFrustum = false;
 
@@ -47,14 +47,14 @@ public:
 	int FindUnused();
 	void SetUpBuffers();
 	void UpdateBuffers();
-	int Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID);
+	int Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID);
 	FastBoundingBox* GetBoundingBox();
 	FastBoundingBox* GetBoundingBoxOnce();
 	void UpdateContainer();
 	void Update();
 
 	static const unsigned short elements[24];
-	static const mwm::Vector3F vertices[8];
+	static const Vector3F vertices[8];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
@@ -63,12 +63,11 @@ public:
 	int ActiveCount;
 	int MaxCount;
 
-	mwm::Matrix4F* models;
-	mwm::Vector3F* colors;
+	Matrix4F* models;
+	Vector3F* colors;
 	FastBoundingBox* boundingBoxesContainer;
 
 	Vao vao;
-	unsigned int vaoHandle;
 	unsigned int modelBuffer;
 	unsigned int colorBuffer;
 

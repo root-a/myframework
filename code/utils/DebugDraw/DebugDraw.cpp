@@ -15,7 +15,7 @@
 #include "LineSystem.h"
 #include "FrameBuffer.h"
 #include "Frustum.h"
-#include "Scene.h"
+#include "SceneGraph.h"
 #include "RigidBody.h"
 #include "FBOManager.h"
 #include "OBJ.h"
@@ -25,7 +25,7 @@
 #include "Point.h"
 #include "Box.h"
 
-using namespace mwm;
+
 
 DebugDraw::DebugDraw()
 {
@@ -49,37 +49,37 @@ void DebugDraw::LoadPrimitives()
 
 	Object* newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::vaos["tetra"]);
+	newObject->vao = GraphicsStorage::vaos["tetra"];
 	newObject->bounds->SetUp(GraphicsStorage::objs["tetra"]->center_of_mesh, GraphicsStorage::objs["tetra"]->dimensions, GraphicsStorage::objs["tetra"]->name);
 	debugShapes["tetra"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::vaos["pyramid"]);
+	newObject->vao = GraphicsStorage::vaos["pyramid"];
 	newObject->bounds->SetUp(GraphicsStorage::objs["pyramid"]->center_of_mesh, GraphicsStorage::objs["pyramid"]->dimensions, GraphicsStorage::objs["pyramid"]->name);
 	debugShapes["pyramid"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::vaos["cube"]);
+	newObject->vao = GraphicsStorage::vaos["cube"];
 	newObject->bounds->SetUp(GraphicsStorage::objs["cube"]->center_of_mesh, GraphicsStorage::objs["cube"]->dimensions, GraphicsStorage::objs["cube"]->name);
 	debugShapes["cube"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::vaos["sphere"]);
+	newObject->vao = GraphicsStorage::vaos["sphere"];
 	newObject->bounds->SetUp(GraphicsStorage::objs["sphere"]->center_of_mesh, GraphicsStorage::objs["sphere"]->dimensions, GraphicsStorage::objs["sphere"]->name);
 	debugShapes["sphere"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::vaos["icosphere"]);
+	newObject->vao = GraphicsStorage::vaos["icosphere"];
 	newObject->bounds->SetUp(GraphicsStorage::objs["icosphere"]->center_of_mesh, GraphicsStorage::objs["icosphere"]->dimensions, GraphicsStorage::objs["icosphere"]->name);
 	debugShapes["icosphere"] = newObject;
 
 	newObject = new Object();
 	newObject->AssignMaterial(debugMat);
-	newObject->AssignMesh(GraphicsStorage::vaos["unitCube"]);
+	newObject->vao = GraphicsStorage::vaos["unitCube"];
 	newObject->bounds->SetUp(GraphicsStorage::objs["unitCube"]->center_of_mesh, GraphicsStorage::objs["unitCube"]->dimensions, GraphicsStorage::objs["unitCube"]->name);
 	debugShapes["unitCube"] = newObject;
 }
@@ -116,7 +116,7 @@ void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float w
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Line::Instance()->Draw(model, *View, *Projection, wireframeShader, width);
+	Line::Instance()->Draw(model, *View, *Projection, wireframeShader);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
@@ -138,7 +138,7 @@ void DebugDraw::DrawNormal(const Vector3& normal, const Vector3& position, float
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Line::Instance()->Draw(model, *View, *Projection, wireframeShader, width);
+	Line::Instance()->Draw(model, *View, *Projection, wireframeShader);
 	Point::Instance()->Draw(model, *View, *Projection, wireframeShader);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
@@ -220,13 +220,13 @@ void DebugDraw::DrawCrossHair(const Vector3F& color)
 	model2 = scaleM * model2;
 	Matrix4 view = Matrix4(1);
 	Matrix4 proj = Matrix4::orthographicTopToBottom(-1.0, 2000.0, 0.0, windowWidth, windowHeight, 0.0);
-	Line::Instance()->mat->color = color;
+	Line::Instance()->color = color;
 
 	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
 	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
 	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Line::Instance()->Draw(model1, view, proj, wireframeShader, 2.f);
-	Line::Instance()->Draw(model2, view, proj, wireframeShader, 2.f);
+	Line::Instance()->Draw(model1, view, proj, wireframeShader);
+	Line::Instance()->Draw(model2, view, proj, wireframeShader);
 	ShaderManager::Instance()->SetCurrentShader(prevShader);
 }
 
@@ -288,7 +288,7 @@ DebugDraw::DrawFastLineSystems(GLuint fboToDrawTo)
 	ShaderManager::Instance()->SetCurrentShader(fastLineShader);
 	for (auto& lSystem : lineSystems)
 	{
-		lSystem->Draw(CameraManager::Instance()->ViewProjection, fastLineShader, 1.f);
+		lSystem->Draw(CameraManager::Instance()->ViewProjection, fastLineShader);
 	}
 }
 
@@ -331,9 +331,9 @@ void DebugDraw::GenerateBoudingBoxes()
 {	
 	for (auto& bbSystem : bbSystems)
 	{
-		for (auto obj : Scene::Instance()->allObjects)
+		for (auto obj : SceneGraph::Instance()->allObjects)
 		{
-			if (obj->inFrustum)
+			if (obj->bounds != nullptr)
 			{
 				FastBoundingBox* fastOBB = bbSystem->GetBoundingBoxOnce();
 				fastOBB->color = &obj->bounds->obb.color;
@@ -351,9 +351,9 @@ void
 DebugDraw::GenerateFastLines()
 {
 	if (DebugDraw::Instance()->lineSystems.empty()) return;
-	for (auto& child : Scene::Instance()->SceneObject->node->children)
+	for (auto& child : SceneGraph::Instance()->SceneObject->node->children)
 	{
-		GenerateFastLineChildren(Scene::Instance()->SceneObject->node, child);
+		GenerateFastLineChildren(SceneGraph::Instance()->SceneObject->node, child);
 	}
 }
 

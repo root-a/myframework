@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 #include "Node.h"
 
-using namespace mwm;
+
 LineSystem::LineSystem(int maxCount){
 
 	MaxCount = maxCount;
@@ -13,6 +13,7 @@ LineSystem::LineSystem(int maxCount){
 	linesContainer = new FastLine[maxCount];
 	positions = new Vector3F[maxCount * 2];
 	colors = new Vector4F[maxCount * 2];
+	vao.SetPrimitiveMode(Vao::PrimitiveMode::LINES);
 	SetUpBuffers();
 }
 
@@ -46,6 +47,7 @@ int LineSystem::FindUnused()
 	return 0;
 }
 
+//we should have a list of indexes to update, maybe?
 void LineSystem::UpdateContainer()
 {
 	ActiveCount = 0;
@@ -69,38 +71,17 @@ void LineSystem::UpdateContainer()
 
 void LineSystem::SetUpBuffers()
 {
-	
-	vao.Bind();
-
-	glGenBuffers(1, &vertexBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * 2 * sizeof(Vector3F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(0);
-	vao.vertexBuffers.push_back(vertexBuffer);
-
-	glGenBuffers(1, &colorBuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	glBufferData(GL_ARRAY_BUFFER, MaxCount * 2 * sizeof(Vector4F), NULL, GL_STREAM_DRAW);
-	glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 0, (void*)0);
-	glEnableVertexAttribArray(1);
-	vao.vertexBuffers.push_back(colorBuffer);
-
-	vao.Unbind();
+	vertexBuffer = vao.AddVertexBuffer(NULL, MaxCount * 2 * sizeof(Vector3F), { {ShaderDataType::Float3, "Position"} });
+	colorBuffer = vao.AddVertexBuffer(NULL, MaxCount * 2 * sizeof(Vector4F), { {ShaderDataType::Float4, "Color"} });
 }
 
 void LineSystem::UpdateBuffers()
 {
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector3F), positions);
-
-	glBindBuffer(GL_ARRAY_BUFFER, colorBuffer);
-	//glBufferData(GL_ARRAY_BUFFER, MaxCount * sizeof(Vector4), NULL, GL_STREAM_DRAW); // Buffer orphaning, a common way to improve streaming perf. See above link for details.
-	glBufferSubData(GL_ARRAY_BUFFER, 0, ActiveCount * sizeof(Vector4F), colors);
+	glNamedBufferSubData(vertexBuffer, 0, ActiveCount * sizeof(Vector3F), positions);
+	glNamedBufferSubData(colorBuffer, 0, ActiveCount * sizeof(Vector4F), colors);
 }
 
-void LineSystem::Draw(const mwm::Matrix4 & ViewProjection, const unsigned int currentShaderID, float width)
+void LineSystem::Draw(const Matrix4 & ViewProjection, const unsigned int currentShaderID)
 {
 	if (dirty)
 	{
@@ -110,18 +91,16 @@ void LineSystem::Draw(const mwm::Matrix4 & ViewProjection, const unsigned int cu
 	}
 	vao.Bind();
 
-	ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
-	glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
-
-	glLineWidth(width);
-	glDrawArrays(GL_LINES, 0, ActiveCount);
-	glLineWidth(1.f);
+	vao.activeCount = ActiveCount;
+	vao.Draw();
 }
 
 FastLine* LineSystem::GetLine()
 {
 	FastLine* fl = &linesContainer[FindUnused()];
 	fl->DrawAlways();
+	fl->nodeA = &fl->localNodeA;
+	fl->nodeB = &fl->localNodeB;
 	dirty = true;
 	return fl;
 }
@@ -139,6 +118,8 @@ FastLine* LineSystem::GetLineOnce()
 {
 	FastLine* fl = &linesContainer[FindUnused()];
 	fl->DrawOnce();
+	fl->nodeA = &fl->localNodeA;
+	fl->nodeB = &fl->localNodeB;
 	dirty = true;
 	return fl;
 }
@@ -165,22 +146,22 @@ void FastLine::DetachEndB()
 	nodeB = &localNodeB;
 }
 
-mwm::Vector3 FastLine::GetPositionA()
+Vector3 FastLine::GetPositionA()
 {
 	return nodeA->TopDownTransform.getPosition() + localNodeA.localPosition;
 }
 
-mwm::Vector3 FastLine::GetPositionB()
+Vector3 FastLine::GetPositionB()
 {
 	return nodeB->TopDownTransform.getPosition() + localNodeB.localPosition;
 }
 
-void FastLine::SetPositionA(mwm::Vector3& pos)
+void FastLine::SetPositionA(Vector3& pos)
 {
 	localNodeA.localPosition = pos;
 }
 
-void FastLine::SetPositionB(mwm::Vector3 & pos)
+void FastLine::SetPositionB(Vector3 & pos)
 {
 	localNodeB.localPosition = pos;
 }

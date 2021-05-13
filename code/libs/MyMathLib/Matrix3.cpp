@@ -1,17 +1,13 @@
 #include <cmath>
 #include <memory.h>
 #include "Matrix3.h"
+#include "Matrix4.h"
 #include "Matrix3F.h"
+#include "Matrix4F.h"
 #include "Vector3.h"
 #include "mLoc.h"
 #include "Quaternion.h"
-
-namespace mwm
-{
-Matrix3::Matrix3(const Matrix3& matrix)
-{
-	*this = matrix;
-}
+#include <cstring>
 
 /*! \fn in constructor matrix values are set to 0 with memset*/
 Matrix3::Matrix3()
@@ -165,8 +161,7 @@ Vector3 Matrix3::operator* (const Vector3& right) const// matrix multi
 	return Vector3(_x, _y, _z);
 }
 
-/*! \fn copy matrix returns new matrix*/
-Matrix3& Matrix3::operator= (const Matrix3& right)
+Matrix3& Matrix3::operator= (const Matrix3F& right)
 {
 	for (int r = 0; r < 3; r++)
 	{
@@ -177,12 +172,40 @@ Matrix3& Matrix3::operator= (const Matrix3& right)
 		}
 	}
 	return *this;
+}
 
+/*! \fn assign matrix returns this matrix*/
+Matrix3& Matrix3::operator= (const Matrix4& right)
+{
+	for (int r = 0; r < 3; r++)
+	{
+		for (int c = 0; c < 3; c++)
+		{
+			_matrix[r][c] = right._matrix[r][c];
+
+		}
+	}
+	return *this;
+}
+
+Matrix3& Matrix3::operator= (const Matrix4F& right)
+{
+	for (int r = 0; r < 3; r++)
+	{
+		for (int c = 0; c < 3; c++)
+		{
+			_matrix[r][c] = right._matrix[r][c];
+
+		}
+	}
+	return *this;
 }
 
 /*! \fn check if matrices are identical*/
 bool Matrix3::operator== (const Matrix3& right)
 {
+	return !std::memcmp((void*)this, (void*)&right, sizeof(Matrix3));
+	/*
 	for (int r = 0; r < 3; r++)
 	{
 		for (int c = 0; c < 3; c++)
@@ -194,6 +217,7 @@ bool Matrix3::operator== (const Matrix3& right)
 		}
 	}
 	return true;
+	*/
 }
 
 /*! \fn function returning rotation matrix with specified rotation angle along X axis*/
@@ -640,5 +664,4 @@ Quaternion Matrix3::toQuaternion() const
 		temp.z = 0.25 * S;
 	}
 	return temp;
-}
 }

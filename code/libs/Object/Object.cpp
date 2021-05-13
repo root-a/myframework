@@ -6,16 +6,18 @@
 #include <math.h>
 #include "Component.h"
 #include "Bounds.h"
-using namespace mwm;
+#include "Script.h"
+
+
 
 Object::Object()
 {
 	node = &localNode;
-	vao = nullptr;
+	localNode.owner = this;
 	ID = currentID;
 	currentID++;
-	bounds = new Bounds();
-	AddComponent(bounds);
+	bounds = nullptr;
+	vao = nullptr;
 }
 
 Object::~Object()
@@ -28,36 +30,47 @@ Object::~Object()
 	dynamicComponents.clear();
 }
 
-void Object::AssignMaterial(Material* mat)
+void Object::AssignMaterial(Material* mat, int slot)
 {
-	this->mat = mat;
+	if (materials.size() == 0) materials.push_back(mat);
+	else if (materials.size() > slot) materials[slot] = mat;
 }
 
-void Object::AssignMesh(Vao* mesh)
+void Object::AddMaterial(Material * mat)
 {
-	vao = mesh;
+	materials.push_back(mat);
 }
 
-void Object::Attach(Node * nodeToAttachTo)
+void Object::RemoveMaterial(Material* mat)
 {
-	node = nodeToAttachTo;
+	int index = FindMaterialIndex(mat);
+	if (index != -1)
+	{
+		materials[index] = materials.back();
+		materials.pop_back();
+	}
 }
 
-void Object::Attach(Object * objectToAttachTo)
+std::string & Object::GetName()
 {
-	node = objectToAttachTo->node;
+	return name;
 }
 
-void Object::Detach()
+Object * Object::GetParentObject()
 {
-	node->SetPosition(node->GetWorldPosition());
-	node->SetOrientation(node->GetWorldOrientation());
-	node->SetScale(node->getScale());
-	node = &localNode;
+	return node->parent->owner;
+}
+
+Component * Object::GetComponent(const char * componentName)
+{
+	auto component = componentsMap.find(componentName);
+	if (component != componentsMap.end()) return component->second;
+	return nullptr;
 }
 
 void Object::Update()
 {
+	TopDownTransformF = node->TopDownTransform.toFloat();
 }
 
 void Object::UpdateComponents()
@@ -78,17 +91,62 @@ unsigned int Object::Count()
 	return currentID;
 }
 
-void Object::AddComponent(Component* newComponent)
+int Object::FindDynamicComponentIndex(Component * componentToFind)
+{
+	for (size_t i = 0; i < dynamicComponents.size(); i++)
+	{
+		if (dynamicComponents[i] == componentToFind)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+int Object::FindComponentIndex(Component * componentToFind)
+{
+	for (size_t i = 0; i < components.size(); i++)
+	{
+		if (components[i] == componentToFind)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+int Object::FindMaterialIndex(Material* materialToFind)
+{
+	for (size_t i = 0; i < materials.size(); i++)
+	{
+		if (materials[i] == materialToFind)
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+void Object::LoadLuaFile(const char * filename)
+{
+	std::string directorywithfilename = "resources\\objects\\scripts";
+	directorywithfilename.append(filename);
+	directorywithfilename.append(".lua");
+
+	script->LoadLuaFile(directorywithfilename.c_str());
+}
+
+void Object::AddComponent(Component* newComponent, bool isDynamic)
 {
 	components.push_back(newComponent);
-	if (newComponent->IsDynamic())
+	if (isDynamic)
 		dynamicComponents.push_back(newComponent);
 	newComponent->Init(this);
 }
 
-void Object::UpdateComponentDynamicState(Component* component)
+void Object::SetComponentDynamicState(Component * component, bool isDynamic)
 {
-	if (component->IsDynamic())
+	if (isDynamic)
 	{
 		dynamicComponents.push_back(component);
 	}
@@ -102,6 +160,30 @@ void Object::UpdateComponentDynamicState(Component* component)
 				dynamicComponents.pop_back();
 				return;
 			}
+		}
+	}
+}
+
+void Object::RemoveComponent(Component * componentToRemove)
+{
+	int index = FindDynamicComponentIndex(componentToRemove);
+	if (index != -1)
+	{
+		dynamicComponents[index] = dynamicComponents.back();
+		dynamicComponents.pop_back();
+	}
+	index = FindComponentIndex(componentToRemove);
+	if (index != -1)
+	{
+		components[index] = components.back();
+		components.pop_back();
+	}
+	for (auto& componentPair : componentsMap)
+	{
+		if (componentPair.second == componentToRemove)
+		{
+			componentsMap.erase(componentPair.first);
+			break;
 		}
 	}
 }

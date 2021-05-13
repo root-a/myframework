@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <GL/glew.h>
 
-using namespace mwm;
+
 
 BoundingBox * BoundingBox::Instance()
 {
@@ -13,22 +13,19 @@ BoundingBox * BoundingBox::Instance()
 }
 
 BoundingBox::BoundingBox(){
-	localMat = new Material();
-	mat = localMat;
+	color.x = 1;
+	color.y = 1;
+	color.z = 0;
+	vao.SetPrimitiveMode(Vao::PrimitiveMode::LINES);
 	SetUpBuffers();
 }
 
 BoundingBox::~BoundingBox()
 {
-	mat = nullptr;
-	delete localMat;
 }
 
 void BoundingBox::SetUpBuffers()
 {
-	
-	vao.Bind();
-
 	Vector3 vertices[] = {
 	Vector3(-0.5, -0.5, 0.5),
 	Vector3(0.5, -0.5, 0.5),
@@ -58,35 +55,35 @@ void BoundingBox::SetUpBuffers()
 	};
 
 	vao.vertexBuffers.reserve(2);
-	GLuint vertexbuffer;
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, 8 * sizeof(Vector3F), &verts[0], GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-	glEnableVertexAttribArray(0);
-	vao.vertexBuffers.push_back(vertexbuffer);
 
-	vao.indicesCount = 24;
-	GLuint elementbuffer;
-	glGenBuffers(1, &elementbuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vao.indicesCount * sizeof(GLushort), &elements[0], GL_STATIC_DRAW);
-	vao.vertexBuffers.push_back(elementbuffer);
+	vao.AddVertexBuffer(verts, 8 * sizeof(Vector3F), { {ShaderDataType::Float3, "position"} });
 
-	vao.Unbind();
+	///GLuint bindingIndex = 0;
+	///GLuint attributeIndex = 0;
+	///
+	///GLuint vertexbuffer;
+	///glCreateBuffers(1, &vertexbuffer);
+	///glNamedBufferStorage(vertexbuffer, 8 * sizeof(Vector3F), verts, GL_DYNAMIC_STORAGE_BIT);
+	///glEnableVertexArrayAttrib(vao.handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
+	///glVertexArrayVertexBuffer(vao.handle, bindingIndex, vertexbuffer, 0, sizeof(Vector3F)); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
+	///glVertexArrayAttribFormat(vao.handle, attributeIndex, 3, GL_FLOAT, GL_FALSE, 0); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
+	///glVertexArrayAttribBinding(vao.handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
+	///vao.vertexBuffers.push_back(vertexbuffer);
+
+	vao.AddIndexBuffer(elements, 24, IndicesType::UNSIGNED_SHORT);
 }
 
-void BoundingBox::Draw(const mwm::Matrix4& Model, const mwm::Matrix4& ViewProjection, unsigned int shader)
+void BoundingBox::Draw(const Matrix4& Model, const Matrix4& ViewProjection, unsigned int shader)
 {
 	Matrix4F MVP = (Model*ViewProjection).toFloat();
 	MatrixHandle = glGetUniformLocation(shader, "MVP");
 	MaterialColorValueHandle = glGetUniformLocation(shader, "MaterialColorValue");
 
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-	glUniform3fv(MaterialColorValueHandle, 1, &mat->color.x);
+	glUniform3fv(MaterialColorValueHandle, 1, &color.x);
 
 	vao.Bind();
 
-	glDrawElements(GL_LINES, vao.indicesCount, GL_UNSIGNED_SHORT, 0);
+	vao.Draw();
 }
 

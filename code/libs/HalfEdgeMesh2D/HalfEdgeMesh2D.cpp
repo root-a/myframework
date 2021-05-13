@@ -9,7 +9,7 @@
 #include "Optimization.h"
 
 using namespace cop4530;
-using namespace mwm;
+
 
 //std specialization
 namespace std

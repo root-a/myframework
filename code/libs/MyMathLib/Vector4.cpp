@@ -2,8 +2,8 @@
 #include "Vector4.h"
 #include "Vector2.h"
 #include "Vector3.h"
-namespace mwm
-{
+#include "Vector4F.h"
+
 /*! \fn Vector4 constructor*/
 Vector4::Vector4(double x, double y, double z, double w) : x(x), y(y), z(z), w(w) {}
 
@@ -24,6 +24,15 @@ Vector4::Vector4(const Vector3& v1, double wIn)
 }
 
 Vector4::~Vector4() {}
+
+Vector4& Vector4::operator=(const Vector4F& right)
+{
+	x = right.x;
+	y = right.y;
+	z = right.x;
+	w = right.y;
+	return *this;
+}
 
 /*! \fn add vectors amd return new one*/
 Vector4 Vector4::operator+ (const Vector4& right) const
@@ -81,7 +90,9 @@ Vector3 Vector4::get_xyz() const
 /*! \fn function returning new normalized vector*/
 Vector4 Vector4::vectNormalize() const
 {
-	double length = sqrt(x*x + y*y + z*z + w*w);
+	double squareMag = x * x + y * y + z * z + w * w;
+	if (squareMag == 0.0) return Vector4();
+	double length = sqrt(squareMag);
 	return Vector4(x / length, y / length, z / length, w / length);
 }
 
@@ -89,5 +100,4 @@ Vector4 Vector4::vectNormalize() const
 double& Vector4::operator[] (int index)
 {
 	return vect[index];
-}
 }

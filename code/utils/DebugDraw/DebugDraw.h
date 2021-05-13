@@ -20,13 +20,13 @@ class DebugDraw
 public:
 	static DebugDraw* Instance();
 
-	void DrawShapeAtPos(const char* shapeName, const mwm::Vector3& pos);
-	void DrawLine(const mwm::Vector3& normal, const mwm::Vector3& position, float width = 4.f);
-	void DrawPlane(const mwm::Vector3& normal, const mwm::Vector3& position, const mwm::Vector3& halfExtent = mwm::Vector3(1.0, 1.0, 1.0));
-	void DrawPlaneN(const mwm::Vector3& normal, const mwm::Vector3& position, const mwm::Vector3& halfExtent = mwm::Vector3(1.0, 1.0, 1.0));
-	void DrawPoint(const mwm::Vector3& position, float size = 10.f);
-	void DrawNormal(const mwm::Vector3& normal, const mwm::Vector3& position, float width = 4.f);
-	void DrawCrossHair(const mwm::Vector3F& color = mwm::Vector3F(1.f, 1.f, 0.f));
+	void DrawShapeAtPos(const char* shapeName, const Vector3& pos);
+	void DrawLine(const Vector3& normal, const Vector3& position, float width = 4.f);
+	void DrawPlane(const Vector3& normal, const Vector3& position, const Vector3& halfExtent = Vector3(1.0, 1.0, 1.0));
+	void DrawPlaneN(const Vector3& normal, const Vector3& position, const Vector3& halfExtent = Vector3(1.0, 1.0, 1.0));
+	void DrawPoint(const Vector3& position, float size = 10.f);
+	void DrawNormal(const Vector3& normal, const Vector3& position, float width = 4.f);
+	void DrawCrossHair(const Vector3F& color = Vector3F(1.f, 1.f, 0.f));
 	void DrawQuad();
 	void DrawRegion(int posX, int posY, int width, int height, const Texture* texture);
 	void Clear();
@@ -39,8 +39,8 @@ public:
 	void GenerateFastLineChildren(Node * parent, Node * child);
 	Material* debugMat;
 	
-	mwm::Matrix4* Projection;
-	mwm::Matrix4* View;
+	Matrix4* Projection;
+	Matrix4* View;
 	void LoadPrimitives();
 	bool debug = false;
 	std::vector<LineSystem*> lineSystems;

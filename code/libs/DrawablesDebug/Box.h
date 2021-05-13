@@ -3,20 +3,21 @@
 #include "MinMax.h"
 #include "Vao.h"
 class Material;
+class Texture;
 
 class Box
 {
 	
 public:
 	static Box* Instance();
-	void Draw(const mwm::Matrix4& ModelViewProjection, unsigned int shader);
-	Material* mat;
+	void Draw(const Matrix4& ModelViewProjection, unsigned int shader);
 	Vao vao;
+	Texture* tex;
+	Vector3F color;
 private:
 	Box();
 	~Box();
 	void SetUpBuffers();
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorHandle;
-	Material* localMat;
 };

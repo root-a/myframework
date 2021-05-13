@@ -1,7 +1,7 @@
 #include "CameraManager.h"
 #include "Camera.h"
 
-using namespace mwm;
+
 
 CameraManager::CameraManager()
 {
@@ -38,4 +38,14 @@ void CameraManager::Update(double deltaTime)
 {
 	currentCamera->Update(deltaTime);
 	ViewProjection = currentCamera->ViewMatrix*currentCamera->ProjectionMatrix;
+	ViewProjectionF = ViewProjection;
+	ViewF = currentCamera->ViewMatrix;
+	ProjectionF = currentCamera->ProjectionMatrix;
+	far = currentCamera->far;
+	near = currentCamera->near;
+	cameraPos = currentCamera->GetPosition2();
+	cameraUp = currentCamera->up;
+	cameraRight = currentCamera->right;
+	cameraForward = currentCamera->forward;
+	screenSize = currentCamera->screenSize;
 }

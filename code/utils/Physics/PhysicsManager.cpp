@@ -7,7 +7,7 @@
 #include "Line.h"
 #include "Point.h"
 
-using namespace mwm;
+
 using namespace std;
 
 PhysicsManager::PhysicsManager()
@@ -593,7 +593,7 @@ void PhysicsManager::CalcFaceVertices(const Vector3& pos, Vector3* vertices, con
 	}
 }
 
-void PhysicsManager::ClipFaceToSidePlane(vector<Vector3>& clipPolygon, std::vector<mwm::Vector3>& newClipPolygon, const Vector3& normal, double plane_offset)
+void PhysicsManager::ClipFaceToSidePlane(vector<Vector3>& clipPolygon, std::vector<Vector3>& newClipPolygon, const Vector3& normal, double plane_offset)
 {
 	Vector3 Vertex1 = clipPolygon.back();
 	double Distance1 = Vertex1.dotAKAscalar(normal) - plane_offset;//rnDistance(Plane, Vertex1.Position);
@@ -765,34 +765,34 @@ void PhysicsManager::DrawSidePlanes(const Vector3& normal1, const Vector3& norma
 	Vector3 vertexOnPlane3 = onePosition - normal2*oneHalfSize.vect[index2]; // -1*normal
 	Vector3 vertexOnPlane4 = onePosition + normal2*oneHalfSize.vect[index2];
 	//let's draw calculated planes with normals at plane points
-	Line::Instance()->mat->SetColor(1, 0, 0); //red
-	Point::Instance()->mat->SetColor(1, 0, 1);
+	Line::Instance()->color = Vector3F(1, 0, 0); //red
+	Point::Instance()->color = Vector3F(1, 0, 1);
 	DebugDraw::Instance()->DrawPlaneN(-1.0*normal1, vertexOnPlane1);
 
-	Line::Instance()->mat->SetColor(0, 1, 0); //green
-	Point::Instance()->mat->SetColor(1, 0, 1);
+	Line::Instance()->color = Vector3F(0, 1, 0); //green
+	Point::Instance()->color = Vector3F(1, 0, 1);
 	DebugDraw::Instance()->DrawPlaneN(normal1, vertexOnPlane2);
 
-	Line::Instance()->mat->SetColor(0, 0, 1); //blue
-	Point::Instance()->mat->SetColor(1, 0, 1);
+	Line::Instance()->color = Vector3F(0, 0, 1); //blue
+	Point::Instance()->color = Vector3F(1, 0, 1);
 	DebugDraw::Instance()->DrawPlaneN(-1.0*normal2, vertexOnPlane3);
 
-	Line::Instance()->mat->SetColor(1, 1, 0); //yellow
-	Point::Instance()->mat->SetColor(1, 0, 1);
+	Line::Instance()->color = Vector3F(1, 1, 0); //yellow
+	Point::Instance()->color = Vector3F(1, 0, 1);
 	DebugDraw::Instance()->DrawPlaneN(normal2, vertexOnPlane4);
 }
 
 void PhysicsManager::DrawReferenceAndIncidentFace(Vector3 * reference_face, Vector3 * incident_face)
 {
 	//reference face verts
-	Point::Instance()->mat->SetColor(0, 1, 1);
+	Point::Instance()->color = Vector3F(0, 1, 1);
 	DebugDraw::Instance()->DrawPoint(reference_face[0], 15);
 	DebugDraw::Instance()->DrawPoint(reference_face[1], 15);
 	DebugDraw::Instance()->DrawPoint(reference_face[2], 15);
 	DebugDraw::Instance()->DrawPoint(reference_face[3], 15);
 	
 	//draw incident face verts
-	Point::Instance()->mat->SetColor(1, 0, 0);
+	Point::Instance()->color = Vector3F(1, 0, 0);
 	DebugDraw::Instance()->DrawPoint(incident_face[0], 15); //upper left
 	DebugDraw::Instance()->DrawPoint(incident_face[1], 15); //lower left
 	DebugDraw::Instance()->DrawPoint(incident_face[2], 15); //lower right
@@ -802,8 +802,8 @@ void PhysicsManager::DrawReferenceAndIncidentFace(Vector3 * reference_face, Vect
 void PhysicsManager::DrawCollisionNormal(Contact& contact)
 {
 	//collision normal
-	Line::Instance()->mat->SetColor(0, 0, 0); //black 
-	Point::Instance()->mat->SetColor(0, 0, 0);
+	Line::Instance()->color = Vector3F(0, 0, 0); //black 
+	Point::Instance()->color = Vector3F(0, 0, 0);
 	DebugDraw::Instance()->DrawNormal(contact.contactNormal, contact.two->object->bounds->centeredPosition); //draw mtv after flip
 }
 
@@ -811,8 +811,8 @@ void PhysicsManager::DrawReferenceNormal(Contact& contact, int typeOfCollision)
 {
 	//reference normal
 	Vector3 centerPointOfRefFace = contact.one->object->bounds->centeredPosition + contact.contactNormal*contact.one->object->bounds->obb.halfExtents[typeOfCollision];
-	Point::Instance()->mat->SetColor(1, 1, 1); //white
-	Line::Instance()->mat->SetColor(1, 1, 1);
+	Point::Instance()->color = Vector3F(1, 1, 1); //white
+	Line::Instance()->color = Vector3F(1, 1, 1);
 	DebugDraw::Instance()->DrawNormal(contact.contactNormal, centerPointOfRefFace); //draw reference normal
 }
 
@@ -830,8 +830,8 @@ size_t PhysicsManager::DrawPlaneClipContacts(std::vector<Vector3> &contactPoints
 {
 	for (size_t i = vertCount; i < contacts.size(); i++)
 	{
-		Point::Instance()->mat->SetColor(1, 0, 1);
-		Line::Instance()->mat->SetColor(normalColor);
+		Point::Instance()->color = Vector3F(1, 0, 1);
+		Line::Instance()->color = Vector3F(normalColor);
 		DebugDraw::Instance()->DrawNormal(normal, contactPoints[i]);
 	}	
 	vertCount = contactPoints.size();

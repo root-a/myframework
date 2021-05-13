@@ -30,9 +30,9 @@ public:
 	Vao vao;
 	Material mat;
 
-	mwm::Matrix4F* M;
+	Matrix4F* M;
 	unsigned int* objectID;
-	mwm::Vector4F* materialColorShininess;
+	Vector4F* materialColorShininess;
 
 	Object* objectContainer;
 

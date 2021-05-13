@@ -1,7 +1,7 @@
 #pragma once
-namespace mwm
-{
+class Vector2F;
 class Vector3;
+
 class Vector2
 {
 public:
@@ -14,10 +14,10 @@ public:
 
 
 	Vector2(double x = 0, double y = 0);
-	Vector2(const Vector2& vect);
 	~Vector2();
 	Vector2 operator+ (const Vector2& right) const;
 	Vector2 operator- (const Vector2& right) const;
+	Vector2& operator= (const Vector2F& right);
 	double dotAKAscalar(const Vector2& right) const;
 	double vectLengt() const;
 	Vector2 vectNormalize() const;
@@ -29,4 +29,3 @@ public:
 	bool operator==(const Vector2& v)const;
 protected:
 };
-}

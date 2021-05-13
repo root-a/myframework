@@ -1,8 +1,6 @@
 //
 // Created by marwac-9 on 9/17/15.
 //
-#include <string>
-#include <unordered_map>
 
 class ShaderManager
 {

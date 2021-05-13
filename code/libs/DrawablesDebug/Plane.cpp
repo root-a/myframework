@@ -1,9 +1,6 @@
 #include "Plane.h"
-#include "Material.h"
 #include <algorithm>
 #include <GL/glew.h>
-
-using namespace mwm;
 
 Plane * Plane::Instance()
 {
@@ -14,49 +11,38 @@ Plane * Plane::Instance()
 
 Plane::Plane()
 {
-	localMat = new Material();
-	mat = localMat;
+	color.x = 1;
+	color.y = 1;
+	color.z = 0;
 	SetUpBuffers();
 }
 
 Plane::~Plane()
 {
-	mat = nullptr;
-	delete localMat;
 }
 
 
 void Plane::SetUpBuffers()
 {
-	
-	
-	//Bind VAO
-	vao.Bind();
-
 	vao.vertexBuffers.reserve(2);
 
 	unsigned short elements[] = { 0, 1, 2, 2, 1, 3 };
 	Vector3F vertices[] = {Vector3F(-1.f, -1.f, 0.f),Vector3F(1.f, -1.f, 0.f),Vector3F(-1.f, 1.f, 0.f),Vector3F(1.f, 1.f, 0.f)};
 
-	GLuint vertexbuffer;
-	// 1rst attribute buffer : vertices
-	glGenBuffers(1, &vertexbuffer);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexbuffer);
-	glBufferData(GL_ARRAY_BUFFER, 4 * sizeof(Vector3F), &vertices[0], GL_STATIC_DRAW);
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-	glEnableVertexAttribArray(0);
-	vao.vertexBuffers.push_back(vertexbuffer);
+	vao.AddVertexBuffer(vertices, 4 * sizeof(Vector3F), { {ShaderDataType::Float3, "position"} });
+	///GLuint bindingIndex = 0;
+	///GLuint attributeIndex = 0;
+	///
+	///GLuint vertexbuffer;
+	///glCreateBuffers(1, &vertexbuffer);
+	///glNamedBufferStorage(vertexbuffer, 4 * sizeof(Vector3F), vertices, GL_DYNAMIC_STORAGE_BIT);
+	///glEnableVertexArrayAttrib(vao.handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
+	///glVertexArrayVertexBuffer(vao.handle, bindingIndex, vertexbuffer, 0, sizeof(Vector3F)); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
+	///glVertexArrayAttribFormat(vao.handle, attributeIndex, 3, GL_FLOAT, GL_FALSE, 0); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
+	///glVertexArrayAttribBinding(vao.handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
+	///vao.vertexBuffers.push_back(vertexbuffer);
 
-	vao.indicesCount = 6;
-	GLuint elementbuffer;
-	// 4th element buffer Generate a buffer for the indices as well
-	glGenBuffers(1, &elementbuffer);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vao.indicesCount * sizeof(GLushort), &elements[0], GL_STATIC_DRAW);
-	vao.vertexBuffers.push_back(elementbuffer);
-
-	//Unbind the VAO now that the VBOs have been set up
-	vao.Unbind();
+	vao.AddIndexBuffer(elements, 6, IndicesType::UNSIGNED_SHORT);
 }
 
 void Plane::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Projection, const GLuint shader)
@@ -67,11 +53,11 @@ void Plane::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Proje
 	MaterialColorValueHandle = glGetUniformLocation(shader, "MaterialColorValue");
 
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
-	glUniform3fv(MaterialColorValueHandle, 1, &mat->color.x);
+	glUniform3fv(MaterialColorValueHandle, 1, &color.x);
 
 	//bind vao before drawing
-	vao.Unbind();
+	vao.Bind();
 
 	// Draw the triangles !
-	glDrawElements(GL_TRIANGLES, vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0); // mode, count, type, element array buffer offset
+	vao.Draw();
 }

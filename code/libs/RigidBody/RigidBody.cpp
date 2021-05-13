@@ -5,7 +5,7 @@
 #include "Times.h"
 #include "BoundingBox.h"
 
-using namespace mwm;
+
 
 RigidBody::RigidBody()
 {
@@ -21,7 +21,6 @@ RigidBody::RigidBody()
 	motion = 1.0; //make sure it does not sleep directly at start of simulation
 	canSleep = true;
 	sleepEpsilon = 0.2;
-	dynamic = true;
 }
 
 RigidBody::~RigidBody()
@@ -223,14 +222,14 @@ void RigidBody::UpdateKineticEnergyStoreAndPutToSleep(double timestep)
 {
 	// Update the kinetic energy store, and possibly put the body to
 	// sleep.
-	if (canSleep) {
+	//if (canSleep) {
 		double currentMotion = velocity.dotAKAscalar(velocity) + angular_velocity.dotAKAscalar(angular_velocity);
 		double bias = pow(0.5, timestep);
 		motion = bias*motion + (1.0 - bias)*currentMotion;
 
 		if (motion < sleepEpsilon) SetAwake(false);
 		else if (motion > 10.0 * sleepEpsilon) motion = 10.0 * sleepEpsilon;
-	}
+	//}
 }
 
 void RigidBody::UpdateInertiaTensor()

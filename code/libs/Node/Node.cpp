@@ -1,6 +1,6 @@
 #include "Node.h"
 #include "Component.h"
-using namespace mwm;
+
 Node::Node()
 {
 	TopDownTransform.setIdentity();
@@ -59,7 +59,7 @@ Vector3 Node::getScale()
 	return totalScale;
 }
 
-mwm::Vector3& Node::GetLocalScale()
+Vector3& Node::GetLocalScale()
 {
 	return localScale;
 }
@@ -75,7 +75,7 @@ Vector3 Node::GetWorldPosition() const
 	return TopDownTransform.getPosition();
 }
 
-mwm::Vector3& Node::GetLocalPosition()
+Vector3& Node::GetLocalPosition()
 {
 	return localPosition;
 }
@@ -104,7 +104,7 @@ void Node::Parent(Node * newParent)
 	}
 }
 
-void Node::ParentWithOffset(Node* newParent, mwm::Vector3& newLocalPos, mwm::Quaternion& newLocalOri, mwm::Vector3& newLocalScale)
+void Node::ParentWithOffset(Node* newParent, Vector3& newLocalPos, Quaternion& newLocalOri, Vector3& newLocalScale)
 {
 	if (parent != newParent)
 	{
@@ -128,7 +128,7 @@ void Node::ParentWithOffset(Node* newParent, mwm::Vector3& newLocalPos, mwm::Qua
 	}
 }
 
-void Node::ParentWithOffset(Node * newParent, mwm::Matrix4& newLocalTransform)
+void Node::ParentWithOffset(Node * newParent, Matrix4& newLocalTransform)
 {
 	if (parent != newParent)
 	{
@@ -275,7 +275,7 @@ bool Node::GetTotalMovable()
 bool Node::UpdateMovable(Node * node)
 {
 	bool newTotalMovable = node->movable || node->parent->totalMovable;
-	if (node->totalMovable != newTotalMovable) //this might not be good
+	if (node->totalMovable != newTotalMovable)
 	{
 		node->totalMovable = newTotalMovable;
 		for (auto* child : children)
@@ -305,7 +305,7 @@ void Node::SetOrientation(const Quaternion& q)
 	LocalOrientationM = localOrientation.ConvertToMatrix();
 }
 
-void Node::SetRotation(const mwm::Matrix4 & m)
+void Node::SetRotation(const Matrix4 & m)
 {
 	LocalOrientationM = m;
 }
@@ -315,17 +315,17 @@ Quaternion& Node::GetLocalOrientation()
 	return localOrientation;
 }
 
-mwm::Matrix3 Node::GetWorldRotation3()
+Matrix3 Node::GetWorldRotation3()
 {
 	return TopDownTransform.extractRotation3();
 }
 
-mwm::Matrix4 Node::GetWorldRotation()
+Matrix4 Node::GetWorldRotation()
 {
 	return TopDownTransform.extractRotation();
 }
 
-mwm::Quaternion Node::GetWorldOrientation()
+Quaternion Node::GetWorldOrientation()
 {
 	return TopDownTransform.extractRotation3().toQuaternion();
 }

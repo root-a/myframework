@@ -185,7 +185,7 @@ Window::Resize()
 void
 Window::Retitle()
 {
-	if (nullptr != this->window) glfwSetWindowTitle(this->window, this->title.c_str());
+	if (nullptr != this->window) glfwSetWindowTitle(this->window, this->title);
 }
 
 //------------------------------------------------------------------------------
@@ -212,7 +212,7 @@ Window::Open()
 	glfwWindowHint(GLFW_SAMPLES, 8);
 
 	// open window
-	this->window = glfwCreateWindow(this->width, this->height, this->title.c_str(), nullptr, nullptr);
+	this->window = glfwCreateWindow(this->width, this->height, this->title, nullptr, nullptr);
 	glfwMakeContextCurrent(this->window);
 
 	if (nullptr != this->window && WindowCount == 0)

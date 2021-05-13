@@ -1,7 +1,7 @@
 #include "Edge.h"
 #include "Vertex.h"
 
-using namespace mwm;
+
 
 Edge::Edge()
 {

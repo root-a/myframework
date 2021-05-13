@@ -3,9 +3,11 @@
 #include "Vector3F.h"
 #include "Matrix4F.h"
 #include "Matrix3F.h"
+#include "Quaternion.h"
+#include "MathUtils.h"
+#define _USE_MATH_DEFINES
+#include <cmath>
 
-namespace mwm
-{
 QuaternionF::QuaternionF()
 {
 	x = 0;
@@ -17,11 +19,27 @@ QuaternionF::QuaternionF()
 QuaternionF::QuaternionF(float angle, const Vector3F &axis)
 {
 	float PI = 3.14159265f;
-	float dAngle = angle * PI / 180.f;
-	x = axis.x * sinf((dAngle) / 2.f);
-	y = axis.y * sinf((dAngle) / 2.f);
-	z = axis.z * sinf((dAngle) / 2.f);
-	w = cosf((dAngle) / 2.f);
+	float rAngle = (float)MathUtils::ToRadians(angle);
+	x = axis.x * sinf((rAngle) / 2.f);
+	y = axis.y * sinf((rAngle) / 2.f);
+	z = axis.z * sinf((rAngle) / 2.f);
+	w = cosf((rAngle) / 2.f);
+}
+
+QuaternionF::QuaternionF(float pitch, float yaw, float roll)
+{
+	float cy = cosf(yaw * 0.5f);
+	float sy = sinf(yaw * 0.5f);
+	float cp = cosf(roll * 0.5f);
+	float sp = sinf(roll * 0.5f);
+	float cr = cosf(pitch * 0.5f);
+	float sr = sinf(pitch * 0.5f);
+	float c1c2 = cy * cp;
+	float s1s2 = sy * sp;
+	w = c1c2 * cr - s1s2 * sr;
+	x = c1c2 * sr + s1s2 * cr;
+	y = sy * cp*cr + cy * sp*sr;
+	z = cy * sp*cr - sy * cp*sr;
 }
 
 QuaternionF::QuaternionF(const float x, const float y, const float z, const float w) : x(x), y(y), z(z), w(w) {}
@@ -48,6 +66,15 @@ QuaternionF QuaternionF::operator*(const QuaternionF& v) const
 QuaternionF QuaternionF::operator*(const float& number) const
 {
 	return QuaternionF(x * number, y * number, z * number, w * number);
+}
+
+QuaternionF& QuaternionF::operator=(const Quaternion & right)
+{
+	x = (float)right.x;
+	y = (float)right.y;
+	z = (float)right.z;
+	w = (float)right.w;
+	return *this;
 }
 
 void QuaternionF::operator*=(const QuaternionF& v)
@@ -192,4 +219,37 @@ Vector3F QuaternionF::getInvForward() const
 	return Vector3F(x1, y1, z1).vectNormalize();
 }
 
+Quaternion QuaternionF::toDouble() const
+{
+	return Quaternion(x, y, z, w);
+}
+
+Vector3F QuaternionF::toEulerAngles() const
+{
+	float yaw = 0.f;
+	float pitch = 0.f;
+	float roll = 0.f;
+	
+	float sqw = w*w;
+	float sqx = x*x;
+	float sqy = y*y;
+	float sqz = z*z;
+	float unit = sqx + sqy + sqz + sqw; // if normalised is one, otherwise is correction factor
+	float test = x*y + z*w;
+	if (test > 0.499f*unit) { // singularity at north pole
+		yaw = 2.f * atan2f(x, w);
+		pitch = 0.f;
+		roll = M_PI / 2.f;
+		return Vector3F(pitch, yaw, roll);
+	}
+	if (test < -0.499f*unit) { // singularity at south pole
+		yaw = -2.f * atan2f(x, w);
+		pitch = 0.f;
+		roll = -M_PI / 2.f;
+		return Vector3F(pitch, yaw, roll);
+	}
+	yaw = atan2f(2.f * y*w - 2.f * x*z, sqx - sqy - sqz + sqw);
+	pitch = atan2f(2.f * x*w - 2.f * y*z, -sqx + sqy - sqz + sqw);
+	roll = asinf(2.f * test / unit);
+	return Vector3F(pitch, yaw, roll);
 }

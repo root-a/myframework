@@ -1,8 +1,6 @@
 #pragma once
 #include "Vector3F.h"
 
-namespace mwm
-{
 struct MinMaxF
 {
 	Vector3F min;
@@ -14,4 +12,3 @@ struct MinMax
 	Vector3 min;
 	Vector3 max;
 };
-}

@@ -24,7 +24,7 @@ private:
 	cop4530::Vector<Vertex*> vertices;
 	cop4530::Vector<Edge*> edges;
 	cop4530::Vector<Face*> faces;
-	bool checkIfSameVect(mwm::Vector3 &vect1, mwm::Vector3 &vect2);
+	bool checkIfSameVect(Vector3 &vect1, Vector3 &vect2);
 	void SplitHalfEdges();
 	void CalculateOldPosition();
 	void CalculateMidpointPosition();

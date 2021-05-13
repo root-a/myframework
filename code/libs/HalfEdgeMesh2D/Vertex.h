@@ -5,7 +5,7 @@ class Edge;
 class Vertex
 {
 public:
-	mwm::Vector2 pos, newPos;
+	Vector2 pos, newPos;
 	Vertex();
 	~Vertex();
 private:

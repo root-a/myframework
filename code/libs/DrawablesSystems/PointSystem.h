@@ -11,13 +11,13 @@ class FastPoint
 public:
 	FastPoint()
 	{
-		color = mwm::Vector4F(0.f, 3.f, 3.f, 0.1f);
+		color = Vector4F(0.f, 3.f, 3.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 	};
 	~FastPoint(){};
 	LineNode node;
-	mwm::Vector4F color;
+	Vector4F color;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -44,13 +44,13 @@ public:
 	int FindUnused();
 	void SetUpBuffers();
 	void UpdateBuffers();
-	void Draw(const mwm::Matrix4& ViewProjection, const unsigned int currentShaderID, float size = 10.0f);
+	void Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID, float size = 10.0f);
 	FastPoint* GetPoint();
 	FastPoint* GetPointOnce();
 	void UpdateContainer();
 	void Update();
 
-	static const mwm::Vector3F vertices[1];
+	static const Vector3F vertices[1];
 
 	unsigned int MatrixHandle;
 	unsigned int MaterialColorValueHandle;
@@ -58,8 +58,8 @@ public:
 	int LastUsed;
 	int ActiveCount;
 	int MaxCount;
-	mwm::Vector3F* positions;
-	mwm::Vector4F* colors;
+	Vector3F* positions;
+	Vector4F* colors;
 	FastPoint* pointsContainer;
 	
 	Vao vao;
