@@ -4,18 +4,20 @@ A framework containing general code for writing applications with focus on AI, n
 External libraries
 - [glew](https://github.com/nigels-com/glew)
 - [glfw](https://github.com/glfw/glfw)
-- [stb_image](https://github.com/nothings/stb)
+- [stb](https://github.com/nothings/stb) + [soil2](https://github.com/SpartanJ/soil2)
 - [vector](https://github.com/rkk09c/Vector)
 - [dirent](https://github.com/tronkko/dirent)
 - [imgui](https://github.com/ocornut/imgui)
-- [luajit](http://luajit.org/download.html)
+- [luajit](https://github.com/9chu/LuaJIT-cmake)
 
 ## libs
 My Libraries
 - App - base class for application
 - Camera - implementation of 3D FPS Camera
 - Component - base class for components that are build pieces for Object
-- Drawables - basic implementation of OpenGL3.0+ figures, points, lines, planes
+- DrawablesDebug - basic implementation of OpenGL3.0+ figures, points, lines, planes
+- DrawablesSystems - One drawcall systems for BBs, Lines, Points and any geometry
+- ImguiWrapper - Includes opengl implementation so I don't have to include these files in each project
 - GLwindow - class that encapsulate GLFW window functionality
 - HalfEdgeMesh - Half-Edge Mesh lib for 3D meshes(generation, subdivision and conversion)
 - HalfEdgeMesh2D - Half-Edge Mesh lib for 2D meshes(generation, subdivision and conversion)
@@ -29,8 +31,12 @@ My Libraries
 - Particle - contains definitions of particle and particle system components
 - PoolParty - memory pool allocator
 - RigidBody - component encapsulating the rigidbody behaviour, integration, applying and reacting to impulses
+- RenderBuffer - class for creating and using render buffers
+- RenderElement - it's meant to be used in future as base class for render nodes
 - Texture - wrapper class encapsulating OpenGL functionality of textures
-
+- Script - simple class for loading/unloading/calling lua scripts
+- Shader - class for storing shader related data
+- ShaderBlock - library for handling of uniform and storage data with tools to map or add variables
 ## utils
 Useful utilities
 - CameraManager - manager for cameras, responsible for calculating and providing various combinations of M V P
@@ -42,6 +48,6 @@ Useful utilities
 - LuaTools - some useful tools for debugging LUA, erorr checkin, traceback, stackdump etc.
 - PhysicsManager - physics engine, collision detection, contacts generation, collision response
 - Render - set of functions to render different passes
-- Scene - Scene-graph manager
+- SceneGraph - Scene-graph manager
 - ShaderManager - manager for switching shaders and keeping track of active shader program
-- Time - time class containing time related static variables
+- Times - time class containing time related static variables
