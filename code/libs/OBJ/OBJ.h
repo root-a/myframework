@@ -35,7 +35,7 @@ public:
 		std::vector<Vector3F>& in_tangents,
 		std::vector<Vector3F>& in_bitangents
 );
-	void LoadAndIndexOBJ(const char* path);
+	bool LoadAndIndexOBJ(const char* path);
 	
 	Vector3 GetDimensions();
 	Vector3 CenterOfOMesh();

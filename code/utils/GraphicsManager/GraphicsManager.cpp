@@ -96,8 +96,7 @@ void GraphicsManager::LoadPaths(const char* path)
 	FILE* file;
 	file = fopen(path, "r");
 	if (file == NULL) {
-		printf("Impossible to open the file ! Are you in the right path ?\n");
-		getchar();
+		printf("%s could not be opened.\n", path);
 		return;
 	}
 	char line[128];
@@ -122,8 +121,7 @@ bool GraphicsManager::LoadOBJs(const char* path)
 	FILE* file;
 	file = fopen(path, "r");
 	if (file == NULL) {
-		printf("Impossible to open the file ! Are you in the right path ?\n");
-		getchar();
+		printf("%s could not be opened.\n", path);
 		return false;
 	}
 	std::vector<std::thread> threadPool;
@@ -166,20 +164,23 @@ bool GraphicsManager::LoadOBJs(std::unordered_map<std::string, std::string>& mes
 void GraphicsManager::LoadOBJ(std::unordered_map<std::string, OBJ*>* objs, std::string path)
 {
 	OBJ* tempOBJ = new OBJ();
-	tempOBJ->LoadAndIndexOBJ(path.c_str());
-	tempOBJ->name = path;
-	size_t sep = tempOBJ->name.find_last_of("\\/");
-
-	if (sep != std::string::npos)
-		tempOBJ->name = tempOBJ->name.substr(sep + 1, tempOBJ->name.size() - sep - 1);
-
-	size_t dot = tempOBJ->name.find_last_of(".");
-	if (dot != std::string::npos)
+	bool res = tempOBJ->LoadAndIndexOBJ(path.c_str());
+	if (res)
 	{
-		tempOBJ->name = tempOBJ->name.substr(0, dot);
+		tempOBJ->name = path;
+		size_t sep = tempOBJ->name.find_last_of("\\/");
+
+		if (sep != std::string::npos)
+			tempOBJ->name = tempOBJ->name.substr(sep + 1, tempOBJ->name.size() - sep - 1);
+
+		size_t dot = tempOBJ->name.find_last_of(".");
+		if (dot != std::string::npos)
+		{
+			tempOBJ->name = tempOBJ->name.substr(0, dot);
+		}
+		std::lock_guard<std::mutex> lock(objLoadMutex);
+		(*objs)[tempOBJ->name] = tempOBJ;
 	}
-	std::lock_guard<std::mutex> lock(objLoadMutex);
-	(*objs)[tempOBJ->name] = tempOBJ;
 }
 
 bool GraphicsManager::SaveToOBJ(OBJ* obj)
@@ -241,7 +242,7 @@ bool GraphicsManager::SaveToOBJ(OBJ* obj)
 		faceRow = faceRow + std::to_string(obj->indices.at(i + 2) + 1) + "/" + std::to_string(obj->indices.at(i + 2) + 1) + "/" + std::to_string(obj->indices.at(i + 2) + 1) + "\n";
 		fputs(faceRow.c_str(), file);
 	}
-
+	
 	fclose(file);
 
 	return true;
@@ -252,8 +253,7 @@ bool GraphicsManager::LoadTextures(const char* path)
 	FILE* file;
 	file = fopen(path, "r");
 	if (file == NULL) {
-		printf("Impossible to open the file ! Are you in the right path ?\n");
-		getchar();
+		printf("%s could not be opened.\n", path);
 		return false;
 	}
 	//stbi_set_flip_vertically_on_load(true);
@@ -268,7 +268,7 @@ bool GraphicsManager::LoadTextures(const char* path)
 		{
 			break; // EOF = End Of File. Quit the loop.
 		}
-
+		
 		printf("Loading texture: %s\n", texturePath);
 		threadPool.push_back(std::thread(LoadTextureInfo, &GraphicsStorage::texturesToLoad, GraphicsStorage::paths["resources"] + texturePath, 0));
 		//LoadTexture(texturePath);
@@ -402,11 +402,10 @@ bool GraphicsManager::LoadCubeMaps(const char* path)
 	FILE* file;
 	file = fopen(path, "r");
 	if (file == NULL) {
-		printf("Impossible to open the file ! Are you in the right path ?\n");
+		printf("%s could not be opened.\n", path);
 		return false;
 	}
 	while (1) {
-
 		char cubemapDirectory[128];
 		// read the first line
 		int res = fscanf(file, "%s", cubemapDirectory);
@@ -415,10 +414,10 @@ bool GraphicsManager::LoadCubeMaps(const char* path)
 			break; // EOF = End Of File. Quit the loop.
 		}
 		FILE* texturesFile;
-		texturesFile = fopen((GraphicsStorage::paths["resources"] + cubemapDirectory).c_str(), "r");
+		std::string texturesFilePath = GraphicsStorage::paths["resources"] + cubemapDirectory;
+		texturesFile = fopen(texturesFilePath.c_str(), "r");
 		if (texturesFile == NULL) {
-			printf("Impossible to open the file ! Are you in the right path ?\n");
-			getchar();
+			printf("%s could not be opened.\n", texturesFilePath.c_str());
 			return false;
 		}
 		std::vector<std::string> texturesPaths;
@@ -432,7 +431,7 @@ bool GraphicsManager::LoadCubeMaps(const char* path)
 			}
 			texturesPaths.push_back(GraphicsStorage::paths["resources"] + cubeMapTexturePath);
 		}
-
+		
 		printf("Loading cubemap: %s\n", cubemapDirectory);
 		LoadCubeMap(texturesPaths);
 		fclose(texturesFile);
@@ -516,8 +515,7 @@ std::unordered_map<std::string, std::string> GraphicsManager::LoadShadersFiles(c
 	FILE* file;
 	file = fopen(path, "r");
 	if (file == NULL) {
-		printf("Impossible to open the file ! Are you in the right path ?\n");
-		getchar();
+		printf("%s could not be opened.\n", path);
 		return std::unordered_map<std::string, std::string>();
 	}
 	char line[128];
@@ -620,7 +618,7 @@ ShaderPaths GraphicsManager::LoadShaderPaths(std::string& path)
 	DIR* dir;
 	struct dirent* ent;
 	ShaderPaths shaderPaths;
-
+	
 	size_t pos = path.find_last_of("/");
 	std::string shaderPath = path.substr(0, pos + 1);
 	std::string name = path.substr(pos + 1, path.length() - 1);
@@ -729,7 +727,7 @@ bool GraphicsManager::ReloadShaderFromPath(const char* name, ShaderPaths& paths)
 			GraphicsStorage::shaders[name]->name = name;
 			GraphicsStorage::shaders[name]->shaderPaths = paths;
 		}
-
+		
 		GraphicsStorage::shaderIDs[name] = result;
 
 		Shader& shader = *GraphicsStorage::shaders[name];
@@ -774,7 +772,7 @@ void GraphicsManager::LoadUniforms(GLuint programID)
 	{
 		glGetActiveUniform(programID, (GLuint)i, bufSize, &length, &size, &type, name);
 
-
+		
 		switch (type)
 		{
 		case GL_SAMPLER_1D:
@@ -858,7 +856,6 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 		GL_ARRAY_STRIDE, GL_MATRIX_STRIDE, GL_IS_ROW_MAJOR,
 		GL_ATOMIC_COUNTER_BUFFER_INDEX, GL_LOCATION
 	};
-
 
 	for (int blockIx = 0; blockIx < numBlocks; ++blockIx)
 	{
@@ -973,16 +970,16 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 	}
 }
 
-Texture* GraphicsManager::LoadDDS(const char* imagepath) {
+Texture* GraphicsManager::LoadDDS(const char* path) {
 
 	unsigned char header[124];
 
 	FILE* fp;
 
 	/* try to open the file */
-	fp = fopen(imagepath, "rb");
+	fp = fopen(path, "rb");
 	if (fp == NULL) {
-		printf("%s could not be opened. Are you in the right directory ? Don't forget to read the FAQ !\n", imagepath); getchar();
+		printf("%s could not be opened.\n", path);
 		return 0;
 	}
 
@@ -1054,17 +1051,17 @@ Texture* GraphicsManager::LoadDDS(const char* imagepath) {
 		if (width < 1) width = 1;
 		if (height < 1) height = 1;
 	}
-
+	
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 	//glGenerateMipmap(GL_TEXTURE_2D);
-
+	
 	//float aniso = 16.0f;
 	//glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
 	//glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
-
+	
 	free(buffer);
 
 	return texture;
@@ -1189,7 +1186,7 @@ void GraphicsManager::ParseShaderForUniformBuffers(std::string& shaderCode, Shad
 			layouts.push_back("std140");
 			uniformBufferPos = tempPos;
 		}
-
+		
 		uniformStartPos = shaderCode.find("{", uniformBufferPos);
 		startPositions.push_back(uniformStartPos);
 		uniformEndPos = shaderCode.find("}", uniformStartPos);
@@ -1236,7 +1233,7 @@ void GraphicsManager::ParseShaderForUniformBuffers(std::string& shaderCode, Shad
 
 	for (int i = 0; i < indexes.size(); i++)
 	{
-		printf("uniform buffer index: %d\n", indexes[i]);
+		printf("uniform buffer index: %d\n", (int)indexes[i]);
 	}
 
 	if (startPositions.size() > 0)
@@ -1284,7 +1281,7 @@ void GraphicsManager::ParseShaderForUniformBuffers(std::string& shaderCode, Shad
 					cleanName = uniformPair[typeIndex + 1].substr(0, arrayStart);
 					replaceAllCharacters(cleanName, " \n\r\t[]", "");
 				}
-
+				
 				if (!uniformPair[typeIndex].compare("mat4"))
 				{
 					int offset = (16 - (bufferSize % 16)) % 16;
@@ -1407,7 +1404,7 @@ void GraphicsManager::ParseShaderForUniformBuffers(std::string& shaderCode, Shad
 					}
 					GraphicsStorage::uniformBuffers.push_back(uniformBuffer);
 				}
-
+				
 				if (uniformBufferType == "O_") { shader.objectUniformBuffers.push_back(uniformBuffer); }
 				else if (uniformBufferType == "M_") { shader.materialUniformBuffers.push_back(uniformBuffer); }
 				else if (uniformBufferType == "G_") { shader.globalUniformBuffers.push_back(uniformBuffer); }
@@ -1513,10 +1510,10 @@ void GraphicsManager::ParseShaderForOutputs(std::string& shaderCode, Shader& sha
 	for (size_t i = 0; i < indexes.size(); i++)
 	{
 		ShaderOutput& output = shader.outputs[i];
-		output.index = indexes[i];
+		output.index = (int)indexes[i];
 		output.type = types[i];
 		output.name = names[i];
-		printf("\033[1;32mout %d %s %s\033[0m\n", indexes[i], types[i].c_str(), names[i].c_str());
+		printf("\033[1;32mout %d %s %s\033[0m\n", (int)indexes[i], types[i].c_str(), names[i].c_str());
 	}
 }
 
@@ -1615,9 +1612,9 @@ GLuint GraphicsManager::LoadProgram(std::string& VertexShaderCode, std::string& 
 	{
 		glDeleteShader(FragmentShaderID);
 	}
-
+	
 	fprintf(stdout, " Shader ID: %d \n", ProgramID);
-
+	
 	if (InfoLogLength > 0)
 	{
 		std::vector<char> ProgramErrorMessage(std::max<int>(InfoLogLength, int(1)));
@@ -1751,7 +1748,7 @@ Vao* GraphicsManager::LoadOBJToVAO(OBJ* object, Vao* vao)
 
 	//Unbind the VAO now that the VBOs have been set up
 	//vao->Unbind();
-
+	
 	vao->center = object->center_of_mesh;
 	vao->dimensions = object->dimensions;
 
@@ -1781,18 +1778,18 @@ Texture* GraphicsManager::CreateTexture(int width, int height, bool isDepth, int
 		texture->Specify();
 		texture->GenerateMipMaps();
 	}
-
+	
 	//if (data)
 	//{
 		//glTexImage2D(GL_TEXTURE_2D, 0, isDepth ? GL_DEPTH_COMPONENT : (numOfElements == 3 ? GL_RGB : GL_RGBA), width, height, isDepth ? GL_DEPTH_COMPONENT : (numOfElements == 3 ? GL_RGB : GL_RGBA), isDepth ? GL_FLOAT : GL_UNSIGNED_BYTE, data);
 		//glGenerateMipmap(GL_TEXTURE_2D);
 	//}
 
-	// Poor filtering, or ...
+    // Poor filtering, or ...
 	///glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	///glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 
-	// ... nice trilinear filtering.
+    // ... nice trilinear filtering.
 	//glTexParameteri(texture->target, GL_TEXTURE_WRAP_S, GL_REPEAT);
 	//glTexParameteri(texture->target, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
@@ -1800,7 +1797,7 @@ Texture* GraphicsManager::CreateTexture(int width, int height, bool isDepth, int
 	//glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 
 
-	return texture;
+    return texture;
 }
 
 void GraphicsManager::LoadAllAssets()
@@ -1867,7 +1864,7 @@ Texture* GraphicsManager::LoadTexture(char* path)
 	int x = 0, y = 0, numOfElements = 0;
 	TextureInfo* ti = nullptr;
 	Texture* tex = nullptr;
-
+	
 	ti = GraphicsManager::LoadImage(path, 0);
 	if (ti != nullptr)
 	{
@@ -1954,6 +1951,10 @@ Texture* GraphicsManager::LoadTexture(char* path)
 		}
 		SOIL_free_texture_info(ti);
 		tex->SetDefaultParameters();
+	}
+	else
+	{
+		printf("%s could not be opened.\n", path);
 	}
 	return tex;
 }
@@ -2117,104 +2118,13 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 {
 	int x = 0, y = 0, numOfElements = 0;
 	Texture* tex = nullptr;
-
+	
 	if (textures.size() == 1)
 	{
 		TextureInfo* ti = GraphicsManager::LoadImage(textures.at(0).c_str(), 0);
-		DDSExtraInfo* ei = NULL;
-		int internalFormat;
-		unsigned int format;
-		switch (ti->type)
+		if (ti != nullptr)
 		{
-		case DDS:
-			ei = (DDSExtraInfo*)ti->extraInfo;
-
-			switch (ti->numOfElements)
-			{
-			case 1:
-				internalFormat = GL_R8; format = GL_RED;
-				break;
-			case 2:
-				internalFormat = GL_RG8; format = GL_RG;
-				break;
-			case 3:
-				internalFormat = GL_RGB; format = GL_RGB;
-				break;
-			case 4:
-				internalFormat = GL_RGBA; format = GL_RGBA;
-				break;
-			default:
-				internalFormat = GL_RGB; format = GL_RGB;
-				break;
-			}
-			if (ei->nrOfCubeMapFaces == 6)
-			{
-				tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
-				if (ei->compressed)
-				{
-					LoadCompressedDDSCubeMap(tex, ti);
-				}
-				else
-				{
-					tex->Generate();
-					tex->Bind();
-					
-					for (int i = 0; i < ei->nrOfCubeMapFaces; i++)
-					{
-						tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, &((unsigned char*)ti->data)[i * ti->width * ti->height * ti->numOfElements]);
-					}
-				}
-			}
-			break;
-		default:
-			switch (ti->numOfElements)
-			{
-			case 1:
-				internalFormat = GL_R8; format = GL_RED;
-				break;
-			case 2:
-				internalFormat = GL_RG8; format = GL_RG;
-				break;
-			case 3:
-				internalFormat = GL_RGB; format = GL_RGB;
-				break;
-			case 4:
-				internalFormat = GL_RGBA; format = GL_RGBA;
-				break;
-			default:
-				internalFormat = GL_RGB; format = GL_RGB;
-				break;
-			}
-
-			tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
-			if (ei->nrOfCubeMapFaces == 6)
-			{
-				tex->Generate();
-				tex->Bind();
-
-				for (int i = 0; i < ei->nrOfCubeMapFaces; i++)
-				{
-					tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, &((unsigned char*)ti->data)[i * ti->width * ti->height * ti->numOfElements]);
-				}
-			}
-			break;
-		}
-		std::string fullName = textures.at(0);
-		size_t pos = fullName.find_last_of("/\\");
-		std::string fileName = fullName.substr(0, pos);
-		pos = fileName.find_last_of("/\\");
-		fileName = fileName.substr(pos + 1);
-		tex->name = fileName;
-		tex->SetDefaultParameters();
-		GraphicsStorage::cubemaps[tex->name] = tex;
-		SOIL_free_texture_info(ti);
-	}
-	else
-	{
-		if (textures.size() == 6)
-		{
-			TextureInfo* ti = GraphicsManager::LoadImage(textures.at(0).c_str(), 0);
-			DDSExtraInfo* ei = nullptr;
+			DDSExtraInfo* ei = NULL;
 			int internalFormat;
 			unsigned int format;
 			switch (ti->type)
@@ -2239,30 +2149,22 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 					internalFormat = GL_RGB; format = GL_RGB;
 					break;
 				}
-
-				tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
-				tex->Generate();
-				tex->Bind();
-				if (ei->compressed)
+				if (ei->nrOfCubeMapFaces == 6)
 				{
-					LoadCompressedDDSCubeMapFace(tex, ti, 0); //face0
-					SOIL_free_texture_info(ti);
-					for (size_t i = 1; i < 6; i++) //face 1-5
+					tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					if (ei->compressed)
 					{
-						ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
-						LoadCompressedDDSCubeMapFace(tex, ti, i);
-						SOIL_free_texture_info(ti);
+						LoadCompressedDDSCubeMap(tex, ti);
 					}
-				}
-				else
-				{
-					tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 0, ti->width, ti->height, ti->data); //face0
-					SOIL_free_texture_info(ti);
-					for (int i = 1; i < 6; i++) //face 1-5
+					else
 					{
-						ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
-						tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, ti->data);
-						SOIL_free_texture_info(ti);
+						tex->Generate();
+						tex->Bind();
+						
+						for (int i = 0; i < ei->nrOfCubeMapFaces; i++)
+						{
+							tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, &((unsigned char*)ti->data)[i * ti->width * ti->height * ti->numOfElements]);
+						}
 					}
 				}
 				break;
@@ -2285,31 +2187,163 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 					internalFormat = GL_RGB; format = GL_RGB;
 					break;
 				}
-				tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
-				tex->Generate();
-				tex->Bind();
 
-				tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 0, ti->width, ti->height, ti->data);
-				SOIL_free_texture_info(ti);
-				for (int i = 1; i < 6; i++)
+				tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+				if (ei->nrOfCubeMapFaces == 6)
 				{
-					ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
-					tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, ti->data);
-					SOIL_free_texture_info(ti);
+					tex->Generate();
+					tex->Bind();
+
+					for (int i = 0; i < ei->nrOfCubeMapFaces; i++)
+					{
+						tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, &((unsigned char*)ti->data)[i * ti->width * ti->height * ti->numOfElements]);
+					}
 				}
 				break;
 			}
+			if (tex != nullptr)
+			{
+				std::string fullName = textures.at(0);
+				size_t pos = fullName.find_last_of("/\\");
+				std::string fileName = fullName.substr(0, pos);
+				pos = fileName.find_last_of("/\\");
+				fileName = fileName.substr(pos + 1);
+				tex->name = fileName;
+				tex->SetDefaultParameters();
+				GraphicsStorage::cubemaps[tex->name] = tex;
+				SOIL_free_texture_info(ti);
+			}
 		}
-		std::string fullName = textures.at(0);
-		size_t pos = fullName.find_last_of("/\\");
-		std::string fileName = fullName.substr(0, pos);
-		pos = fileName.find_last_of("/\\");
-		fileName = fileName.substr(pos + 1);
-		tex->name = fileName;
-		tex->SetDefaultParameters();
-		GraphicsStorage::cubemaps[tex->name] = tex;
+		else
+		{
+			printf("%s could not be opened.\n", textures.at(0).c_str());
+		}
 	}
+	else
+	{
+		if (textures.size() == 6)
+		{
+			TextureInfo* ti = GraphicsManager::LoadImage(textures.at(0).c_str(), 0);
+			if (ti != nullptr)
+			{
+				DDSExtraInfo* ei = nullptr;
+				int internalFormat;
+				unsigned int format;
+				switch (ti->type)
+				{
+				case DDS:
+					ei = (DDSExtraInfo*)ti->extraInfo;
+					switch (ti->numOfElements)
+					{
+					case 1:
+						internalFormat = GL_R8; format = GL_RED;
+						break;
+					case 2:
+						internalFormat = GL_RG8; format = GL_RG;
+						break;
+					case 3:
+						internalFormat = GL_RGB; format = GL_RGB;
+						break;
+					case 4:
+						internalFormat = GL_RGBA; format = GL_RGBA;
+						break;
+					default:
+						internalFormat = GL_RGB; format = GL_RGB;
+						break;
+					}
 
+					tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					tex->Generate();
+					tex->Bind();
+					if (ei->compressed)
+					{
+						LoadCompressedDDSCubeMapFace(tex, ti, 0); //face0
+						SOIL_free_texture_info(ti);
+						for (size_t i = 1; i < 6; i++) //face 1-5
+						{
+							ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
+							if (ti != nullptr)
+							{
+								LoadCompressedDDSCubeMapFace(tex, ti, (int)i);
+								SOIL_free_texture_info(ti);
+							}
+							else
+							{
+								printf("%s could not be opened.\n", textures.at(i).c_str());
+							}
+						}
+					}
+					else
+					{
+						tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 0, ti->width, ti->height, ti->data); //face0
+						SOIL_free_texture_info(ti);
+						for (int i = 1; i < 6; i++) //face 1-5
+						{
+							ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
+							if (ti != nullptr)
+							{
+								tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, ti->data);
+								SOIL_free_texture_info(ti);
+							}
+							else
+							{
+								printf("%s could not be opened.\n", textures.at(i).c_str());
+							}
+						}
+					}
+					break;
+				default:
+					switch (ti->numOfElements)
+					{
+					case 1:
+						internalFormat = GL_R8; format = GL_RED;
+						break;
+					case 2:
+						internalFormat = GL_RG8; format = GL_RG;
+						break;
+					case 3:
+						internalFormat = GL_RGB; format = GL_RGB;
+						break;
+					case 4:
+						internalFormat = GL_RGBA; format = GL_RGBA;
+						break;
+					default:
+						internalFormat = GL_RGB; format = GL_RGB;
+						break;
+					}
+					tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					tex->Generate();
+					tex->Bind();
+
+					tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + 0, ti->width, ti->height, ti->data);
+					SOIL_free_texture_info(ti);
+					for (int i = 1; i < 6; i++)
+					{
+						ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
+						tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, ti->data);
+						SOIL_free_texture_info(ti);
+					}
+					break;
+				}
+			}
+			else
+			{
+				printf("%s could not be opened.\n", textures.at(0).c_str());
+			}
+		}
+		if (tex != nullptr)
+		{
+			std::string fullName = textures.at(0);
+			size_t pos = fullName.find_last_of("/\\");
+			std::string fileName = fullName.substr(0, pos);
+			pos = fileName.find_last_of("/\\");
+			fileName = fileName.substr(pos + 1);
+			tex->name = fileName;
+			tex->SetDefaultParameters();
+			GraphicsStorage::cubemaps[tex->name] = tex;
+		}
+	}
+	
 	return tex;
 }
 

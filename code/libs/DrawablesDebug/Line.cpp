@@ -28,18 +28,6 @@ void Line::SetUpBuffers()
 	Vector3F vertices[] = { Vector3F(0.f, 0.f, 0.f),Vector3F(0.f, 0.f, 1.f) };
 	
 	vao.AddVertexBuffer(vertices, 2 * sizeof(Vector3F), { {ShaderDataType::Float3, "position"} });
-
-	///GLuint bindingIndex = 0;
-	///GLuint attributeIndex = 0;
-	///
-	///GLuint vertexbuffer;
-	///glCreateBuffers(1, &vertexbuffer);
-	///glNamedBufferStorage(vertexbuffer, 2 * sizeof(Vector3F), vertices, GL_DYNAMIC_STORAGE_BIT);
-	///glEnableVertexArrayAttrib(vao.handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
-	///glVertexArrayVertexBuffer(vao.handle, bindingIndex, vertexbuffer, 0, sizeof(Vector3F)); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
-	///glVertexArrayAttribFormat(vao.handle, attributeIndex, 3, GL_FLOAT, GL_FALSE, 0); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
-	///glVertexArrayAttribBinding(vao.handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
-	///vao.vertexBuffers.push_back(vertexbuffer);
 	vao.activeCount = 2;
 }
 

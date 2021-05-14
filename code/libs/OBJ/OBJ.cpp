@@ -4,7 +4,7 @@
 
 
 
-void OBJ::LoadAndIndexOBJ(const char* path)
+bool OBJ::LoadAndIndexOBJ(const char* path)
 {
 	// Read our .obj file
 	std::vector<Vector3F> vertices;
@@ -19,6 +19,7 @@ void OBJ::LoadAndIndexOBJ(const char* path)
 
 		indexVBO(vertices, uvs, normals, tangents, bitangents);
 	}
+	return res;
 }
 
 void OBJ::indexVBO(
@@ -100,7 +101,7 @@ bool OBJ::LoadOBJ(
 	char stupidBuffer[1000];
 	if (file == NULL){
 		printf("\nImpossible to open the file ! Are you in the right path ?");
-		getchar();
+		//getchar();
 		return false;
 	}
 	while (1){

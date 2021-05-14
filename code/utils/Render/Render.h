@@ -20,17 +20,6 @@ class Render
 	typedef unsigned int GLuint;
 	typedef unsigned int GLenum;
 
-	struct PostHDRBloom
-	{
-		float gamma;
-		float exposure;
-		float brightness;
-		float contrast;
-		float bloomIntensity;
-		bool hdrEnabled;
-		bool bloomEnabled;
-	};
-
 public:
 
 	static Render* Instance();
@@ -65,7 +54,15 @@ public:
 	FrameBuffer* AddDirectionalShadowMapBuffer(int width, int height);
 	FrameBuffer* dirShadowMapBuffer;
 	Texture* dirShadowMapTexture;
-	PostHDRBloom pb;
+
+	float gamma;
+	float exposure;
+	float brightness;
+	float contrast;
+	float bloomIntensity;
+	bool hdrEnabled;
+	bool bloomEnabled;
+
 	float angleX = 0.f;
 	float angleY = 0.f;
 	std::vector<Matrix4F> captureVPs; //used when drawing depth
@@ -83,53 +80,4 @@ private:
 	ShaderBlockData* lsbd;
 	ShaderBlockData* csbd;
 	ShaderBlockData* psbd;
-	
-	//struct GBVars
-	//{
-	//	Matrix4F MVP;
-	//	Matrix4F M;
-	//	Vector4F MaterialColorShininess;
-	//	Vector2F tiling;
-	//	unsigned int objectID;
-	//};
-	//
-	//GBVars gb;
-	//
-	//struct LightVars
-	//{
-	//	Matrix4F depthBiasMVP;
-	//	Vector3F lightInvDir;
-	//	float shadowTransitionSize;
-	//	float outerCutOff;
-	//	float innerCutOff;
-	//	float lightRadius;
-	//	float lightPower;
-	//	Vector3F lightColor;
-	//	float ambient;
-	//	float diffuse;
-	//	float specular;
-	//	float alignmentOffset;
-	//	float alignmentOffset2;
-	//	Matrix4F MVP;
-	//	Vector3F lightPosition;
-	//	Attenuation attenuation;
-	//};
-	//
-	//LightVars lb;
-	//
-	//struct CamVars
-	//{
-	//	float width;
-	//	float height;
-	//	float near;
-	//	float far;
-	//	Vector3F cameraPos;
-	//};
-	//
-	//CamVars cb;
-	//
-	//GLuint uboGBVars;
-	//GLuint uboLBVars;
-	//GLuint uboCBVars;
-	//GLuint uboPBVars;
 };
