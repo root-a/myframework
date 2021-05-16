@@ -688,12 +688,12 @@ ShaderPaths GraphicsManager::LoadShaderPaths(std::string& path)
 
 bool GraphicsManager::ReloadShaders()
 {
-	return LoadShaders("resources/shaders.txt");
+	return LoadShaders("config/shaders.txt");
 }
 
 bool GraphicsManager::ReloadShader(const char* name)
 {
-	ShaderPaths spath = LoadShaderPaths(LoadShadersFiles("resources/shaders.txt")[name]);
+	ShaderPaths spath = LoadShaderPaths(LoadShadersFiles("config/shaders.txt")[name]);
 	if (!spath.fs.empty() || !spath.vs.empty() || !spath.gs.empty())
 	{
 		auto& shaderPaths = GraphicsStorage::shaderPaths[name] = spath;
@@ -1130,7 +1130,7 @@ void GraphicsManager::AppendStringToTextFile(std::string& content, std::string& 
 void GraphicsManager::RemoveLineFromTextFileContainingText(std::string& content, std::string& path)
 {
 	std::ifstream in(path, std::ios::in);
-	std::ofstream out("resources/tempfile.txt", std::ios::out);
+	std::ofstream out(GraphicsStorage::paths["resources"] + "tempfile.txt", std::ios::out);
 	if (in.is_open())
 	{
 		std::string line;
@@ -1153,7 +1153,7 @@ void GraphicsManager::RemoveLineFromTextFileContainingText(std::string& content,
 		out.close();
 		in.close();
 		std::remove(path.c_str());
-		std::rename("resources/tempfile.txt", path.c_str());
+		std::rename((GraphicsStorage::paths["resources"] + "tempfile.txt").c_str(), path.c_str());
 	}
 }
 
