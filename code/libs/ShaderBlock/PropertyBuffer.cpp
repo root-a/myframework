@@ -15,13 +15,13 @@ DataInfo* PropertyBuffer::AddProperty(const char* name, const void* newData, int
 	data.resize(size + dataSize);
 	memcpy(&data[size], newData, dataSize);
 	int offset = size;
-	bindings[name] = DataInfoLoc(offset, new DataInfo(&data[size], dataSize, type));
+	bindings.try_emplace(name, offset, &data[size], dataSize, type);
 	size += dataSize;
 	for (auto& binding : bindings)
 	{
-		binding.second.info->dataAddress = &data[binding.second.offset];
+		binding.second.info.dataAddress = &data[binding.second.offset];
 	}
-	return bindings[name].info;
+	return &bindings[name].info;
 }
 
 void PropertyBuffer::RemoveProperty(const char * name)
@@ -30,9 +30,9 @@ void PropertyBuffer::RemoveProperty(const char * name)
 	if (result != bindings.end())
 	{
 		int propertyLocation = result->second.offset;
-		int propertySize = result->second.info->size;
-		data.erase(data.begin() + result->second.offset, (data.begin() + result->second.offset + result->second.info->size));
-		size -= result->second.info->size;
+		int propertySize = result->second.info.size;
+		data.erase(data.begin() + result->second.offset, (data.begin() + result->second.offset + result->second.info.size));
+		size -= result->second.info.size;
 		bindings.erase(name);
 		for (auto& binding : bindings)
 		{
@@ -40,7 +40,7 @@ void PropertyBuffer::RemoveProperty(const char * name)
 			{
 				binding.second.offset -= propertySize;
 			}
-			binding.second.info->dataAddress = &data[binding.second.offset];
+			binding.second.info.dataAddress = &data[binding.second.offset];
 		}
 	}
 }
@@ -48,7 +48,7 @@ void PropertyBuffer::RemoveProperty(const char * name)
 const void* PropertyBuffer::GetPropertyPtr(const char* name)
 {
 	if (bindings.find(name) != bindings.end())
-		return bindings[name].info->dataAddress;
+		return bindings[name].info.dataAddress;
 	else
 		return nullptr;
 }
@@ -57,7 +57,7 @@ DataInfo* PropertyBuffer::GetProperty(const char* name)
 {
 	auto binding = bindings.find(name);
 	if (binding != bindings.end())
-		return binding->second.info;
+		return &binding->second.info;
 	else
 		return nullptr;
 }
@@ -68,7 +68,7 @@ void PropertyBuffer::SetData(const char* name, const void* newData)
 	if (binding != bindings.end())
 	{
 		auto db = binding->second;
-		memcpy(db.info->dataAddress, newData, db.info->size);
+		memcpy(db.info.dataAddress, newData, db.info.size);
 	}
 }
 

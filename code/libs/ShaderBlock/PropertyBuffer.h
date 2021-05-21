@@ -1,17 +1,18 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
+#include "DataInfo.h"
 
-struct DataInfo;
 class DataRegistry;
 enum class PropertyType;
 
 struct DataInfoLoc
 {
-	DataInfoLoc() { int offset = 0; info = nullptr;};
-	DataInfoLoc(int newLocation, DataInfo* newInfo) { offset = newLocation;  info = newInfo;}
+	DataInfoLoc() { int offset = 0;};
+	DataInfoLoc(int newLocation, DataInfo& newInfo) { offset = newLocation;  info = newInfo;}
+	DataInfoLoc(int newLocation, void* address, int size, PropertyType type) { offset = newLocation; info.dataAddress = address; info.size = size; info.type = type; }
 	int offset;
-	DataInfo* info;
+	DataInfo info;
 };
 class DataRegistry;
 

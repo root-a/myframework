@@ -6,10 +6,6 @@ DataRegistry::DataRegistry()
 
 DataRegistry::~DataRegistry()
 {
-	for (auto binding : bindings)
-	{
-		delete binding.second;
-	}
 }
 
 const DataInfo* DataRegistry::GetData(const std::string & name) const
@@ -17,18 +13,8 @@ const DataInfo* DataRegistry::GetData(const std::string & name) const
 	auto& binding = bindings.find(name);
 	if (binding != bindings.end())
 	{
-		return binding->second;
+		return &binding->second;
 	}
-	/* //there is no need to search in pb because everything is registered in bindings even added properties that reside inside pb
-	else
-	{
-		auto& binding = pb.bindings.find(name);
-		if (binding != pb.bindings.end())
-		{
-			return binding->second.info;
-		}
-	}
-	*/
 	return nullptr;
 }
 
@@ -36,7 +22,7 @@ void DataRegistry::RegisterProperty(const std::string & name, const DataInfo * p
 {
 	if (bindings.find(name) == bindings.end())
 	{
-		bindings[name] = property;
+		bindings[name] = *property;
 	}
 }
 
@@ -45,12 +31,13 @@ void DataRegistry::AddAndRegisterProperty(const char* name, const void * address
 	auto& binding = bindings.find(name);
 	if (binding != bindings.end())
 	{
-		if (binding->second->size != size || binding->second->type != type)
+		if (binding->second.size != size || binding->second.type != type)
 		{
 			pb.RemoveProperty(name);
 		}
 	}
-	bindings[name] = pb.AddProperty(name, address, size, type);
+	pb.AddProperty(name, address, size, type);
+	RegisterProperties(&pb);
 }
 
 void
@@ -58,7 +45,7 @@ DataRegistry::RegisterProperty(const std::string& name, void * address, int size
 {
 	if (bindings.find(name) == bindings.end())
 	{
-		bindings[name] = new DataInfo(address, size, type);
+		bindings.try_emplace(name, address, size, type);
 	}
 }
 
@@ -77,17 +64,7 @@ DataRegistry::GetPropertyPtr(const char * name)
 {
 	auto& binding = bindings.find(name);
 	if (binding != bindings.end())
-		return binding->second->dataAddress;
-	/* //there is no need to search in pb because everything is registered in bindings even added properties that reside inside pb
-	else
-	{
-		auto& binding = pb.bindings.find(name);
-		if (binding != pb.bindings.end())
-		{
-			return binding->second.info->dataAddress;
-		}
-	}
-	*/
+		return binding->second.dataAddress;
 	return nullptr;
 }
 
@@ -95,18 +72,13 @@ const DataInfo * DataRegistry::GetProperty(const char * name)
 {
 	auto binding = bindings.find(name);
 	if (binding != bindings.end())
-		return binding->second;
-	/* //there is no need to search in pb because everything is registered in bindings even added properties that reside inside pb
-	else
-	{
-		auto& binding = pb.bindings.find(name);
-		if (binding != pb.bindings.end())
-		{
-			return binding->second.info;
-		}
-	}
-	*/
+		return &binding->second;
 	return nullptr;
+}
+
+void DataRegistry::SetProperty(const char* name, void* newData)
+{
+	pb.SetData(name, newData);
 }
 
 void
@@ -121,7 +93,6 @@ DataRegistry::RegisterProperties(PropertyBuffer* properties)
 void
 DataRegistry::Clear()
 {
-	//we need to property delete properties from memory!
 	pb.Clear();
 	bindings.clear();
 }
