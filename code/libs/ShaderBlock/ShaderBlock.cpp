@@ -10,7 +10,7 @@ ShaderBlock::ShaderBlock(int newSize, int newIndex, BlockType type)
 {
 	index = newIndex;
 	size = newSize;
-	if (type == Uniform) target = GL_UNIFORM_BUFFER;
+	if (type == BlockType::Uniform) target = GL_UNIFORM_BUFFER;
 	else target = GL_SHADER_STORAGE_BUFFER;
 	Generate();
 }
@@ -46,9 +46,3 @@ void ShaderBlock::AddVariableOffset(const std::string & uniformName, int loc)
 {
 	offsets[uniformName] = loc;
 }
-
-//void ShaderBlock::AddUniformData(std::string& uniformName, int dataSize)
-//{
-//	offsets[uniformName] = size;
-//	size += dataSize;
-//}

@@ -1,7 +1,6 @@
 #include "Shader.h"
 #include <GL/glew.h>
 #include <stdio.h>
-#include "MyMathLib.h"
 #include "ShaderBlock.h"
 #include <memory>
 
@@ -27,7 +26,7 @@ struct block_info_t
 };
 
 */
-//this class should be used to get locations and set uniforms once before drawing, for loops get earlier locations and use default opengl glUniform functions
+
 Shader::Shader(unsigned int ID, std::string& sname, ShaderPaths& sp)
 {
 	shaderID = ID;
@@ -42,107 +41,7 @@ Shader::~Shader()
 
 void Shader::LoadUniforms()
 {
-	GLint location;
-	GLint count;
-
-	GLint size; // size of the variable
-	GLenum type; // type of the variable (float, vec3 or mat4, etc)
-	const GLsizei bufSize = 100; // maximum name length
-	GLchar name[bufSize]; // variable name in GLSL
-	GLsizei length; // name length
-	/*
-	glGetProgramiv(shaderID, GL_ACTIVE_UNIFORMS, &count);
-	printf("Active Uniforms: %d\n", count);
-	for (location = 0; location < count; location++)
-	{
-		glGetActiveUniform(shaderID, (GLuint)location, bufSize, &length, &size, &type, name);
-		uniformLocations[name] = location;
-
-		switch (type)
-		{
-		case GL_FLOAT_VEC2:
-			printf("vec2\n");
-			break;
-		case GL_FLOAT_VEC3:
-			printf("vec3\n");
-			break;
-		case GL_FLOAT_VEC4:
-			printf("vec4\n");
-			break;
-		case GL_BOOL:
-			printf("bool\n");
-			break;
-		case GL_BOOL_VEC2:
-			printf("bool2\n");
-			break;
-		case GL_BOOL_VEC3:
-			printf("bool3\n");
-			break;
-		case GL_BOOL_VEC4:
-			printf("bool4\n");
-			break;
-		case GL_FLOAT_MAT2:
-			printf("mat2\n");
-			break;
-		case GL_FLOAT_MAT3:
-			printf("mat3\n");
-			break;
-		case GL_FLOAT_MAT4:
-			printf("mat4\n");
-			break;
-		case GL_SAMPLER_1D:
-			printf("sampler1d\n");
-			break;
-		case GL_SAMPLER_2D:
-			printf("sampler2d\n");
-			break;
-		case GL_SAMPLER_3D:
-			printf("sampler3d\n");
-			break;
-		case GL_SAMPLER_CUBE:
-			printf("samplerCube\n");
-			break;
-		case GL_INT:
-			printf("int\n");
-			break;
-		case GL_UNSIGNED_INT:
-			printf("unsigned int\n");
-			break;
-		case GL_FLOAT:
-			printf("float\n");
-			break;
-		default:
-			break;
-		}
-		//printf("Uniform #%d Type: %u Name: %s\n", i, type, name);
-		printf("Uniform loc: #%d Type: %#08x Name: %s\n", location, type, name);
-	}
-	*/
-	GLint uniform_count = 0;
-	glGetProgramiv(shaderID, GL_ACTIVE_UNIFORMS, &uniform_count);
-
 	std::unordered_map<std::string, uniform_info_t> uniforms;
-	//if (uniform_count != 0)
-	//{
-	//	GLint 	max_name_len = 0;
-	//	GLsizei length = 0;
-	//	GLsizei count = 0;
-	//	GLenum 	type = GL_NONE;
-	//	glGetProgramiv(shaderID, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_name_len);
-	//
-	//	auto uniform_name = std::make_unique<char[]>(max_name_len);
-	//
-	//
-	//	for (GLint i = 0; i < uniform_count; ++i)
-	//	{
-	//		glGetActiveUniform(shaderID, i, max_name_len, &length, &count, &type, uniform_name.get());
-	//		uniform_info_t uniform_info = {};
-	//		uniform_info.location = glGetUniformLocation(shaderID, uniform_name.get());
-	//		uniform_info.count = count;
-	//
-	//		uniforms.emplace(std::make_pair(std::string(uniform_name.get(), length), uniform_info));
-	//	}
-	//}
 
 	GLint numBlocks;
 	glGetProgramiv(shaderID, GL_ACTIVE_UNIFORM_BLOCKS, &numBlocks);
@@ -256,29 +155,8 @@ void Shader::LoadUniforms()
 					break;
 				}
 
-				uniforms.emplace(std::make_pair(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info));
+				uniforms.try_emplace(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info);
 			}
-			/*
-				GLint 	max_name_len = 0;
-				GLsizei length = 0;
-				GLsizei count = 0;
-				GLenum 	type = GL_NONE;
-				glGetProgramiv(shaderID, GL_ACTIVE_UNIFORM_MAX_LENGTH, &max_name_len);
-
-				auto uniform_name = std::make_unique<char[]>(max_name_len);
-
-
-				for (GLint i = 0; i < nrOfUniformsInTheBlock; ++i)
-				{
-					glGetActiveUniform(shaderID, listOfUniformIndices[i], max_name_len, &length, &count, &type, uniform_name.get());
-					uniform_info_t uniform_info = {};
-					uniform_info.location = listOfUniformIndices[i];
-					uniform_info.count = count;
-
-					uniforms.emplace(std::make_pair(std::string(uniform_name.get(), length), uniform_info));
-				}
-			}
-			*/
 		}
 		GLint isBlockInVertexShader;
 		glGetActiveUniformBlockiv(shaderID, blockIx, GL_UNIFORM_BLOCK_REFERENCED_BY_VERTEX_SHADER, &isBlockInVertexShader);
@@ -303,59 +181,8 @@ void Shader::LoadUniforms()
 		glGetActiveUniformBlockName(shaderID, blockIx, nameLen, NULL, &name[0]);
 
 		nameList.push_back(std::string());
-		nameList.back().assign(name.begin(), name.end() - 1); //Remove the null terminator.
+		nameList.back().assign(name.begin(), name.end() - 1);
 	}
-}
-
-unsigned int Shader::GetLocation(const char * uniformName)
-{
-	if (uniformLocations.find(uniformName) == uniformLocations.end()) return -1;
-	else return uniformLocations[uniformName];
-}
-
-void Shader::UpdateUniform(const char * uniformName, Matrix4F & newValue)
-{
-	glUniformMatrix4fv(uniformLocations[uniformName], 1, GL_FALSE, &newValue[0][0]);
-}
-
-void Shader::UpdateUniform(const char * uniformName, const Vector2F & newValue)
-{
-	glUniform2fv(uniformLocations[uniformName], 1, &newValue.x);
-}
-
-void Shader::UpdateUniform(const char * uniformName, const Vector3F & newValue)
-{
-	glUniform3fv(uniformLocations[uniformName], 1, &newValue.x);
-}
-
-void Shader::UpdateUniform(const char * uniformName, const Vector4F & newValue)
-{
-	glUniform4fv(uniformLocations[uniformName], 1, &newValue.x);
-}
-
-void Shader::UpdateUniform(const char * uniformName, const unsigned int newValue)
-{
-	glUniform1ui(uniformLocations[uniformName], newValue);
-}
-
-void Shader::UpdateUniform(const char * uniformName, const int newValue)
-{
-	glUniform1i(uniformLocations[uniformName], newValue);
-}
-
-void Shader::UpdateUniform(const char * uniformName, const float newValue)
-{
-	glUniform1f(uniformLocations[uniformName], newValue);
-}
-
-void Shader::UpdateUniform(const char * uniformName, const bool newValue)
-{
-	glUniform1i(uniformLocations[uniformName], newValue);
-}
-
-void Shader::UpdateMaterialUniformBuffers(Material * mat)
-{
-
 }
 
 bool Shader::HasUniformBuffer(int index)

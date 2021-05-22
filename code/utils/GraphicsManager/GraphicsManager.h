@@ -12,7 +12,7 @@ class Shader;
 struct ShaderPaths;
 class FrameBuffer;
 struct TextureInfo;
-enum BlockType;
+enum class BlockType;
 
 class GraphicsManager
 {
@@ -41,7 +41,6 @@ public:
 	static bool ReloadShaderFromPath(const char* name, ShaderPaths& paths);
 	static bool ReloadShaderCode(std::string& shaderCode, std::unordered_set<std::string>& shaderIncludes);
 	static bool LoadShaderIncludes(std::string&shaderCode, std::unordered_set<std::string>& shaderIncludes);
-	static void LoadUniforms(GLuint programID);
 	static void LoadBlocks(Shader* shader, BlockType& type);
 	static std::string ReadTextFileIntoString(const char* path);
 	static std::string ReadTextFileIntoString(std::string& path);
@@ -51,10 +50,8 @@ public:
 	static void ParseShaderForUniformBuffers(std::string& shaderCode, Shader& shader);
 	static void ParseShaderForOutputs(std::string& shaderCode, Shader& shader);
 	static void RemoveComments(std::string& shaderCode);
-	static Texture* LoadDDS(const char* imagepath);
 	static TextureInfo* LoadImage(const char* path, int forcedNumOfEle);
 	static GLuint LoadProgram(std::string& vertex, std::string& fragment = std::string(), std::string& geometry = std::string());
-	static Texture* CreateTexture(int width, int height, bool isDepth, int numOfElements, unsigned char* data);
 	static Texture* LoadTexture(char* path);
 	static Texture* LoadCompressedDDS(Texture* tex, TextureInfo* ti, int index = 0);
 	static Texture* LoadCompressedDDSCubeMap(Texture* tex, TextureInfo* ti);

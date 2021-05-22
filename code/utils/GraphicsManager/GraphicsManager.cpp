@@ -741,13 +741,7 @@ bool GraphicsManager::ReloadShaderFromPath(const char* name, ShaderPaths& paths)
 		LoadBlocks(&shader, type);
 		type = BlockType::Storage;
 		LoadBlocks(&shader, type);
-		//ParseShaderForUniformBuffers(VertexShaderCode, shader);
-		//ParseShaderForUniformBuffers(FragmentShaderCode, shader);
-		//ParseShaderForUniformBuffers(GeometryShaderCode, shader);
 		ParseShaderForOutputs(FragmentShaderCode, shader);
-		//shader.LoadUniforms();
-		//shader.LoadBlocks(uniform);
-		//LoadUniforms(result);
 		return true;
 	}
 	else
@@ -791,72 +785,6 @@ bool GraphicsManager::LoadShaderIncludes(std::string& shaderCode, std::unordered
 	return false;
 }
 
-void GraphicsManager::LoadUniforms(GLuint programID)
-{
-	GLint i;
-	GLint count;
-
-	GLint size; // size of the variable
-	GLenum type; // type of the variable (float, vec3 or mat4, etc)
-
-	const GLsizei bufSize = 64; // maximum name length
-	GLchar name[bufSize]; // variable name in GLSL
-	std::string readableType; // variable name in GLSL
-	GLsizei length; // name length
-	glGetProgramiv(programID, GL_ACTIVE_UNIFORMS, &count);
-	std::vector<std::string> samplers;
-	for (i = 0; i < count; i++)
-	{
-		glGetActiveUniform(programID, (GLuint)i, bufSize, &length, &size, &type, name);
-
-		
-		switch (type)
-		{
-		case GL_SAMPLER_1D:
-		{
-			readableType = "sampler 1D";
-			samplers.push_back(name);
-			break;
-		}
-		case GL_SAMPLER_2D:
-		{
-			readableType = "sampler 2D";
-			samplers.push_back(name);
-			break;
-		}
-		case GL_SAMPLER_3D:
-		{
-			readableType = "sampler 3D";
-			samplers.push_back(name);
-			break;
-		}
-		case GL_SAMPLER_CUBE:
-		{
-			readableType = "sampler CUBE";
-			samplers.push_back(name);
-			break;
-		}
-		default:
-		{
-			readableType = "other";
-			break;
-		}
-		}
-		printf("Uniform #%d Type: %s Name: %s\n", i, readableType.c_str(), name); //we get type and name, number is irrelevant, it's just a count, we should get the id ourselves using the name, done :D
-
-	}
-	std::map<int, std::string> samplersOrdered;
-	for (auto& samplerName : samplers)
-	{
-		GLuint samplerLocation = glGetUniformLocation(programID, samplerName.c_str());
-		samplersOrdered[samplerLocation] = samplerName;
-	}
-	for (auto& sampler : samplersOrdered)
-	{
-		//printf("id %d Name: %s\n", sampler.first, sampler.second.c_str()); //ordered samplers with location ids
-	}
-}
-
 void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 {
 	GLenum blockInterface;
@@ -865,12 +793,12 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 
 	switch (type)
 	{
-	case Uniform:
+	case BlockType::Uniform:
 		blockInterface = GL_UNIFORM_BLOCK;
 		resourceInterface = GL_UNIFORM;
 		nrOfVariableProperties = 10;
 		break;
-	case Storage:
+	case BlockType::Storage:
 		blockInterface = GL_SHADER_STORAGE_BLOCK;
 		resourceInterface = GL_BUFFER_VARIABLE;
 		nrOfVariableProperties = 9;
@@ -912,17 +840,17 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 		glGetProgramResourceName(shader->shaderID, blockInterface, blockIx, blockName.size(), NULL, &blockName[0]);
 
 		ShaderBlock* shaderBlock = nullptr;
-		if (type == Uniform) shaderBlock = GraphicsStorage::GetUniformBuffer(blockPropertyValues[2]);
+		if (type == BlockType::Uniform) shaderBlock = GraphicsStorage::GetUniformBuffer(blockPropertyValues[2]);
 		else shaderBlock = GraphicsStorage::GetShaderStorageBuffer(blockPropertyValues[2]);
 		if (shaderBlock == nullptr)
 		{
 			shaderBlock = new ShaderBlock(blockPropertyValues[1], blockPropertyValues[2], type);
 			shaderBlock->name = std::string(blockName.begin(), blockName.end() - 1);
-			if (type == Uniform) GraphicsStorage::uniformBuffers.push_back(shaderBlock);
+			if (type == BlockType::Uniform) GraphicsStorage::uniformBuffers.push_back(shaderBlock);
 			else GraphicsStorage::shaderStorageBuffers.push_back(shaderBlock);
 		}
 
-		if (type == Uniform)
+		if (type == BlockType::Uniform)
 		{
 			std::string bufferType = shaderBlock->name.substr(0, 2);
 			if (bufferType == "O_") { shader->objectUniformBuffers.push_back(shaderBlock); }
@@ -1001,107 +929,10 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 				break;
 			}
 
-			uniforms.emplace(std::make_pair(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info));
+			uniforms.try_emplace(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info);
 			shaderBlock->AddVariableOffset(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info.offset);
 		}
 	}
-}
-
-Texture* GraphicsManager::LoadDDS(const char* path) {
-
-	unsigned char header[124];
-
-	FILE* fp;
-
-	/* try to open the file */
-	fp = fopen(path, "rb");
-	if (fp == NULL) {
-		printf("%s could not be opened.\n", path);
-		return 0;
-	}
-
-	/* verify the type of file */
-	char filecode[4];
-	fread(filecode, 1, 4, fp);
-	if (strncmp(filecode, "DDS ", 4) != 0) {
-		fclose(fp);
-		return 0;
-	}
-
-	/* get the surface desc */
-	fread(&header, 124, 1, fp);
-
-	unsigned int height = *(unsigned int*)&(header[8]);
-	unsigned int width = *(unsigned int*)&(header[12]);
-	unsigned int linearSize = *(unsigned int*)&(header[16]);
-	unsigned int mipMapCount = *(unsigned int*)&(header[24]);
-	unsigned int fourCC = *(unsigned int*)&(header[80]);
-
-
-	unsigned char* buffer;
-	unsigned int bufsize;
-	/* how big is it going to be including all mipmaps? */
-	bufsize = mipMapCount > 1 ? linearSize * 2 : linearSize;
-	buffer = (unsigned char*)malloc(bufsize * sizeof(unsigned char));
-	fread(buffer, 1, bufsize, fp);
-	/* close the file pointer */
-	fclose(fp);
-
-	unsigned int components = (fourCC == FOURCC_DXT1) ? 3 : 4;
-	unsigned int format;
-	switch (fourCC)
-	{
-	case FOURCC_DXT1:
-		format = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
-		break;
-	case FOURCC_DXT3:
-		format = GL_COMPRESSED_RGBA_S3TC_DXT3_EXT;
-		break;
-	case FOURCC_DXT5:
-		format = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
-		break;
-	default:
-		free(buffer);
-		return nullptr;
-	}
-
-	Texture* texture = new Texture(GL_TEXTURE_2D, 0, format, width, height, components == 3 ? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, buffer, GL_COLOR_ATTACHMENT0);
-	texture->Generate();
-	texture->Bind();
-	texture->hasMipMaps = mipMapCount > 1;
-	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
-
-	unsigned int blockSize = (format == GL_COMPRESSED_RGBA_S3TC_DXT1_EXT) ? 8 : 16;
-	unsigned int offset = 0;
-
-	/* load the mipmaps */
-	for (unsigned int level = 0; level < mipMapCount && (width || height); ++level)
-	{
-		unsigned int size = ((width + 3) / 4) * ((height + 3) / 4) * blockSize;
-		glCompressedTexImage2D(GL_TEXTURE_2D, level, format, width, height, 0, size, buffer + offset);
-
-		offset += size;
-		width /= 2;
-		height /= 2;
-
-		// Deal with Non-Power-Of-Two textures.
-		if (width < 1) width = 1;
-		if (height < 1) height = 1;
-	}
-	
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	//glGenerateMipmap(GL_TEXTURE_2D);
-	
-	//float aniso = 16.0f;
-	//glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &aniso);
-	//glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAX_ANISOTROPY_EXT, aniso);
-	
-	free(buffer);
-
-	return texture;
 }
 
 std::string GraphicsManager::ReadTextFileIntoString(const char* path)
@@ -1803,38 +1634,6 @@ void GraphicsManager::LoadAllOBJsToVAOs()
 		//delete obj.second;
 	}
 	//GraphicsStorage::objs.clear();
-}
-
-Texture* GraphicsManager::CreateTexture(int width, int height, bool isDepth, int numOfElements, unsigned char* data) {
-
-	Texture* texture = new Texture(GL_TEXTURE_2D, 0, isDepth ? GL_DEPTH_COMPONENT : (numOfElements == 3 ? GL_RGB : GL_RGBA), width, height, isDepth ? GL_DEPTH_COMPONENT : (numOfElements == 3 ? GL_RGB : GL_RGBA), isDepth ? GL_FLOAT : GL_UNSIGNED_BYTE, data, GL_COLOR_ATTACHMENT0);
-	texture->Generate();
-	texture->Bind();
-	if (data)
-	{
-		texture->Specify();
-		texture->GenerateMipMaps();
-	}
-	
-	//if (data)
-	//{
-		//glTexImage2D(GL_TEXTURE_2D, 0, isDepth ? GL_DEPTH_COMPONENT : (numOfElements == 3 ? GL_RGB : GL_RGBA), width, height, isDepth ? GL_DEPTH_COMPONENT : (numOfElements == 3 ? GL_RGB : GL_RGBA), isDepth ? GL_FLOAT : GL_UNSIGNED_BYTE, data);
-		//glGenerateMipmap(GL_TEXTURE_2D);
-	//}
-
-    // Poor filtering, or ...
-	///glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-	///glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
-
-    // ... nice trilinear filtering.
-	//glTexParameteri(texture->target, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	//glTexParameteri(texture->target, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-	//glTexParameteri(texture->target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-	//glTexParameteri(texture->target, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-
-
-    return texture;
 }
 
 void GraphicsManager::LoadAllAssets()

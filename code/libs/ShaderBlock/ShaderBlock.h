@@ -4,7 +4,7 @@
 
 class CPUBlockData;
 
-enum BlockType
+enum class BlockType
 {
 	Uniform, Storage
 };
