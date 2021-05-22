@@ -1,4 +1,6 @@
 #pragma once
+#include <string.h>
+
 enum class PropertyType
 {
 	INT,
@@ -20,6 +22,7 @@ struct DataInfo
 {
 	DataInfo() { dataAddress = nullptr; size = 0; type = PropertyType::INT; };
 	DataInfo(void* newAddress, int newSize, PropertyType newType) { dataAddress = newAddress; size = newSize; type = newType; }
+	void SetData(void* newData) { memcpy(dataAddress, newData, size); };
 	void* dataAddress;
 	int size;
 	PropertyType type;

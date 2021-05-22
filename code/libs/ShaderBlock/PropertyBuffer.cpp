@@ -72,11 +72,6 @@ void PropertyBuffer::SetData(const char* name, const void* newData)
 	}
 }
 
-void PropertyBuffer::SetData(DataInfo* binding, const void* newData)
-{
-	memcpy(binding->dataAddress, newData, binding->size);
-}
-
 void PropertyBuffer::Clear()
 {
 	data.clear();

@@ -19,7 +19,7 @@ void CPUBlockData::RegisterDataWithOffsets(const DataRegistry& dataRegistry, std
 {
 	for (auto& nameAndOffset : shaderBlockOffsets)
 	{
-		auto property = dataRegistry.GetData(nameAndOffset.first);
+		auto property = dataRegistry.GetProperty(nameAndOffset.first.c_str());
 		if (property != nullptr)
 		{
 			//UpdateCounters(nameAndOffset.second, property->size); //should not have it here

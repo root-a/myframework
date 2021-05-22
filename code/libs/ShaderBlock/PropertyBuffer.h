@@ -29,7 +29,6 @@ public:
 	const void* GetPropertyPtr(const char* name);
 	DataInfo* GetProperty(const char* name);
 	void SetData(const char* name, const void* data);
-	void SetData(DataInfo* binding, const void * newData);
 	void Clear();
 	std::vector<char> data;
 	std::unordered_map<std::string, DataInfoLoc> bindings;
