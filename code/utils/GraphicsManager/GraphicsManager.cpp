@@ -471,11 +471,11 @@ void GraphicsManager::RemoveComments(std::string& shaderCode)
 {
 	while (true)
 	{
-		size_t nFPos = shaderCode.find("//");
+		size_t nFPos = shaderCode.find("/*");
 		if (nFPos + 1)
 		{
-			size_t second = shaderCode.find("\n", nFPos);
-			shaderCode.erase(nFPos, second - nFPos);
+			size_t second = shaderCode.find("*/", nFPos);
+			shaderCode.erase(nFPos, (second + 1) - nFPos);
 		}
 		else
 		{
@@ -484,11 +484,11 @@ void GraphicsManager::RemoveComments(std::string& shaderCode)
 	}
 	while (true)
 	{
-		size_t nFPos = shaderCode.find("/*");
+		size_t nFPos = shaderCode.find("//");
 		if (nFPos + 1)
 		{
-			size_t second = shaderCode.find("*/", nFPos);
-			shaderCode.erase(nFPos, (second + 1) - nFPos);
+			size_t second = shaderCode.find("\n", nFPos);
+			shaderCode.erase(nFPos, second - nFPos);
 		}
 		else
 		{
@@ -709,9 +709,12 @@ bool GraphicsManager::ReloadShaderFromPath(const char* name, ShaderPaths& paths)
 	std::string& VertexShaderCode = ReadTextFileIntoString(paths.vs);
 	std::string& FragmentShaderCode = ReadTextFileIntoString(paths.fs);
 	std::string& GeometryShaderCode = ReadTextFileIntoString(paths.gs);
-	RemoveComments(VertexShaderCode);
-	RemoveComments(FragmentShaderCode);
-	RemoveComments(GeometryShaderCode);
+	std::unordered_set<std::string> vsIncludes;
+	std::unordered_set<std::string> fsIncludes;
+	std::unordered_set<std::string> gsIncludes;
+	ReloadShaderCode(VertexShaderCode, vsIncludes);
+	ReloadShaderCode(FragmentShaderCode, fsIncludes);
+	ReloadShaderCode(GeometryShaderCode, gsIncludes);
 	unsigned int result = LoadProgram(VertexShaderCode, FragmentShaderCode, GeometryShaderCode);
 	if (result > 0)
 	{
@@ -752,6 +755,40 @@ bool GraphicsManager::ReloadShaderFromPath(const char* name, ShaderPaths& paths)
 		printf("\033[1;31mFailed to load shader: %s\033[0m\n", name);
 		return false;
 	}
+}
+
+bool GraphicsManager::ReloadShaderCode(std::string& shaderCode, std::unordered_set<std::string>& shaderIncludes)
+{
+	RemoveComments(shaderCode);
+	LoadShaderIncludes(shaderCode, shaderIncludes);
+	return true;
+}
+
+bool GraphicsManager::LoadShaderIncludes(std::string& shaderCode, std::unordered_set<std::string>& shaderIncludes)
+{
+	while (true)
+	{
+		size_t nFPos = shaderCode.find("#include");
+		if (nFPos + 1)
+		{
+			size_t endInclude = shaderCode.find(";", nFPos);
+			std::string includeFile = shaderCode.substr(nFPos + 9, endInclude - (nFPos + 9));
+			std::string pathToIncludeFile = GraphicsStorage::paths["resources"] + "shaders/" + includeFile;
+			shaderCode.erase(nFPos, (endInclude + 1) - nFPos);
+			if (shaderIncludes.find(includeFile) == shaderIncludes.end())
+			{
+				shaderIncludes.insert(includeFile);
+				std::string& includeShaderCode = ReadTextFileIntoString(pathToIncludeFile);
+				shaderCode.insert(nFPos, includeShaderCode);
+				ReloadShaderCode(pathToIncludeFile, shaderIncludes);
+			}
+		}
+		else
+		{
+			break;
+		}
+	}
+	return false;
 }
 
 void GraphicsManager::LoadUniforms(GLuint programID)

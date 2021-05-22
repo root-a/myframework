@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 class Texture;
 class OBJ;
@@ -38,6 +39,8 @@ public:
 	static bool ReloadShaders();
 	static bool ReloadShader(const char* name);
 	static bool ReloadShaderFromPath(const char* name, ShaderPaths& paths);
+	static bool ReloadShaderCode(std::string& shaderCode, std::unordered_set<std::string>& shaderIncludes);
+	static bool LoadShaderIncludes(std::string&shaderCode, std::unordered_set<std::string>& shaderIncludes);
 	static void LoadUniforms(GLuint programID);
 	static void LoadBlocks(Shader* shader, BlockType& type);
 	static std::string ReadTextFileIntoString(const char* path);
