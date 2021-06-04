@@ -52,7 +52,7 @@ void ShaderBlockData::RegisterDataWithOffsets(const DataRegistry& dataRegistry, 
 			//UpdateCounters(nameAndOffset.second, property->size); //should not have it here
 			int index = FindDataBindingIndex(nameAndOffset.second);
 			if (index == -1)
-				dataBindings.push_back(DataBinding(nameAndOffset.second, property->dataAddress, property->size));
+				dataBindings.emplace_back(nameAndOffset.second, property->dataAddress, property->size);
 			else
 			{
 				dataBindings[index].offset = nameAndOffset.second;
@@ -68,7 +68,7 @@ void ShaderBlockData::RegisterDataWithOffset(int offset, const void* data, int s
 {
 	int index = FindDataBindingIndex(offset);
 	if (index == -1)
-		dataBindings.push_back(DataBinding(offset, data, size));
+		dataBindings.emplace_back(offset, data, size);
 	else
 	{
 		dataBindings[index].offset = offset;
