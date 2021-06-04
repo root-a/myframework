@@ -1,8 +1,8 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
+#include "CPUBlockData.h"
 
-class CPUBlockData;
 class ShaderBlock;
 class DataRegistry;
 
@@ -16,7 +16,10 @@ public:
 	void UpdateAndSubmit();
 	void Submit();
 	void RegisterProperties(const DataRegistry& dataRegistry);
+	void RegisterDataWithOffsets(const DataRegistry& dataRegistry, std::unordered_map<std::string, int>& shaderBlockOffsets);
+	void RegisterDataWithOffset(int offset, const void* data, int size);
 	ShaderBlock* shaderBlock;
-	CPUBlockData* cpuBlock;
+	std::vector<DataBinding> dataBindings;
 private:
+	int FindDataBindingIndex(int offset);
 };

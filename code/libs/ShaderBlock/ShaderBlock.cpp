@@ -12,6 +12,7 @@ ShaderBlock::ShaderBlock(int newSize, int newIndex, BlockType type)
 	size = newSize;
 	if (type == BlockType::Uniform) target = GL_UNIFORM_BUFFER;
 	else target = GL_SHADER_STORAGE_BUFFER;
+	data.SetSize(newSize);
 	Generate();
 }
 
@@ -36,13 +37,21 @@ void ShaderBlock::Generate()
 	glBindBufferBase(target, index, handle);
 }
 
-void ShaderBlock::Submit(CPUBlockData& buffer)
+void ShaderBlock::Submit()
 {
-	glNamedBufferSubData(handle, buffer.gpuBufferStart, buffer.sizeToUpdate, buffer.cpuBufferStart);
-	buffer.ResetCounters();
+	glNamedBufferSubData(handle, data.gpuBufferStart, data.sizeToUpdate, data.cpuBufferStart);
+	data.ResetCounters();
 }
 
 void ShaderBlock::AddVariableOffset(const std::string & uniformName, int loc)
 {
 	offsets[uniformName] = loc;
+}
+
+void ShaderBlock::SetData(const char* uniformName, const void* newData, int size)
+{
+	if (offsets.find(uniformName) != offsets.end())
+	{
+		data.SetData(offsets[uniformName], newData, size);
+	}
 }

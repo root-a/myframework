@@ -9,14 +9,14 @@ struct DataBinding
 	int offset;
 	const void* dataAddress;
 	int size;
+	bool operator < (const DataBinding& str) const
+	{
+		return (offset < str.offset);
+	}
 };
-
-class DataRegistry;
 
 class CPUBlockData
 {
-	typedef unsigned int GLuint;
-	typedef unsigned int GLenum;
 public:
 	CPUBlockData();
 	~CPUBlockData();
@@ -25,19 +25,15 @@ public:
 
 	std::vector<char> data;
 	void SetSize(int size);
-	void RegisterDataWithOffsets(const DataRegistry& dataRegistry, std::unordered_map<std::string, int>& shaderBlockOffsets);
-	void RegisterDataWithOffset(int offset, const void* data, int size);
-	void UpdateBuffer();
+	void UpdateBuffer(std::vector<DataBinding>& dataBindings);
 
+	void ResetCounters();
 	int gpuBufferStart = 0;
 	void* cpuBufferStart = nullptr;
-	void ResetCounters();
 	int updateStart = INT_MAX;
 	int updateEnd = INT_MIN;
 	int sizeToUpdate = 0;
 
 private:
-	int FindDataBindingIndex(int offset);
-	std::vector<DataBinding> dataBindings;
-	void UpdateCounters(int newLocation, int size);
+	void UpdateCounters(int offset, int size);
 };

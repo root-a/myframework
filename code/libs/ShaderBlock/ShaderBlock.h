@@ -1,8 +1,7 @@
 #pragma once
 #include <vector>
 #include <unordered_map>
-
-class CPUBlockData;
+#include "CPUBlockData.h"
 
 enum class BlockType
 {
@@ -18,9 +17,11 @@ public:
 	~ShaderBlock();
 	void Bind();
 	void Unbind();
-	void Submit(CPUBlockData& buffer);
+	void Submit();
 	void AddVariableOffset(const std::string& uniformName, int loc);
+	void SetData(const char* uniformName, const void* newData, int size);
 	std::unordered_map<std::string, int> offsets;
+	CPUBlockData data;
 	std::string name;
 	int index;
 	int size;
