@@ -82,7 +82,7 @@ static TextureInfo* stbi__pkm_info(stbi__context *s)
 
 	stbi__getn( s, (stbi_uc*)(&header), sizeof(PKMHeader) );
 
-	if ( 0 != strcmp( header.aName, "PKM 10" ) ) {
+	if (0 != strncmp( header.aName, "PKM 10", sizeof(header.aName))) {
 		stbi__rewind(s);
 		return 0;
 	}
@@ -153,7 +153,7 @@ static TextureInfo* stbi__pkm_load(stbi__context *s, int req_comp)
 
 	stbi__getn( s, (stbi_uc*)(&header), sizeof(PKMHeader) );
 
-	if ( 0 != strcmp( header.aName, "PKM 10" ) ) {
+	if (0 != strncmp( header.aName, "PKM 10", sizeof(header.aName))) {
 		return NULL;
 	}
 

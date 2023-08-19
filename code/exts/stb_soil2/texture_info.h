@@ -9,6 +9,8 @@ extern "C" {
 	typedef struct DDSExtraInfo DDSExtraInfo;
 	typedef struct GIFExtraInfo GIFExtraInfo;
 	typedef struct PVRExtraInfo PVRExtraInfo;
+	typedef struct PNMExtraInfo PNMExtraInfo;
+	typedef struct PSDExtraInfo PSDExtraInfo;
 
 	enum TextureTypes
 	{
@@ -23,7 +25,8 @@ extern "C" {
 		PIC,
 		PNM,
 		PKM,
-		PVR
+		PVR,
+		QOI
 	};
 
 	struct TextureInfo
@@ -52,6 +55,17 @@ extern "C" {
 	struct PVRExtraInfo
 	{
 		int compressed;
+	};
+	
+	struct PNMExtraInfo
+	{
+		int bitsPerChannel;
+	};
+	
+	struct PSDExtraInfo
+	{
+		int channelCount;
+		int depth;
 	};
 
 #ifdef __cplusplus

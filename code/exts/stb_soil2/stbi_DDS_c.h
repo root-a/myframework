@@ -241,7 +241,8 @@ void stbi_decode_DXT_color_block(
 }
 
 static TextureInfo* stbi__dds_info(stbi__context *s) {
-	int x,y,flags,is_compressed,has_alpha,comp;
+	int x,y,is_compressed,has_alpha,comp, cubemap_faces;
+	unsigned int flags;
 	DDS_header header={0};
 
 	if( sizeof( DDS_header ) != 128 )
@@ -293,6 +294,12 @@ static TextureInfo* stbi__dds_info(stbi__context *s) {
 	else
 		comp = 4;
 
+	cubemap_faces = (header.sCaps.dwCaps2 & DDSCAPS2_CUBEMAP) / DDSCAPS2_CUBEMAP;
+	/*	I need cubemaps to have square faces	*/
+	cubemap_faces &= (s->img_x == s->img_y);
+	cubemap_faces *= 5;
+	cubemap_faces += 1;
+
 	TextureInfo* ti = malloc(sizeof(TextureInfo));
 	ti->width = x;
 	ti->height = y;
@@ -303,7 +310,7 @@ static TextureInfo* stbi__dds_info(stbi__context *s) {
 	DDSExtraInfo * ei = malloc(sizeof(DDSExtraInfo));
 	ei->fourCC = header.sPixelFormat.dwFourCC;
 	ei->nrOfMips = header.dwMipMapCount;
-	ei->nrOfCubeMapFaces = 0;
+	ei->nrOfCubeMapFaces = cubemap_faces;
 	ei->compressed = is_compressed;
 
 	ti->extraInfo = ei;
@@ -447,7 +454,8 @@ static TextureInfo* stbi__dds_load(stbi__context *s, int req_comp)
 {
 	//	all variables go up front
 	stbi_uc *dds_data = NULL;
-	int flags, DXT_family;
+	unsigned int flags;
+	int DXT_family;
 	int has_alpha, has_mipmap;
 	int is_compressed, cubemap_faces;
 	int block_pitch, num_blocks;
