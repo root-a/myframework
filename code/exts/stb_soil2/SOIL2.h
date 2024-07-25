@@ -25,6 +25,7 @@
 	- DDS		load & save
 	- PNG		load & save
 	- JPG		load & save
+	- QOI		load & save
 	- PSD		load
 	- HDR		load
 	- PIC		load

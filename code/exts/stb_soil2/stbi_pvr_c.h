@@ -611,6 +611,8 @@ static void GetModulationValue(int x,
 	*Mod =ModVal;
 }
 
+static int DisableTwiddlingRoutine = 0;
+
 /*!***********************************************************************
  @Function		TwiddleUV
  @Input			YSize	Y dimension of the texture in pixels
@@ -624,7 +626,6 @@ static void GetModulationValue(int x,
 
 				NOTE the dimensions of the texture must be a power of 2
 *************************************************************************/
-static int DisableTwiddlingRoutine = 0;
 
 static U32 TwiddleUV(U32 YSize, U32 XSize, U32 YPos, U32 XPos)
 {
