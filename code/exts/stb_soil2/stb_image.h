@@ -7847,7 +7847,8 @@ static TextureInfo* stbi__pnm_info(stbi__context *s)
 
 static int stbi__pnm_is16(stbi__context *s)
 {
-   if (stbi__pnm_info(s) == 16)
+    TextureInfo* info = stbi__pnm_info(s);
+    if (info != NULL && ((PNMExtraInfo*)info->extraInfo)->bitsPerChannel == 16)
 	   return 1;
    return 0;
 }
