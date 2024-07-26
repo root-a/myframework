@@ -1,7 +1,6 @@
 #pragma once
 #include <list>
 #include "MyMathLib.h"
-#include "Vector.h"
 #include "PoolParty.h"
 #include <unordered_map>
 
@@ -20,12 +19,12 @@ public:
 	PoolParty<Edge, 1000> edgePool;
 	PoolParty<Face, 1000> facePool;
 
-	cop4530::Vector<Vertex*> vertices;
-	cop4530::Vector<Edge*> edges;
-	cop4530::Vector<Face*> faces;
-	cop4530::Vector<Face*> goals;
+	std::vector<Vertex*> vertices;
+	std::vector<Edge*> edges;
+	std::vector<Face*> faces;
+	std::vector<Face*> goals;
 	
-	cop4530::Vector<Vector2> goalsPos;
+	std::vector<Vector2> goalsPos;
 
 	Face* startFace;
 	Face* endFace;

@@ -8,9 +8,6 @@
 #include <string>
 #include "Optimization.h"
 
-using namespace cop4530;
-
-
 //std specialization
 namespace std
 {
@@ -62,7 +59,7 @@ void HalfEdgeMesh2D::Construct(const char * path)
 		height++;
 	}
 	width = (int)str.length();
-	Vector<Face*> allFaces;
+	std::vector<Face*> allFaces;
 	allFaces.reserve(height*width);
 	Face* emptyFace = facePool.Alloc();
 

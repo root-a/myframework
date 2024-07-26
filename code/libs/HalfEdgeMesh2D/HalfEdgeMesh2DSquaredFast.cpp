@@ -7,11 +7,8 @@
 #include "Face.h"
 #include <fstream>
 #include <string>
-#include "Vector.h"
 #include <unordered_map>
 #include "Optimization.h"
-
-using namespace cop4530;
 
 
 HalfEdgeMesh2DSquaredFast::HalfEdgeMesh2DSquaredFast()
@@ -27,7 +24,7 @@ HalfEdgeMesh2DSquaredFast::~HalfEdgeMesh2DSquaredFast()
 	delete[] vertices;
 }
 
-void HalfEdgeMesh2DSquaredFast::Construct(std::string map, const int width, const int height)
+void HalfEdgeMesh2DSquaredFast::Construct(std::string& map, const int width, const int height)
 {
 	mapSize = height*width;
 	faces = new Face[mapSize];

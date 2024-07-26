@@ -1,7 +1,6 @@
 #pragma once
 #include "MyMathLib.h"
 #include "PoolParty.h"
-#include "Vector.h"
 
 class Vertex;
 class Edge;
@@ -20,9 +19,9 @@ public:
 	PoolParty<Vertex,1000> vertexPool;
 	PoolParty<Edge,1000> edgePool;
 	PoolParty<Face,1000> facePool;
-	cop4530::Vector<Vertex*> vertices;
-	cop4530::Vector<Edge*> edges;
-	cop4530::Vector<Face*> faces;
+	std::vector<Vertex*> vertices;
+	std::vector<Edge*> edges;
+	std::vector<Face*> faces;
 private:
 	bool checkIfSameVect(Vector3 &vect1, Vector3 &vect2);
 	void SplitHalfEdges();

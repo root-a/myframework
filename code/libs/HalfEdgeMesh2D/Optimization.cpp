@@ -3,10 +3,7 @@
 #include "Face.h"
 #include "Vertex.h"
 
-using namespace cop4530;
-
-
-Face* Optimization::findNode(const Vector2& point, Vector<Face*>& faces)
+Face* Optimization::findNode(const Vector2& point, std::vector<Face*>& faces)
 {
 	for (int i = 0; i < faces.size(); i++)
 	{
@@ -56,7 +53,7 @@ bool Optimization::isPointInNode(const Vector2& point, Face* node)
 	return true;
 }
 
-void Optimization::quadrangulate(cop4530::Vector<Face*>& faces)
+void Optimization::quadrangulate(std::vector<Face*>& faces)
 {
 	std::list<Face*> toOptimize;
 
@@ -65,7 +62,7 @@ void Optimization::quadrangulate(cop4530::Vector<Face*>& faces)
 		toOptimize.push_back(faces.at(i));
 	}
 
-	unordered_map<Face*, bool> joined;
+	std::unordered_map<Face*, bool> joined;
 	for (size_t i = 0; i < faces.size(); i++)
 	{
 		Face* face = toOptimize.front();
@@ -78,7 +75,7 @@ void Optimization::quadrangulate(cop4530::Vector<Face*>& faces)
 			}
 		}
 	}
-	Vector<Face*> optimized;
+	std::vector<Face*> optimized;
 	optimized.reserve(toOptimize.size());
 	for (auto optiFace : toOptimize)
 	{
@@ -97,7 +94,7 @@ int Optimization::quadrangulate(Face * faces, int mapSize)
 		toOptimize.push_back(faces[i]);
 	}
 
-	unordered_map<Face*, bool> joined;
+	std::unordered_map<Face*, bool> joined;
 	for (size_t i = 0; i < mapSize; i++)
 	{
 		Face face = toOptimize.front();
@@ -125,17 +122,17 @@ int Optimization::quadrangulate(Face * faces, int mapSize)
 	return newMapSize;
 }
 
-void Optimization::optimizeMesh(Vector<Face*>& faces)
+void Optimization::optimizeMesh(std::vector<Face*>& faces)
 {
 	std::list<Face*> toOptimize;
-	Vector<Face*> optimization;
+	std::vector<Face*> optimization;
 
 	for (int i = 0; i < faces.size(); i++)
 	{
 		toOptimize.push_back(faces.at(i));
 	}
 
-	unordered_map<Face*, bool> joined;
+	std::unordered_map<Face*, bool> joined;
 	while (!toOptimize.empty())
 	{
 		Face* face = toOptimize.front();
@@ -153,7 +150,7 @@ void Optimization::optimizeMesh(Vector<Face*>& faces)
 		}
 	}
 
-	Vector<Face*> optimized;
+	std::vector<Face*> optimized;
 	for (auto optiFace : optimization)
 	{
 		if (!joined[optiFace])
@@ -168,14 +165,14 @@ void Optimization::optimizeMesh(Vector<Face*>& faces)
 int Optimization::optimizeMesh(Face* faces, int mapSize)
 {
 	std::list<Face*> toOptimize;
-	Vector<Face> optimization;
+	std::vector<Face> optimization;
 
 	for (int i = 0; i < mapSize; i++)
 	{
 		toOptimize.push_back(&faces[i]);
 	}
 
-	unordered_map<Face*, bool> joined;
+	std::unordered_map<Face*, bool> joined;
 	while (!toOptimize.empty())
 	{
 		Face* face = toOptimize.front();
@@ -193,7 +190,7 @@ int Optimization::optimizeMesh(Face* faces, int mapSize)
 		}
 	}
 
-	Vector<Face> optimized;
+	std::vector<Face> optimized;
 	optimized.reserve(optimization.size());
 	int j = 0;
 	for (auto& optiFace : optimization)
@@ -215,7 +212,7 @@ int Optimization::optimizeMesh(Face* faces, int mapSize)
 	return newMapSize;
 }
 
-bool Optimization::tryToJoin(Face* face, unordered_map<Face*, bool>& joined)
+bool Optimization::tryToJoin(Face* face, std::unordered_map<Face*, bool>& joined)
 {
 	Edge* currentEdge = face->edge;
 	do {

@@ -1,7 +1,6 @@
 #pragma once
 #include <unordered_map>
 #include "MyMathLib.h"
-#include "Vector.h"
 
 class Vertex;
 class Edge;
@@ -13,15 +12,15 @@ public:
 	Optimization();
 	~Optimization();
 
-	static Face* findNode(const Vector2& position, cop4530::Vector<Face*>& faces);
+	static Face* findNode(const Vector2& position, std::vector<Face*>& faces);
 	static Face* findNode(const Vector2& point, Face* faces, int mapSize);
 
 	static bool isPointInNode(const Vector2& point, Face* node);
 
-	static void quadrangulate(cop4530::Vector<Face*>& faces);
+	static void quadrangulate(std::vector<Face*>& faces);
 	static int quadrangulate(Face* faces, int mapSize);
 
-	static void optimizeMesh(cop4530::Vector<Face*>& faces);
+	static void optimizeMesh(std::vector<Face*>& faces);
 	static int optimizeMesh(Face* faces, int mapSize);
 	
 private:

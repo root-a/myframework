@@ -10,9 +10,6 @@
 #include <unordered_map>
 #include "Optimization.h"
 
-using namespace cop4530;
-
-
 HalfEdgeMesh2DSquared::HalfEdgeMesh2DSquared()
 {
 	vertexPool.CreatePoolParty();
@@ -24,9 +21,9 @@ HalfEdgeMesh2DSquared::~HalfEdgeMesh2DSquared()
 {
 }
 
-void HalfEdgeMesh2DSquared::Construct(std::string map, const int width, const int height)
+void HalfEdgeMesh2DSquared::Construct(std::string& map, const int width, const int height)
 {
-	Vector<Face*> allFaces;
+	std::vector<Face*> allFaces;
 	allFaces.reserve(height*width);
 	Face* emptyFace = facePool.Alloc();
 

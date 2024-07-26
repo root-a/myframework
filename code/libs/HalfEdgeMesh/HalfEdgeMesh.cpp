@@ -6,9 +6,6 @@
 #include "Edge.h"
 #include "Face.h"
 
-using namespace cop4530;
-
-
 HalfEdgeMesh::HalfEdgeMesh()
 {
 	vertexPool.CreatePoolParty();
