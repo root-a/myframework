@@ -17,13 +17,13 @@ public:
 	void Subdivide();
 	static void ExportMeshToOBJ(HalfEdgeMesh* mesh, OBJ* newOBJ);
 
-private:
 	PoolParty<Vertex,1000> vertexPool;
 	PoolParty<Edge,1000> edgePool;
 	PoolParty<Face,1000> facePool;
 	cop4530::Vector<Vertex*> vertices;
 	cop4530::Vector<Edge*> edges;
 	cop4530::Vector<Face*> faces;
+private:
 	bool checkIfSameVect(Vector3 &vect1, Vector3 &vect2);
 	void SplitHalfEdges();
 	void CalculateOldPosition();

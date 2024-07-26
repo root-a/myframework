@@ -28,7 +28,7 @@ void HalfEdgeMesh2DSquared::Construct(std::string map, const int width, const in
 {
 	Vector<Face*> allFaces;
 	allFaces.reserve(height*width);
-	Face* emptyFace = facePool.PoolPartyAlloc();
+	Face* emptyFace = facePool.Alloc();
 
 	for (int y = 0; y < height; y++)
 	{
@@ -45,10 +45,10 @@ void HalfEdgeMesh2DSquared::Construct(std::string map, const int width, const in
 				//connecting
 				
 				//let's get vertices we wanna work with
-				Vertex* vertice1 = vertexPool.PoolPartyAlloc();
-				Vertex* vertice2 = vertexPool.PoolPartyAlloc();
-				Vertex* vertice3 = vertexPool.PoolPartyAlloc();
-				Vertex* vertice4 = vertexPool.PoolPartyAlloc();
+				Vertex* vertice1 = vertexPool.Alloc();
+				Vertex* vertice2 = vertexPool.Alloc();
+				Vertex* vertice3 = vertexPool.Alloc();
+				Vertex* vertice4 = vertexPool.Alloc();
 
 				vertice1->pos = Vector2(x, (y + 1));
 				vertice2->pos = Vector2(x, y);
@@ -56,10 +56,10 @@ void HalfEdgeMesh2DSquared::Construct(std::string map, const int width, const in
 				vertice4->pos = Vector2((x + 1), (y + 1));
 
 				//create new edges
-				Edge* leftEdge = edgePool.PoolPartyAlloc();
-				Edge* topEdge = edgePool.PoolPartyAlloc();
-				Edge* rightEdge = edgePool.PoolPartyAlloc();
-				Edge* bottomEdge = edgePool.PoolPartyAlloc();
+				Edge* leftEdge = edgePool.Alloc();
+				Edge* topEdge = edgePool.Alloc();
+				Edge* rightEdge = edgePool.Alloc();
+				Edge* bottomEdge = edgePool.Alloc();
 
 				//connect vertices to edges
 				leftEdge->vertex = vertice1;
@@ -117,7 +117,7 @@ void HalfEdgeMesh2DSquared::Construct(std::string map, const int width, const in
 				vertices.push_back(vertice3);
 				vertices.push_back(vertice4);
 
-				Face* newFace = facePool.PoolPartyAlloc();
+				Face* newFace = facePool.Alloc();
 				newFace->edge = rightEdge;
 
 				rightEdge->face = newFace;

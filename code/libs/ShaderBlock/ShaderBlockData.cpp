@@ -22,6 +22,7 @@ void ShaderBlockData::RegisterPropertyData(const char* uniformName, const void* 
 {
 	if (shaderBlock->offsets.find(uniformName) != shaderBlock->offsets.end())
 	{
+		//we should not pass size, shaderblock knows/should know all uniform names, offsets and size
 		RegisterDataWithOffset(shaderBlock->offsets[uniformName], newData, size);
 	}
 }

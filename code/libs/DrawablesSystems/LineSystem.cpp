@@ -3,31 +3,21 @@
 #include <algorithm>
 #include <GL/glew.h>
 #include "Node.h"
-
+#include "GraphicsStorage.h"
 
 LineSystem::LineSystem(int maxCount){
 
 	MaxCount = maxCount;
 	LastUsed = 0;
-	ActiveCount = 0;
 	linesContainer = new FastLine[maxCount];
-	positions = new Vector3F[maxCount * 2];
-	colors = new Vector4F[maxCount * 2];
-	vao.SetPrimitiveMode(Vao::PrimitiveMode::LINES);
+	vao.SetPrimitiveMode(PrimitiveMode::LINES);
 	SetUpBuffers();
 }
 
 LineSystem::~LineSystem()
 {
 	delete[] linesContainer;
-	delete[] positions;
-	delete[] colors;
 }
-
-const Vector3F LineSystem::vertices[] = {
-	Vector3F(0.f, 0.f, 0.f),
-	Vector3F(0.f, 0.f, 1.f)
-};
 
 int LineSystem::FindUnused()
 {
@@ -47,23 +37,20 @@ int LineSystem::FindUnused()
 	return 0;
 }
 
-//we should have a list of indexes to update, maybe?
 void LineSystem::UpdateContainer()
 {
-	ActiveCount = 0;
+	positionColorBuffer->activeCount = 0;
 	for (int i = 0; i < MaxCount; i++){
 
 		FastLine& l = linesContainer[i];
 
 		if (l.CanDraw())
 		{
-			positions[ActiveCount] = l.GetPositionA().toFloat();
-			positions[ActiveCount + 1] = l.GetPositionB().toFloat();
-
-			colors[ActiveCount] = l.colorA;
-			colors[ActiveCount + 1] = l.colorB;
-
-			ActiveCount += 2;
+			l.data.positionA = l.GetPositionA();
+			l.data.positionB = l.GetPositionB();
+			positionColorBuffer->SetData(positionColorBuffer->activeCount, &l.data, sizeof(FastLine::LineData));
+			positionColorBuffer->IncreaseInstanceCount();
+			positionColorBuffer->IncreaseInstanceCount();
 			l.UpdateDrawState();
 		}
 	}
@@ -71,17 +58,17 @@ void LineSystem::UpdateContainer()
 
 void LineSystem::SetUpBuffers()
 {
-	vertexBuffer = vao.AddVertexBuffer(NULL, MaxCount * 2 * sizeof(Vector3F), { {ShaderDataType::Float3, "Position"} });
-	colorBuffer = vao.AddVertexBuffer(NULL, MaxCount * 2 * sizeof(Vector4F), { {ShaderDataType::Float4, "Color"} });
+	BufferLayout vbPositionColor({ {ShaderDataType::Type::Float3, "Position"}, {ShaderDataType::Type::Float4, "Color"} });
+	positionColorBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount * 2, vbPositionColor);
+	vao.AddVertexBuffer(positionColorBuffer);
 }
 
 void LineSystem::UpdateBuffers()
 {
-	glNamedBufferSubData(vertexBuffer, 0, ActiveCount * sizeof(Vector3F), positions);
-	glNamedBufferSubData(colorBuffer, 0, ActiveCount * sizeof(Vector4F), colors);
+	positionColorBuffer->Update();
 }
 
-void LineSystem::Draw(const Matrix4 & ViewProjection, const unsigned int currentShaderID)
+void LineSystem::Draw(const glm::mat4& ViewProjection, const unsigned int currentShaderID)
 {
 	if (dirty)
 	{
@@ -90,8 +77,9 @@ void LineSystem::Draw(const Matrix4 & ViewProjection, const unsigned int current
 		dirty = false;
 	}
 	vao.Bind();
-
-	vao.activeCount = ActiveCount;
+	vao.activeCount = positionColorBuffer->activeCount;
+	//ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
+	//glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
 	vao.Draw();
 }
 
@@ -99,8 +87,6 @@ FastLine* LineSystem::GetLine()
 {
 	FastLine* fl = &linesContainer[FindUnused()];
 	fl->DrawAlways();
-	fl->nodeA = &fl->localNodeA;
-	fl->nodeB = &fl->localNodeB;
 	dirty = true;
 	return fl;
 }
@@ -114,12 +100,15 @@ void LineSystem::Update()
 	}
 }
 
+Component* LineSystem::Clone()
+{
+	return new LineSystem(*this);
+}
+
 FastLine* LineSystem::GetLineOnce()
 {
 	FastLine* fl = &linesContainer[FindUnused()];
 	fl->DrawOnce();
-	fl->nodeA = &fl->localNodeA;
-	fl->nodeB = &fl->localNodeB;
 	dirty = true;
 	return fl;
 }
@@ -146,22 +135,22 @@ void FastLine::DetachEndB()
 	nodeB = &localNodeB;
 }
 
-Vector3 FastLine::GetPositionA()
+glm::vec3 FastLine::GetPositionA()
 {
-	return nodeA->TopDownTransform.getPosition() + localNodeA.localPosition;
+	return MathUtils::GetPosition(nodeA->TopDownTransform) + localNodeA.localPosition;
 }
 
-Vector3 FastLine::GetPositionB()
+glm::vec3 FastLine::GetPositionB()
 {
-	return nodeB->TopDownTransform.getPosition() + localNodeB.localPosition;
+	return MathUtils::GetPosition(nodeB->TopDownTransform) + localNodeB.localPosition;
 }
 
-void FastLine::SetPositionA(Vector3& pos)
+void FastLine::SetPositionA(const glm::vec3& pos)
 {
 	localNodeA.localPosition = pos;
 }
 
-void FastLine::SetPositionB(Vector3 & pos)
+void FastLine::SetPositionB(const glm::vec3& pos)
 {
 	localNodeB.localPosition = pos;
 }

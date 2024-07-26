@@ -49,18 +49,18 @@ Vector4F Vector4F::operator- (const Vector4F& right) const
 }
 
 /*! \fn dot product returns scalar*/
-float Vector4F::dotAKAscalar(const Vector4F& right) const
+float Vector4F::dot(const Vector4F& right) const
 {
 	return x * right.x + y * right.y + z * right.z + w * right.w;
 }
 
 /*! \fn function returning length of instanced vector*/
-float Vector4F::vectLengt() const
+float Vector4F::lengt() const
 {
 	return sqrtf(x*x + y*y + z*z + w*w);
 }
 
-float Vector4F::squareMag() const
+float Vector4F::squareLength() const
 {
 	return x*x + y*y + z*z + w*w;
 }
@@ -89,11 +89,11 @@ Vector3F Vector4F::get_xyz() const
 }
 
 /*! \fn function returning new normalized vector*/
-Vector4F Vector4F::vectNormalize() const
+Vector4F Vector4F::normalize() const
 {
-	float squareMag = x * x + y * y + z * z + w * w;
-	if (squareMag == 0.0) return Vector4F();
-	float length = sqrt(squareMag);
+	float squareLength = x * x + y * y + z * z + w * w;
+	if (squareLength == 0.0) return Vector4F();
+	float length = sqrt(squareLength);
 	return Vector4F(x / length, y / length, z / length, w / length);
 }
 

@@ -1,4 +1,5 @@
 #pragma once
+#include "Vector3F.h"
 
 class Vector3F;
 struct loc;
@@ -10,7 +11,17 @@ class Matrix4F;
 class Matrix3F
 {
 public:
-	float _matrix[3][3];
+	union
+	{
+		float _matrix[3][3];
+		float _matrix9[9];
+		struct
+		{
+			Vector3F right, up, dir;
+		} v;
+		Vector3F component[3];
+	};
+	
 
 	Matrix3F();
 	Matrix3F(int identity);
@@ -45,6 +56,9 @@ public:
 	Vector3F getAxisNormalized(int axis) const;
 	Vector3F extractScale() const;
 	QuaternionF toQuaternion() const;
+	float AngleX() const;
+	float AngleY() const;
+	float AngleZ() const;
 
 	void setUp(const Vector3F& axis);
 	void setRight(const Vector3F& axis);

@@ -36,16 +36,16 @@ bool Optimization::isPointInNode(const Vector2& point, Face* node)
 	//Looping through every edge in the current node
 	do
 	{
-		Vector2 vectorOfEdge = (currentEdge->next->vertex->pos - currentEdge->vertex->pos).vectNormalize();
+		Vector2 vectorOfEdge = (currentEdge->next->vertex->pos - currentEdge->vertex->pos).normalize();
 		Vector2 vectorToPoint = point - currentEdge->vertex->pos;
 		if (vectorToPoint.vect[0] != 0 && vectorToPoint.vect[1] != 0)
 		{
-			vectorToPoint = vectorToPoint.vectNormalize();
+			vectorToPoint = vectorToPoint.normalize();
 		}
 		//clockwise as halfedgemesh is clockwise
-		Vector2 sideVectorToEdge = Vector2(vectorOfEdge.vect[1], -vectorOfEdge.vect[0]).vectNormalize();
+		Vector2 sideVectorToEdge = Vector2(vectorOfEdge.vect[1], -vectorOfEdge.vect[0]).normalize();
 
-		if (sideVectorToEdge.dotAKAscalar(vectorToPoint) > 0)
+		if (sideVectorToEdge.dot(vectorToPoint) > 0)
 		{
 			return false;
 		}
@@ -252,7 +252,7 @@ bool Optimization::turnsRightOrParallel(Edge* e1, Edge* e2)
 
 	Vector2 sideVectorToEdge = Vector2(vectorOfEdge1.y, -vectorOfEdge1.x);
 
-	return sideVectorToEdge.dotAKAscalar(vectorOfEdge2) <= 0;
+	return sideVectorToEdge.dot(vectorOfEdge2) <= 0;
 }
 
 void Optimization::moveEdgesToFace(Edge* startEdge, Face* destFace)

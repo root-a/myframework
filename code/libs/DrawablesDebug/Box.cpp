@@ -3,6 +3,8 @@
 #include "Texture.h"
 #include <algorithm>
 #include <GL/glew.h>
+#include "GraphicsStorage.h"
+#include "Ebo.h"
 
 Box * Box::Instance()
 {
@@ -56,7 +58,7 @@ void Box::SetUpBuffers()
 	Vector3F(-1.f, 1.f, 1.f)
 	};
 
-	GLushort elements[] = {
+	GLubyte elements[] = {
 		0, 1, 2,
 		1, 3, 2,
 		4, 5, 6,
@@ -71,16 +73,14 @@ void Box::SetUpBuffers()
 		21, 23, 22
 	};
 
-
-	vao.vertexBuffers.reserve(2);
-
-	vao.AddVertexBuffer(verts, 24 * sizeof(Vector3F), { {ShaderDataType::Float3, "position"} });
-	vao.AddIndexBuffer(elements, 36, IndicesType::UNSIGNED_SHORT);
+	BufferLayout vbVertex({ {ShaderDataType::Type::Float3, "position"} });
+	vao.AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>(verts, (unsigned int)24, vbVertex));
+	vao.AddElementBuffer(GraphicsStorage::assetRegistry.AllocAsset<ElementBuffer>(elements, (unsigned int)36));
 }
 
-void Box::Draw(const Matrix4& ModelViewProjection, unsigned int shader)
+void Box::Draw(const glm::mat4& ModelViewProjection, unsigned int shader)
 {
-	Matrix4F MVP = ModelViewProjection.toFloat();
+	glm::mat4 MVP = ModelViewProjection;
 	MatrixHandle = glGetUniformLocation(shader, "MVP");
 	MaterialColorHandle = glGetUniformLocation(shader, "MaterialColor");
 

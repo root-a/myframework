@@ -20,7 +20,7 @@ namespace std
 	public:
 		size_t operator()(const Vertex* val) const {
 			return val->pos.a ^ val->pos.b;
-			//return val->contactPoint.squareMag();//works
+			//return val->contactPoint.squareLength();//works
 
 		}
 	};
@@ -64,7 +64,7 @@ void HalfEdgeMesh2D::Construct(const char * path)
 	width = (int)str.length();
 	Vector<Face*> allFaces;
 	allFaces.reserve(height*width);
-	Face* emptyFace = facePool.PoolPartyAlloc();
+	Face* emptyFace = facePool.Alloc();
 
 
 	file1.close();
@@ -81,19 +81,19 @@ void HalfEdgeMesh2D::Construct(const char * path)
 			}
 			else
 			{
-				Face* leftTriangle = facePool.PoolPartyAlloc();
+				Face* leftTriangle = facePool.Alloc();
 				leftTriangle->id = faceID;
 				faceID++;
-				Face* rightTriangle = facePool.PoolPartyAlloc();
+				Face* rightTriangle = facePool.Alloc();
 				rightTriangle->id = faceID;
 				faceID++;
 				//connecting
 					
 				//let's get vertices we wanna work with
-				Vertex* vertice1 = vertexPool.PoolPartyAlloc();
-				Vertex* vertice2 = vertexPool.PoolPartyAlloc();
-				Vertex* vertice3 = vertexPool.PoolPartyAlloc();
-				Vertex* vertice4 = vertexPool.PoolPartyAlloc();
+				Vertex* vertice1 = vertexPool.Alloc();
+				Vertex* vertice2 = vertexPool.Alloc();
+				Vertex* vertice3 = vertexPool.Alloc();
+				Vertex* vertice4 = vertexPool.Alloc();
 
 				vertice1->pos = Vector2((float)x, (float)(y + 1));
 				vertice2->pos = Vector2((float)x, (float)y);
@@ -101,9 +101,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				vertice4->pos = Vector2((float)(x + 1), (float)(y + 1));
 
 				//create new edges
-				Edge* leftEdge = edgePool.PoolPartyAlloc();
-				Edge* topEdge = edgePool.PoolPartyAlloc();
-				Edge* innerRightEdge = edgePool.PoolPartyAlloc();
+				Edge* leftEdge = edgePool.Alloc();
+				Edge* topEdge = edgePool.Alloc();
+				Edge* innerRightEdge = edgePool.Alloc();
 
 				//connect vertices to edges
 				leftEdge->vertex = vertice1;
@@ -124,9 +124,9 @@ void HalfEdgeMesh2D::Construct(const char * path)
 				edges.push_back(topEdge);
 				edges.push_back(innerRightEdge);
 				
-				Edge* rightEdge = edgePool.PoolPartyAlloc();
-				Edge* bottomEdge = edgePool.PoolPartyAlloc();
-				Edge* innerLeftEdge = edgePool.PoolPartyAlloc();
+				Edge* rightEdge = edgePool.Alloc();
+				Edge* bottomEdge = edgePool.Alloc();
+				Edge* innerLeftEdge = edgePool.Alloc();
 
 				//connect vertices to edges
 				rightEdge->vertex = vertice3;

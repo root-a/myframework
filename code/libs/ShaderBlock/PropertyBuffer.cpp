@@ -26,7 +26,7 @@ DataInfo* PropertyBuffer::AddProperty(const char* name, const void* newData, int
 
 void PropertyBuffer::RemoveProperty(const char * name)
 {
-	auto& result = bindings.find(name);
+	auto result = bindings.find(name);
 	if (result != bindings.end())
 	{
 		int propertyLocation = result->second.offset;

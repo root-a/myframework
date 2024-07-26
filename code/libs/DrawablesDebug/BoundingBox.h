@@ -2,15 +2,16 @@
 #include "MyMathLib.h"
 #include "MinMax.h"
 #include "Vao.h"
+#include "Material.h"
 
 class BoundingBox
 {
 	
 public:
 	static BoundingBox* Instance();
-	void Draw(const Matrix4& Model, const Matrix4& ViewProjection, unsigned int wireframeShader);
-	Vao vao;
-	Vector3F color;
+	void Draw(const glm::mat4& Model, const glm::mat4& ProjectionView, unsigned int wireframeShader);
+	VertexArray vao;
+	glm::vec3 color;
 private:
 	BoundingBox();
 	~BoundingBox();

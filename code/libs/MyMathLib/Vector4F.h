@@ -20,10 +20,10 @@ public:
 	Vector4F& operator= (const Vector4& right);
 	Vector4F operator+ (const Vector4F& right) const;
 	Vector4F operator- (const Vector4F& right) const;
-	float dotAKAscalar(const Vector4F& right) const;
-	float vectLengt() const;
-	float squareMag() const;
-	Vector4F vectNormalize() const;
+	float dot(const Vector4F& right) const;
+	float lengt() const;
+	float squareLength() const;
+	Vector4F normalize() const;
 	Vector4 toDouble() const;
 
 	Vector4F operator* (const float& right) const;

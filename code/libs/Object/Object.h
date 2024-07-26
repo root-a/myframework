@@ -4,10 +4,11 @@
 #include <vector>
 #include "Bounds.h"
 #include <unordered_map>
+#include <typeindex>
 #include "DataRegistry.h"
 
 class Material;
-class Vao;
+class VertexArray;
 class Component;
 class ObjectProfile;
 class Script;
@@ -18,74 +19,64 @@ public:
 	Object();
 	~Object();
 	Node* node;
-	Node localNode;
-	Vao* vao;
+	//Node localNode;
+	VertexArray* vao;
 	Bounds* bounds;
 	unsigned int ID;
 	std::string name;
-
-	void AddComponent(Component* newComponent, bool isDynamic = false);
+	std::string path;
+	DataRegistry registry;
+	template <typename ComponentClassName>
+	void AddComponent(ComponentClassName* newComponent, bool isDynamic = false)
+	{
+		components[typeid(ComponentClassName*)] = newComponent;
+		if (isDynamic)
+			dynamicComponents[typeid(ComponentClassName*)] = newComponent;
+		newComponent->Init(this);
+	}
+	void AddComponent(const std::type_index& type, Component* newComponent, bool isDynamic = false);
 	void SetComponentDynamicState(Component* component, bool isDynamic);
+	void SetComponentDynamicState(std::type_index& component, bool isDynamic);
 	void RemoveComponent(Component* componentToRemove);
-	void AssignMaterial(Material* mat, int slot = 0);
-	void AddMaterial(Material* mat);
+	void RemoveComponent(std::type_index& componentToRemove);
+	void AssignMaterial(Material* mat, int sequenceIndex = 0, int materialSlot = 0);
+	void UnAssignMaterial(int matSequenceIndex = 0, int slot = 0);
+	void AddMaterial(Material* mat, int matSequenceIndex = -1);
 	void RemoveMaterial(Material* mat);
-
+	void RemoveMaterialSequence(int index);
+	Material* GetMaterial(const char* name);
+	Material* GetMaterial(int sequenceIndex, int matIndex = 0);
 	std::string& GetName();
+	std::string& GetPath();
 	Object* GetParentObject();
 
-	std::vector<Material*> materials;
-	std::vector<Component*> components;
-	//std::unordered_map<type_info,Component*> componentsMap;
-	std::unordered_map<std::string,Component*> componentsMap;
-	std::vector<Component*> dynamicComponents;
-	
-	Component* GetComponent(const char* componentName);
-	//Component* GetComponents(const char* componentName);
+	std::vector<std::vector<Material*>> materials;
+	std::unordered_map<std::type_index, Component*> components;
+	std::unordered_map<std::type_index, Component*> dynamicComponents;
 
 	template <typename ComponentClassName>
 	ComponentClassName* GetComponent()
-	{ 
-		for (auto& component : components)
-		{
-			if (dynamic_cast<ComponentClassName*>(component))
-			{
-				return (ComponentClassName*)component;
-			}
-		}
-		return nullptr;
+	{
+		auto res = components.find(typeid(ComponentClassName*));
+		return res == components.end() ? nullptr : (ComponentClassName*)res->second;
 	}
 
-	template <typename ComponentClassName>
-	std::vector<ComponentClassName*> GetComponents()
+	std::unordered_map<std::type_index, Component*> GetStaticComponents()
 	{
-		std::vector<ComponentClassName*> foundComponents;
-		for (auto& component : components)
-		{
-			if (dynamic_cast<ComponentClassName*>(component))
-			{
-				foundComponents.push_back((ComponentClassName*)component);
-			}
-		}
-		return foundComponents;
-	}
-
-	std::vector<Component*> GetStaticComponents()
-	{
-		std::vector<Component*> staticComponents;
-		for (size_t i = 0; i < components.size(); i++)
+		std::unordered_map<std::type_index, Component*> staticComponents;
+		for (auto comp : components)
 		{
 			bool found = false;
-			for (size_t j = 0; j < dynamicComponents.size(); j++)
+			for (auto dcomp : dynamicComponents)
 			{
-				if (components[i] == dynamicComponents[j])
+				if (comp.second == dcomp.second)
 				{
 					found = true;
 				}
 			}
 			if (!found)
 			{
-				staticComponents.push_back(components[i]);
+				staticComponents.insert(comp);
 			}
 		}
 		return staticComponents;
@@ -104,19 +95,10 @@ public:
 
 	static void ResetIDs();
 	static unsigned int Count();
-	bool inFrustum = false;
+	bool inFrustum = true;
 
-	DataRegistry registry;
-
-	Matrix4F TopDownTransformF;
-
-	void LoadLuaFile(const char * filename);
-
-	Script* script;
 private:
-	int FindDynamicComponentIndex(Component * componentToFind);
-	int FindComponentIndex(Component * componentToFind);
-	int FindMaterialIndex(Material* materialToFind);
+	int FindMaterialIndex(Material* materialToFind, std::vector<Material*>& matSq);
 	static unsigned int currentID;
 	bool draw = false;
 	bool drawAlways = false;

@@ -14,11 +14,12 @@ public:
 	DirectionalLight();
 	~DirectionalLight();
 	void Update();
-	Matrix4 ProjectionMatrix; //used when drawing depth
-	Vector3F LightInvDir; //used when drawing light 
+	Component* Clone();
+	glm::mat4 ProjectionMatrix; //used when drawing depth
+	glm::vec3 LightInvDir; //used when drawing light 
 	//Matrix4 LightMatrixVP; //used when drawing depth
-	Matrix4F LightMatrixVP; //used when drawing depth
-	Matrix4F BiasedLightMatrixVP; //used when drawing lights to sample depth
+	glm::mat4 LightMatrixVP; //used when drawing depth
+	glm::mat4 BiasedLightMatrixVP; //used when drawing lights to sample depth
 	void SetProjectionRadius(double radius);
 	float radius = 150.f;
 	int activeBlurLevel = 3;

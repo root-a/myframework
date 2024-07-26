@@ -19,24 +19,25 @@ public:
 	QuaternionF();
 	/// Constructor to set up a QuaternionF
 	QuaternionF(float angle, const Vector3F &axis);
-	QuaternionF(float yaw, float pitch, float roll);
+	QuaternionF(float pitch, float yaw, float roll);
+	QuaternionF(const Vector3F& pitchYawRoll);
 	QuaternionF(const float x, const float y, const float z, const float w);
 	~QuaternionF(void);
 
 	/// Set a value of a component of a vector
-	void InsertAt(unsigned int index, float value);
+	void insertAt(unsigned int index, float value);
 
 	QuaternionF operator*(const QuaternionF& v) const;
 	void operator*=(const QuaternionF& v);
 	QuaternionF operator*(const float& number)const;
 	QuaternionF& operator= (const Quaternion& right);
 
-	float Magnitude();
-	/// Normalize this vector
-	void Normalize();
-	QuaternionF Normalized() const;
-	Matrix4F ConvertToMatrix() const;
-	Matrix3F ConvertToMatrix3F() const;
+	float length();
+	/// normalize this vector
+	void normalize();
+	QuaternionF normalized() const;
+	Matrix4F convertToMatrix() const;
+	Matrix3F convertToMatrix3F() const;
 
 	Vector3F getUp() const;
 	Vector3F getInvUp() const;

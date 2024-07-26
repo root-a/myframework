@@ -17,10 +17,10 @@ public:
 	~SpotLight();
 	void Update();
 	void Init(Object* parent);
-	Matrix4 ProjectionMatrix; //used when drawing depth
-	Vector3F LightInvDir; //used when drawing light 
-	Matrix4F LightMatrixVP; //used when drawing depth
-	Matrix4F BiasedLightMatrixVP; //used when drawing lights to sample depth
+	glm::mat4 ProjectionMatrix; //used when drawing depth
+	glm::vec3 LightInvDir; //used when drawing light 
+	glm::mat4 LightMatrixVP; //used when drawing depth
+	glm::mat4 BiasedLightMatrixVP; //used when drawing lights to sample depth
 	void SetCutOff(float cutOffInDegrees);
 	void SetOuterCutOff(float outerCutOffInDegrees);
 	void SetRadius(float newRadius);
@@ -29,7 +29,7 @@ public:
 	void GenerateBlurShadowMapBuffer(BlurMode mode = BlurMode::OneSize, int blurLevels = 4);
 	void DeleteShadowMapBlurBuffer();
 	void ResizeShadowMap(int width, int height);
-	
+	Component* Clone();
 	int activeBlurLevel = 3;
 	int shadowBlurLevels = 4;
 	float blurIntensity = 0.5f;

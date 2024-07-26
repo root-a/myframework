@@ -1,7 +1,7 @@
 #pragma once
 #include <string>
 #include <vector>
-#include <unordered_map>
+#include <map>
 #include "DataInfo.h"
 #include "PropertyBuffer.h"
 
@@ -19,10 +19,10 @@ public:
 	const void* GetPropertyPtr(const char* name);
 	const DataInfo* GetProperty(const char* name) const;
 	void SetProperty(const char* name, void* newData);
-	void AddAndRegisterProperty(const char* name, const void* address, int size, PropertyType type);
+	const DataInfo* AddAndRegisterProperty(const char* name, const void* address, int size, PropertyType type);
 	void RegisterProperties(PropertyBuffer* properties);
 	void Clear();
-	std::unordered_map<std::string, DataInfo> bindings;
+	std::map<std::string, DataInfo> bindings;
 	PropertyBuffer pb;
 private:
 };

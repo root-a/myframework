@@ -14,13 +14,28 @@ Vector3::Vector3(const Vector2& vec, double zIn)
 	z = zIn;
 }
 
+Vector3::Vector3(const Vector4& vec)
+{
+	x = vec.x;
+	y = vec.y;
+	z = vec.z;
+}
+
 Vector3::~Vector3() {}
 
 Vector3& Vector3::operator=(const Vector3F& right)
 {
-	x = (float)right.x;
-	y = (float)right.y;
-	z = (float)right.z;
+	x = right.x;
+	y = right.y;
+	z = right.z;
+	return *this;
+}
+
+Vector3& Vector3::operator=(const Vector4& right)
+{
+	x = right.x;
+	y = right.y;
+	z = right.z;
 	return *this;
 }
 
@@ -36,36 +51,36 @@ Vector3 Vector3::operator- (const Vector3& right) const
 	return Vector3(x - right.x, y - right.y, z - right.z);
 }
 /*! \fn dot product returns scalar*/
-double Vector3::dotAKAscalar(const Vector3& right) const
+double Vector3::dot(const Vector3& right) const
 {
 	return x * right.x + y * right.y + z * right.z;
 }
 
 /*! \fn function returning length of instanced vector*/
-double Vector3::vectLengt() const
+double Vector3::lengt() const
 {
 	return sqrt(x*x + y*y + z*z);
 }
 
-double Vector3::squareMag() const
+double Vector3::squareLength() const
 {
 	return x*x + y*y + z*z;
 }
 
 /*! \fn function returning new normalized vector*/
-Vector3 Vector3::vectNormalize() const
+Vector3 Vector3::normalize() const
 {
-	double squareMag = x * x + y * y + z * z;
-	if (squareMag == 0.0) return Vector3();
-	double length = sqrt(squareMag);
+	double squareLength = x * x + y * y + z * z;
+	if (squareLength == 0.0) return Vector3();
+	double length = sqrt(squareLength);
 	return Vector3(x / length, y / length, z / length);
 }
 /*! \fn cross product function returning normal vector*/
 Vector3 Vector3::crossProd(const Vector3& right) const
 {
-	double tx = +((y * right.z) - (right.y * z));
-	double ty = -((x * right.z) - (right.x * z));
-	double tz = +((x * right.y) - (right.x * y));
+	double tx = (y * right.z) - (right.y * z);
+	double ty = (x * right.z) - (right.x * z);
+	double tz = (x * right.y) - (right.x * y);
 	return Vector3(tx, ty, tz);
 }
 

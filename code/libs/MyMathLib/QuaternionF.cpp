@@ -5,8 +5,6 @@
 #include "Matrix3F.h"
 #include "Quaternion.h"
 #include "MathUtils.h"
-#define _USE_MATH_DEFINES
-#include <cmath>
 
 QuaternionF::QuaternionF()
 {
@@ -42,11 +40,27 @@ QuaternionF::QuaternionF(float pitch, float yaw, float roll)
 	z = cy * sp*cr - sy * cp*sr;
 }
 
+QuaternionF::QuaternionF(const Vector3F& pitchYawRoll)
+{
+	float cy = cos(pitchYawRoll.y * 0.5);
+	float sy = sin(pitchYawRoll.y * 0.5);
+	float cp = cos(pitchYawRoll.z * 0.5);
+	float sp = sin(pitchYawRoll.z * 0.5);
+	float cr = cos(pitchYawRoll.x * 0.5);
+	float sr = sin(pitchYawRoll.x * 0.5);
+	float c1c2 = cy * cp;
+	float s1s2 = sy * sp;
+	w = c1c2 * cr - s1s2 * sr;
+	x = c1c2 * sr + s1s2 * cr;
+	y = sy * cp * cr + cy * sp * sr;
+	z = cy * sp * cr - sy * cp * sr;
+}
+
 QuaternionF::QuaternionF(const float x, const float y, const float z, const float w) : x(x), y(y), z(z), w(w) {}
 
 QuaternionF::~QuaternionF(void) {}
 
-void QuaternionF::InsertAt(unsigned int index, float value)
+void QuaternionF::insertAt(unsigned int index, float value)
 {
 	quaternion[index] = value;
 }
@@ -85,12 +99,12 @@ void QuaternionF::operator*=(const QuaternionF& v)
 	w = w*v.w - x*v.x - y*v.y - z*v.z;
 }
 
-float QuaternionF::Magnitude()
+float QuaternionF::length()
 {
 	return sqrtf(x*x + y*y + z*z + w*w);
 }
 
-void QuaternionF::Normalize()
+void QuaternionF::normalize()
 {
 	float length = sqrtf(x*x + y*y + z*z + w*w);
 	x /= length;
@@ -99,13 +113,13 @@ void QuaternionF::Normalize()
 	w /= length;
 }
 
-QuaternionF QuaternionF::Normalized() const
+QuaternionF QuaternionF::normalized() const
 {
 	float length = sqrtf(x*x + y*y + z*z + w*w);
 	return QuaternionF(x / length, y / length, z / length, w / length);
 }
 
-Matrix4F QuaternionF::ConvertToMatrix() const
+Matrix4F QuaternionF::convertToMatrix() const
 {
 	Matrix4F rotation;
 	rotation[0][0] = 1.f - 2.f * y*y - 2.f * z*z;
@@ -136,7 +150,7 @@ float& QuaternionF::operator[](unsigned int index)
 	return quaternion[index];
 }
 
-Matrix3F QuaternionF::ConvertToMatrix3F() const
+Matrix3F QuaternionF::convertToMatrix3F() const
 {
 	Matrix3F rotation;
 	rotation[0][0] = 1.f - 2.f * y*y - 2.f * z*z;
@@ -159,7 +173,7 @@ Vector3F QuaternionF::getLeft() const
 	float x1 = 1.f - 2.f * y*y - 2.f * z*z;
 	float y1 = (2.f * x * y) + (2.f * w * z);
 	float z1 = (2.f * x * z) - (2.f * w * y);
-	return Vector3F(x1, y1, z1).vectNormalize();
+	return Vector3F(x1, y1, z1).normalize();
 }
 
 Vector3F QuaternionF::getInvLeft() const
@@ -167,7 +181,7 @@ Vector3F QuaternionF::getInvLeft() const
 	float x1 = 1.f - 2.f * y*y - 2.f * z*z;
 	float y1 = (2.f * x * y) - (2.f * w * z);
 	float z1 = (2.f * x * z) + (2.f * w * y);
-	return Vector3F(x1, y1, z1).vectNormalize();
+	return Vector3F(x1, y1, z1).normalize();
 }
 
 Vector3F QuaternionF::getUp() const
@@ -176,7 +190,7 @@ Vector3F QuaternionF::getUp() const
 	float x1 = (2.f * x * y) - (2.f * w * z);
 	float y1 = 1.f - 2.f * x*x - 2.f * z*z;
 	float z1 = (2.f * y * z) + (2.f * w * x);
-	return Vector3F(x1, y1, z1).vectNormalize();
+	return Vector3F(x1, y1, z1).normalize();
 }
 
 Vector3F QuaternionF::getInvUp() const
@@ -184,7 +198,7 @@ Vector3F QuaternionF::getInvUp() const
 	float x1 = (2.f * x * y) + (2.f * w * z);
 	float y1 = 1.f - 2.f * x*x - 2.f * z*z;
 	float z1 = (2.f * y * z) - (2.f * w * x);
-	return Vector3F(x1, y1, z1).vectNormalize();
+	return Vector3F(x1, y1, z1).normalize();
 }
 
 Vector3F QuaternionF::getBack() const
@@ -192,7 +206,7 @@ Vector3F QuaternionF::getBack() const
 	float x1 = (2.f * x * z) + (2.f * w * y);
 	float y1 = (2.f * y * z) - (2.f * w * x);
 	float z1 = 1.f - 2.f * x*x - 2.f * y*y;
-	return Vector3F(-x1, -y1, -z1).vectNormalize();
+	return Vector3F(-x1, -y1, -z1).normalize();
 }
 
 Vector3F QuaternionF::getInvBack() const
@@ -200,7 +214,7 @@ Vector3F QuaternionF::getInvBack() const
 	float x1 = (2.f * x * z) - (2.f * w * y);
 	float y1 = (2.f * y * z) + (2.f * w * x);
 	float z1 = 1.f - 2.f * x*x - 2.f * y*y;
-	return Vector3F(-x1, -y1, -z1).vectNormalize();
+	return Vector3F(-x1, -y1, -z1).normalize();
 }
 
 Vector3F QuaternionF::getForward() const
@@ -208,7 +222,7 @@ Vector3F QuaternionF::getForward() const
 	float x1 = (2.f * x * z) + (2.f * w * y);
 	float y1 = (2.f * y * z) - (2.f * w * x);
 	float z1 = 1.f - 2.f * x*x - 2.f * y*y;
-	return Vector3F(x1, y1, z1).vectNormalize();
+	return Vector3F(x1, y1, z1).normalize();
 }
 
 Vector3F QuaternionF::getInvForward() const
@@ -216,7 +230,7 @@ Vector3F QuaternionF::getInvForward() const
 	float x1 = (2.f * x * z) - (2.f * w * y);
 	float y1 = (2.f * y * z) + (2.f * w * x);
 	float z1 = 1.f - 2.f * x*x - 2.f * y*y;
-	return Vector3F(x1, y1, z1).vectNormalize();
+	return Vector3F(x1, y1, z1).normalize();
 }
 
 Quaternion QuaternionF::toDouble() const
@@ -239,13 +253,13 @@ Vector3F QuaternionF::toEulerAngles() const
 	if (test > 0.499f*unit) { // singularity at north pole
 		yaw = 2.f * atan2f(x, w);
 		pitch = 0.f;
-		roll = M_PI / 2.f;
+		roll = MathUtils::PI / 2.f;
 		return Vector3F(pitch, yaw, roll);
 	}
 	if (test < -0.499f*unit) { // singularity at south pole
 		yaw = -2.f * atan2f(x, w);
 		pitch = 0.f;
-		roll = -M_PI / 2.f;
+		roll = -MathUtils::PI / 2.f;
 		return Vector3F(pitch, yaw, roll);
 	}
 	yaw = atan2f(2.f * y*w - 2.f * x*z, sqx - sqy - sqz + sqw);

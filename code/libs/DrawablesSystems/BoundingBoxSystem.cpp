@@ -3,41 +3,36 @@
 #include "Object.h"
 #include <algorithm>
 #include <GL/glew.h>
-
-
+#include <GraphicsStorage.h>
+#include "Ebo.h"
 
 BoundingBoxSystem::BoundingBoxSystem(int maxCount){
 	MaxCount = maxCount;
 	LastUsed = 0;
-	ActiveCount = 0;
 	boundingBoxesContainer = new FastBoundingBox[maxCount];
-	models = new Matrix4F[maxCount];
-	colors = new Vector3F[maxCount];
 	SetUpBuffers();
 	paused = false;
-	vao.SetPrimitiveMode(Vao::PrimitiveMode::LINES);
+	vao.SetPrimitiveMode(PrimitiveMode::LINES);
 }
 
 BoundingBoxSystem::~BoundingBoxSystem()
 {
 	delete[] boundingBoxesContainer;
-	delete[] models;
-	delete[] colors;
 }
 
-const Vector3F BoundingBoxSystem::vertices[8] = {
-	Vector3F(-0.5f, -0.5f, 0.5f),
-	Vector3F(0.5f, -0.5f, 0.5f),
-	Vector3F(0.5f, 0.5f, 0.5f),
-	Vector3F(-0.5f, 0.5f, 0.5f),
+const glm::vec3 BoundingBoxSystem::vertices[8] = {
+	glm::vec3(-0.5f, -0.5f, 0.5f),
+	glm::vec3(0.5f, -0.5f, 0.5f),
+	glm::vec3(0.5f, 0.5f, 0.5f),
+	glm::vec3(-0.5f, 0.5f, 0.5f),
 
-	Vector3F(-0.5f, -0.5f, -0.5f),
-	Vector3F(0.5f, -0.5f, -0.5f),
-	Vector3F(0.5f, 0.5f, -0.5f),
-	Vector3F(-0.5f, 0.5f, -0.5f)
+	glm::vec3(-0.5f, -0.5f, -0.5f),
+	glm::vec3(0.5f, -0.5f, -0.5f),
+	glm::vec3(0.5f, 0.5f, -0.5f),
+	glm::vec3(-0.5f, 0.5f, -0.5f)
 };
 
-const GLushort BoundingBoxSystem::elements[] = {
+const GLubyte BoundingBoxSystem::elements[] = {
 	0, 1, 1, 2, 2, 3, 3, 0,
 	4, 5, 5, 6, 6, 7, 7, 4,
 	0, 4, 1, 5, 2, 6, 3, 7
@@ -64,19 +59,15 @@ int BoundingBoxSystem::FindUnused()
 
 void BoundingBoxSystem::UpdateContainer()
 {
-	ActiveCount = 0;
+	colorModelBuffer->activeCount = 0;
 	for (int i = 0; i < MaxCount; i++){
 
 		FastBoundingBox& bb = boundingBoxesContainer[i];
 
 		if (bb.CanDraw())
 		{
-			models[ActiveCount] = bb.model->toFloat();
-
-			colors[ActiveCount] = *bb.color;
-
-			ActiveCount += 1;
-
+			colorModelBuffer->SetElementData(colorModelBuffer->activeCount, &bb.data);
+			colorModelBuffer->IncreaseInstanceCount();
 			bb.UpdateDrawState();
 		}
 	}
@@ -84,20 +75,20 @@ void BoundingBoxSystem::UpdateContainer()
 
 void BoundingBoxSystem::SetUpBuffers()
 {
-	vao.vertexBuffers.reserve(4);
-	vao.AddVertexBuffer(vertices, 8 * sizeof(Vector3F), { {ShaderDataType::Float3, "Position"} });
-	vao.AddIndexBuffer(elements, 24, IndicesType::UNSIGNED_SHORT);
-	colorBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector3F), { {ShaderDataType::Float3, "Color", 1} });
-	modelBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Matrix4F), { {ShaderDataType::Mat4, "M", 1} });
+	BufferLayout vbVertex({ {ShaderDataType::Type::Float3, "Position"} });
+	BufferLayout vbColorModel({ {ShaderDataType::Type::Float3, "Color", 1}, {ShaderDataType::Type::FloatMat4, "M", 1} });
+	colorModelBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbColorModel);
+	vao.AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>(vertices, (unsigned int)8, vbVertex));
+	vao.AddVertexBuffer(colorModelBuffer);
+	vao.AddElementBuffer(GraphicsStorage::assetRegistry.AllocAsset<ElementBuffer>(elements, (unsigned int)24));
 }
 
 void BoundingBoxSystem::UpdateBuffers()
 {
-	glNamedBufferSubData(modelBuffer, 0, ActiveCount * sizeof(Matrix4F), models);
-	glNamedBufferSubData(colorBuffer, 0, ActiveCount * sizeof(Vector3F), colors);
+	colorModelBuffer->Update();
 }
 
-int BoundingBoxSystem::Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID)
+int BoundingBoxSystem::Draw(const glm::mat4& ViewProjection, const unsigned int currentShaderID)
 {
 	UpdateContainer();
 	UpdateBuffers();
@@ -105,10 +96,10 @@ int BoundingBoxSystem::Draw(const Matrix4& ViewProjection, const unsigned int cu
 	vao.Bind();
 
 	glLineWidth(1.f);
-	vao.activeCount = ActiveCount;
+	vao.activeCount = colorModelBuffer->activeCount;
 	vao.Draw();
 
-	return ActiveCount;
+	return colorModelBuffer->activeCount;
 }
 
 FastBoundingBox* BoundingBoxSystem::GetBoundingBox()
@@ -127,4 +118,9 @@ FastBoundingBox* BoundingBoxSystem::GetBoundingBoxOnce()
 
 void BoundingBoxSystem::Update()
 {
+}
+
+Component* BoundingBoxSystem::Clone()
+{
+	return new BoundingBoxSystem(*this);
 }

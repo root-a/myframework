@@ -4,17 +4,17 @@
 
 struct OBB
 {
-	Vector3 extents;
-	Vector3 halfExtents;
-	Matrix3 rot;
-	Matrix4 model;
+	glm::vec3 extents;
+	glm::vec3 halfExtents;
+	glm::mat3 rot;
+	glm::mat4 model;
 	MinMax mm;
-	Vector3F color;
+	glm::vec3 color;
 };
 
 struct AABB
 {
-	Matrix4 model = Matrix4(1);
-	Vector3F color;
-	Vector3 extents;
+	glm::mat4 model = glm::mat4(1);
+	glm::vec3 color;
+	glm::vec3 extents;
 };

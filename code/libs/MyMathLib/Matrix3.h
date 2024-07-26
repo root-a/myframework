@@ -1,4 +1,5 @@
 #pragma once
+#include "Vector3.h"
 
 class Vector3;
 class Matrix3F;
@@ -12,7 +13,16 @@ class Matrix3
 
 {
 public:
-	double _matrix[3][3];
+	union
+	{
+		double _matrix[3][3];
+		double _matrix9[9];
+		struct
+		{
+			Vector3 right, up, dir;
+		} v;
+		Vector3 component[3];
+	};
 
 	Matrix3(); //!< in constructor matrix values are set to 0 with memset
 	Matrix3(int identity); //!< in constructor matrix values are set to 0 with memset
@@ -48,6 +58,9 @@ public:
 	Vector3 extractScale() const;
 	Vector3 getScale() const;
 	Quaternion toQuaternion() const;
+	double AngleX() const;
+	double AngleY() const;
+	double AngleZ() const;
 
 	void setUp(const Vector3& axis);
 	void setRight(const Vector3& axis);
@@ -64,7 +77,7 @@ public:
 	void clear();
 
 	void setSkewSymmetric(const Vector3& vector);
-	static Matrix3 CuboidInertiaTensor(Vector3& dimensions);
+	static Matrix3 CuboidInertiaTensor(const Vector3& dimensions);
 	static double det(double a, double b, double c, double d, double e, double f, double g, double h, double i); //!< calculates determinant of 3x3 matrix
 	static Matrix3 translation(double x, double y, double z); //!< returns translation matrix with specified translation values
 	static Matrix3 translation(const Vector3 & right);

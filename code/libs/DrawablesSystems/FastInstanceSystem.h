@@ -8,13 +8,16 @@
 #include "Material.h"
 
 class OBJ;
+class LocationLayout;
+class VertexBufferDynamic;
 
 class FastInstanceSystem : public Component
 {
 public:
+	FastInstanceSystem();
 	FastInstanceSystem(int maxCount, OBJ* object);
 	~FastInstanceSystem();
-
+	void SetUp(int maxCount, OBJ* object);
 	void SetUpGPUBuffers();
 	int Draw();
 	Object* GetObject();
@@ -24,11 +27,11 @@ public:
 	void ReturnObjects();
 	void Update();
 	void Init(Object* parent);
-
+	Component* Clone();
 	int ActiveCount;
-	int MaxCount;
+	unsigned int MaxCount;
 
-	Vao vao;
+	VertexArray vao;
 	Material mat;
 
 	Object* objectContainer;
@@ -37,9 +40,12 @@ public:
 	std::vector<Object*> objectsToReturn;
 	std::vector<Object*> objectsToUpdate;
 
-	unsigned int modelBuffer;
-	unsigned int objectIDBuffer;
-	unsigned int materialColorBuffer;
+	VertexBufferDynamic* modelBuffer;
+	VertexBufferDynamic* objectIDBuffer;
+	VertexBufferDynamic* materialColorBuffer;
+	LocationLayout* model;
+	LocationLayout* id;
+	LocationLayout* color;
 	bool dirty = false;
 	bool paused = true;
 };

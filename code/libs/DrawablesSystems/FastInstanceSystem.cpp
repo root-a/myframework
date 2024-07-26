@@ -11,6 +11,13 @@
 
 
 
+FastInstanceSystem::FastInstanceSystem()
+{
+	ActiveCount = 0;
+	paused = false;
+	objectContainer = nullptr;
+}
+
 FastInstanceSystem::FastInstanceSystem(int maxCount, OBJ* object)
 {
 	MaxCount = maxCount;
@@ -31,12 +38,39 @@ FastInstanceSystem::~FastInstanceSystem()
 	delete[] objectContainer;
 }
 
+void FastInstanceSystem::SetUp(int maxCount, OBJ* object)
+{
+	MaxCount = maxCount;
+	ActiveCount = 0;
+	objectContainer = new Object[maxCount];
+	paused = false;
+	indexMap.reserve(maxCount);
+	gpuOrderedObjects.reserve(maxCount);
+	objectsToUpdate.reserve(maxCount);
+	objectsToReturn.reserve(maxCount);
+	GraphicsManager::LoadOBJToVAO(object, &vao);
+	SetUpGPUBuffers();
+	///mat.AssignTexture(GraphicsStorage::textures.at(0));
+}
+
 //this is initial
 void FastInstanceSystem::SetUpGPUBuffers()
 {
-	modelBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Matrix4F), { {ShaderDataType::Mat4, "M", 1} });
-	objectIDBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(unsigned int), { {ShaderDataType::Int, "ID", 1} });
-	materialColorBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector4F), { {ShaderDataType::Float4, "MaterialColor", 1} });
+	BufferLayout vbModel({ {ShaderDataType::Type::FloatMat4, "M", 1} });
+	BufferLayout vbID({ {ShaderDataType::Type::Int, "ID", 1} });
+	BufferLayout vbColor({ {ShaderDataType::Type::Float4, "MaterialColor", 1} });
+	
+	modelBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbModel);
+	objectIDBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbID);
+	materialColorBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbColor);
+	
+	vao.AddVertexBuffer(modelBuffer);
+	vao.AddVertexBuffer(objectIDBuffer);
+	vao.AddVertexBuffer(materialColorBuffer);
+	
+	model = &modelBuffer->layout.locations[0];
+	id = &objectIDBuffer->layout.locations[1];
+	color = &materialColorBuffer->layout.locations[0];
 }
 
 int FastInstanceSystem::Draw()
@@ -67,7 +101,8 @@ Object* FastInstanceSystem::GetObject()
 		objectsToUpdate.push_back(object);
 		gpuOrderedObjects.push_back(object);
 		dirty = true;
-		ActiveCount++;
+		modelBuffer->IncreaseInstanceCount();
+		objectIDBuffer->IncreaseInstanceCount();
 		return object;
 	}
 	else
@@ -103,9 +138,9 @@ void FastInstanceSystem::UpdateObjects()
 
 		int index = it->second;
 
-		glNamedBufferSubData(modelBuffer, index * sizeof(Matrix4F), sizeof(Matrix4F), &object->node->TopDownTransform.toFloat());
-		glNamedBufferSubData(objectIDBuffer, index * sizeof(unsigned int), sizeof(unsigned int), &object->ID);
-		glNamedBufferSubData(materialColorBuffer, index * sizeof(Vector4F), sizeof(Vector4F), &object->materials[0]->colorShininess);
+		modelBuffer->SetData(index, *model, &object->node->TopDownTransformF);
+		objectIDBuffer->SetData(index, *id, &object->ID);
+		//glNamedBufferSubData(materialColorBuffer, index * sizeof(Vector4F), sizeof(Vector4F), &object->mat->colorShininess);
 	}
 	objectsToUpdate.clear();
 }
@@ -125,14 +160,15 @@ void FastInstanceSystem::ReturnObjects()
 
 		//if (index == ActiveCount) continue;
 
-		//SceneGraph::Instance()->unregisterForPicking(object);
+		//Scene::Instance()->unregisterForPicking(object);
 		indexMap[object] = ActiveCount;
 		Object* lastObject = gpuOrderedObjects[ActiveCount];
 		indexMap[lastObject] = index; //we have no good way of knowing the last object, i know the order via map
 
-
-		glNamedBufferSubData(modelBuffer, index * sizeof(Matrix4F), sizeof(Matrix4F), &lastObject->node->TopDownTransform.toFloat());
-		glNamedBufferSubData(objectIDBuffer, index * sizeof(unsigned int), sizeof(unsigned int), &lastObject->ID);
+		modelBuffer->SetData(index, *model, &lastObject->node->TopDownTransformF);
+		objectIDBuffer->SetData(index, *id, &lastObject->ID);
+		modelBuffer->activeCount--;
+		objectIDBuffer->activeCount--;
 		//glNamedBufferSubData(materialColorBuffer, index * sizeof(Vector4F), sizeof(Vector4F), &lastObject->mat->colorShininess);
 	
 		gpuOrderedObjects[ActiveCount] = object;
@@ -158,13 +194,12 @@ void FastInstanceSystem::Init(Object * parent)
 
 	for (size_t i = 0; i < MaxCount; i++)
 	{
-		Material* newMaterial = new Material();
-		GraphicsStorage::materials.push_back(newMaterial);
+		Material* newMaterial = GraphicsStorage::assetRegistry.AllocAsset<Material>();
+		newMaterial->name = "fastInsSysMat";
 		*newMaterial = mat;
 		objectContainer[i].AssignMaterial(newMaterial);
 		objectContainer[i].node->SetScale(SceneGraph::Instance()->generateRandomIntervallVectorSpherical(1, 15));
 		objectContainer[i].node->SetPosition(SceneGraph::Instance()->generateRandomIntervallVectorSpherical(2, 15));
-		objectContainer[i].bounds = new Bounds();
 		objectContainer[i].bounds->SetUp(parent->bounds->centerOfMesh, parent->bounds->dimensions, parent->bounds->name);
 		objectContainer[i].node->UpdateNode(*parent->node);
 		SceneGraph::Instance()->registerForPicking(&objectContainer[i]);
@@ -173,4 +208,9 @@ void FastInstanceSystem::Init(Object * parent)
 	{
 		GetObject();
 	}
+}
+
+Component* FastInstanceSystem::Clone()
+{
+	return new FastInstanceSystem(*this);
 }

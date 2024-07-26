@@ -295,7 +295,7 @@ Matrix3F Matrix3F::rotateAngle(Vector3F& thisVector, float angle)
 	float cosAng = cosf(sAngle * PI / 180.0f);
 	float sinAng = sinf(sAngle * PI / 180.0f);
 	float T = 1 - cosAng;
-	Vector3F normalizedVector = thisVector.vectNormalize();
+	Vector3F normalizedVector = thisVector.normalize();
 	float x = normalizedVector.x;
 	float y = normalizedVector.y;
 	float z = normalizedVector.z;
@@ -384,42 +384,42 @@ Matrix3F Matrix3F::CuboidInertiaTensor(Vector3F dimensions)
 
 Vector3F Matrix3F::getLeft() const
 {
-	return Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
+	return Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).normalize();
 }
 
 Vector3F Matrix3F::getInvLeft() const
 {
-	return Vector3F(_matrix[0][0], _matrix[1][0], _matrix[2][0]).vectNormalize();
+	return Vector3F(_matrix[0][0], _matrix[1][0], _matrix[2][0]).normalize();
 }
 
 Vector3F Matrix3F::getUp() const
 {
-	return Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
+	return Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).normalize();
 }
 
 Vector3F Matrix3F::getInvUp() const
 {
-	return Vector3F(_matrix[0][1], _matrix[1][1], _matrix[2][1]).vectNormalize();
+	return Vector3F(_matrix[0][1], _matrix[1][1], _matrix[2][1]).normalize();
 }
 
 Vector3F Matrix3F::getBack() const
 {
-	return Vector3F(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
+	return Vector3F(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).normalize();
 }
 
 Vector3F Matrix3F::getInvBack() const
 {
-	return Vector3F(_matrix[0][2] * -1.f, _matrix[1][2] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
+	return Vector3F(_matrix[0][2] * -1.f, _matrix[1][2] * -1.f, _matrix[2][2] * -1.f).normalize();
 }
 
 Vector3F Matrix3F::getForward() const
 {
-	return Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
+	return Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).normalize();
 }
 
 Vector3F Matrix3F::getInvForward() const
 {
-	return Vector3F(_matrix[0][2], _matrix[1][2], _matrix[2][2]).vectNormalize();
+	return Vector3F(_matrix[0][2], _matrix[1][2], _matrix[2][2]).normalize();
 }
 
 void Matrix3F::setUp(const Vector3F& axis)
@@ -481,14 +481,14 @@ Vector3F Matrix3F::getAxis(int axis) const
 
 Vector3F Matrix3F::getAxisNormalized(int axis) const
 {
-	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
+	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).normalize();
 }
 
 Vector3F Matrix3F::extractScale() const
 {
-	float scaleX = Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
-	float scaleY = Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
-	float scaleZ = Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
+	float scaleX = Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).lengt();
+	float scaleY = Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).lengt();
+	float scaleZ = Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).lengt();
 	return Vector3F(scaleX, scaleY, scaleZ);
 }
 
@@ -528,6 +528,48 @@ QuaternionF Matrix3F::toQuaternion() const
 		temp.z = 0.25f * S;
 	}
 	return temp;
+}
+
+float Matrix3F::AngleX() const
+{
+	float PI = 3.14159265f;
+	float decompRotX = (atan2(_matrix[2][1], _matrix[2][2]) * 180.0) / PI;
+	if (decompRotX > 180.0f) {
+		decompRotX -= 360.0f;
+	}
+	else if (decompRotX < -180.0f) {
+		decompRotX += 360.0f;
+	}
+	decompRotX = -1.0f * decompRotX;
+	return decompRotX;
+}
+
+float Matrix3F::AngleY() const
+{
+	float PI = 3.14159265f;
+	float decompRotY = (atan2(-_matrix[2][0], sqrt((_matrix[2][1] * _matrix[2][1]) + (_matrix[2][2] * _matrix[2][2]))) * 180.0) / PI;
+	if (decompRotY > 180.0f) {
+		decompRotY -= 360.0f;
+	}
+	else if (decompRotY < -180.0f) {
+		decompRotY += 360.0f;
+	}
+	decompRotY = -1.0f * decompRotY;
+	return decompRotY;
+}
+
+float Matrix3F::AngleZ() const
+{
+	float PI = 3.14159265f;
+	float decompRotZ = (atan2(_matrix[1][0], _matrix[0][0]) * 180.0) / PI;
+	if (decompRotZ > 180.0f) {
+		decompRotZ -= 360.0f;
+	}
+	else if (decompRotZ < -180.0f) {
+		decompRotZ += 360.0f;
+	}
+	decompRotZ = -1.0f * decompRotZ;
+	return decompRotZ;
 }
 
 /*! \fn converts float matrix to double */

@@ -1,5 +1,5 @@
 #pragma once
-enum BlurMode
+enum class BlurMode
 {
 	None,
 	OneSize,

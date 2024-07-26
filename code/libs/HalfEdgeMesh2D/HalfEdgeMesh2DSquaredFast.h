@@ -1,7 +1,5 @@
 #pragma once
 #include "MyMathLib.h"
-#include <string>
-
 class Vertex;
 class Edge;
 class Face;
@@ -12,7 +10,7 @@ class HalfEdgeMesh2DSquaredFast
 public:
 	HalfEdgeMesh2DSquaredFast();
 	~HalfEdgeMesh2DSquaredFast();
-	void Construct(std::string& map, const int width, const int height);
+	void Construct(std::string map, const int width, const int height);
 	void ConstructFromFile(const char * path);
 
 	Vertex* vertices;

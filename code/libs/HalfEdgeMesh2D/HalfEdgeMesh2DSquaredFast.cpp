@@ -27,7 +27,7 @@ HalfEdgeMesh2DSquaredFast::~HalfEdgeMesh2DSquaredFast()
 	delete[] vertices;
 }
 
-void HalfEdgeMesh2DSquaredFast::Construct(std::string& map, const int width, const int height)
+void HalfEdgeMesh2DSquaredFast::Construct(std::string map, const int width, const int height)
 {
 	mapSize = height*width;
 	faces = new Face[mapSize];

@@ -9,9 +9,9 @@ class Plane
 	
 public:
 	static Plane* Instance();
-	void Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Projection, const unsigned int shader);
-	Vao vao;
-	Vector3F color;
+	void Draw(const glm::mat4& Model, const glm::mat4& View, const glm::mat4& Projection, const unsigned int shader);
+	VertexArray vao;
+	glm::vec3 color;
 private:
 	Plane();
 	~Plane();

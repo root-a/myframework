@@ -7,6 +7,7 @@ RenderBuffer::RenderBuffer(GLint internalFormat, GLsizei width, GLsizei height, 
 	this->height = height;
 	this->aspect = (double)width / (double)height;
 	this->attachment = attachment;
+	this->target = GL_RENDERBUFFER;
 }
 
 RenderBuffer::~RenderBuffer()
@@ -19,7 +20,7 @@ void RenderBuffer::Update(int windowWidth, int windowHeight)
 	width = windowWidth;
 	height = windowHeight;
 	aspect = (double)width / (double)height;
-	glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
+	glRenderbufferStorage(target, internalFormat, width, height);
 }
 
 void RenderBuffer::Generate()
@@ -29,17 +30,17 @@ void RenderBuffer::Generate()
 
 void RenderBuffer::Bind()
 {
-	glBindRenderbuffer(GL_RENDERBUFFER, handle);
+	glBindRenderbuffer(target, handle);
 }
 
 void RenderBuffer::Specify()
 {
-	glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
+	glRenderbufferStorage(target, internalFormat, width, height);
 }
 
 void RenderBuffer::GenerateBindSpecify()
 {
 	glGenRenderbuffers(1, &handle);
-	glBindRenderbuffer(GL_RENDERBUFFER, handle);
-	glRenderbufferStorage(GL_RENDERBUFFER, internalFormat, width, height);
+	glBindRenderbuffer(target, handle);
+	glRenderbufferStorage(target, internalFormat, width, height);
 }

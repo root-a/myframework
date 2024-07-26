@@ -20,37 +20,25 @@ HalfEdgeMesh::~HalfEdgeMesh()
 {
 }
 
-void HalfEdgeMesh::Construct(OBJ &object)
-{
-
-	//copy all data from vectors to half edge mesh vectors
-	//vertice data
-	for (size_t i = 0; i < object.indexed_vertices.size(); i++)
-	{
-		Vertex* newVertex = vertexPool.PoolPartyAlloc();
-		newVertex->pos = object.indexed_vertices.at(i);
-		newVertex->normal = object.indexed_normals.at(i);
-		newVertex->tex = object.indexed_uvs.at(i);
-		vertices.push_back(newVertex);
-	}
-
-	//connecting
-	for (size_t i = 0; i < object.indices.size(); i += 3)
+template <typename Container>
+void CreateConnections(const Container& container, HalfEdgeMesh* mesh) {
+	// Loop through the elements in the container
+	for (size_t i = 0; i < container.size(); i += 3)
 	{
 		//get vertex index from element array containing indices
-		int vertexIndex = object.indices.at(i);
-		int vertexIndex2 = object.indices.at(i + 1);
-		int vertexIndex3 = object.indices.at(i + 2);
+		int vertexIndex = container.at(i);
+		int vertexIndex2 = container.at(i + 1);
+		int vertexIndex3 = container.at(i + 2);
 		//let's get vertices we wanna work with
-		Vertex* vertice1 = vertices.at(vertexIndex);
-		Vertex* vertice2 = vertices.at(vertexIndex2);
-		Vertex* vertice3 = vertices.at(vertexIndex3);
+		Vertex* vertice1 = mesh->vertices.at(vertexIndex);
+		Vertex* vertice2 = mesh->vertices.at(vertexIndex2);
+		Vertex* vertice3 = mesh->vertices.at(vertexIndex3);
 
 
 		//create new edges
-		Edge* newEdge1 = edgePool.PoolPartyAlloc();
-		Edge* newEdge2 = edgePool.PoolPartyAlloc();
-		Edge* newEdge3 = edgePool.PoolPartyAlloc();
+		Edge* newEdge1 = mesh->edgePool.Alloc();
+		Edge* newEdge2 = mesh->edgePool.Alloc();
+		Edge* newEdge3 = mesh->edgePool.Alloc();
 
 		//connect vertices to edges
 		newEdge1->vertex = vertice1;
@@ -67,16 +55,44 @@ void HalfEdgeMesh::Construct(OBJ &object)
 		newEdge2->next = newEdge3;
 		newEdge3->next = newEdge1;
 
-		edges.push_back(newEdge1);
-		edges.push_back(newEdge2);
-		edges.push_back(newEdge3);
+		mesh->edges.push_back(newEdge1);
+		mesh->edges.push_back(newEdge2);
+		mesh->edges.push_back(newEdge3);
+	}
+}
 
+void HalfEdgeMesh::Construct(OBJ &object)
+{
+
+	//copy all data from vectors to half edge mesh vectors
+	//vertice data
+	for (size_t i = 0; i < object.indexed_vertices.size(); i++)
+	{
+		Vertex* newVertex = vertexPool.Alloc();
+		newVertex->pos = object.indexed_vertices.at(i);
+		newVertex->normal = object.indexed_normals.at(i);
+		newVertex->tex = object.indexed_uvs.at(i);
+		vertices.push_back(newVertex);
+	}
+
+	//connecting
+	if (object.indices.size() > 0)
+	{
+		CreateConnections(object.indices, this);
+	}
+	else if (object.indicesUB.size() > 0)
+	{
+		CreateConnections(object.indicesUB, this);
+	}
+	else if (object.indicesUS.size() > 0)
+	{
+		CreateConnections(object.indicesUS, this);
 	}
 
 	//connect edges to faces and faces to edges
 	for (int i = 0; i < edges.size(); i+=3)
 	{
-		Face* newFace = facePool.PoolPartyAlloc();
+		Face* newFace = facePool.Alloc();
 		newFace->edge = edges.at(i);
 
 		//edges.at(i).face = &faces.at(i);
@@ -91,9 +107,9 @@ void HalfEdgeMesh::Construct(OBJ &object)
 	}
 
 	//find pairs
-	for (auto& edgei : edges)
+	for (auto edgei : edges)
 	{	
-		for (auto& edgej : edges)
+		for (auto edgej : edges)
 		{
 			if (edgej->vertex->pos == edgei->next->vertex->pos) //we could just compare pointers but we have double vertices, not per triangle but per quad
 			{
@@ -159,7 +175,7 @@ void HalfEdgeMesh::CalculateOldPosition()
 		Edge* halfedge = vertices.at(i)->edge;
 
 		//Sum of all neighbour vertices
-		Vector3F neighbourSum;
+		glm::vec3 neighbourSum(0);
 		//Amount of neighbors around the vertex
 		float n = 0;
 
@@ -203,17 +219,17 @@ void HalfEdgeMesh::CalculateMidpointPosition()
 			Vertex* v3 = halfedge->next->next->vertex;
 			Vertex* v4 = halfedge->pair->next->next->vertex;
 
-			Vector3F vertexPosSum = 3.f * (v1->pos + v2->pos) + v3->pos + v4->pos;
+			glm::vec3 vertexPosSum = 3.f * (v1->pos + v2->pos) + v3->pos + v4->pos;
 
 			//we only calculate midpoint and assign it to the edge and it's pair
 			//we are not performing any splitting or reconnections here
-			Vertex* midpoint = vertexPool.PoolPartyAlloc();
-			Vector3F calculatedPosition = vertexPosSum / 8.0f;
-			Vector2F calculatedUVs = (v1->tex + v2->tex) / 2.0f;
-			Vector3F calculatedNormal = (v1->normal + v2->normal + v3->normal + v4->normal) / 4.0f;
+			Vertex* midpoint = vertexPool.Alloc();
+			glm::vec3 calculatedPosition = vertexPosSum / 8.0f;
+			glm::vec2 calculatedUVs = (v1->tex + v2->tex) / 2.0f;
+			glm::vec3 calculatedNormal = (v1->normal + v2->normal + v3->normal + v4->normal) / 4.0f;
 			midpoint->pos = calculatedPosition; // there is no reason to set this as we copy newPos to pos later on
 			midpoint->tex = calculatedUVs;
-			midpoint->normal = calculatedNormal.vectNormalize();
+			midpoint->normal = glm::normalize(calculatedNormal);
 			midpoint->newPos = calculatedPosition;
 			halfedge->midVertex = midpoint;
 			halfedge->pair->midVertex = midpoint;
@@ -231,7 +247,7 @@ void HalfEdgeMesh::SplitHalfEdges()
 	//iterate trought edge list and split edge if not splitted 
 	for (unsigned int i = 0; i < hEdgesSize; i++){
 		//Create new half-edge
-		Edge* newHEdge = edgePool.PoolPartyAlloc();
+		Edge* newHEdge = edgePool.Alloc();
 		newHEdge->vertex = edges.at(i)->midVertex;
 		newHEdge->vertex->edge = newHEdge;
 		newHEdge->next = edges.at(i)->next;
@@ -261,18 +277,18 @@ void HalfEdgeMesh::UpdateConnections()
 	unsigned int faceListSize = faces.size();
 	for (unsigned int i = 0; i < faceListSize; i++){
 		Face* leftFace = faces.at(i);
-		Face* topFace = facePool.PoolPartyAlloc();
-		Face* rightFace = facePool.PoolPartyAlloc();
-		Face* middleFace = facePool.PoolPartyAlloc();
+		Face* topFace = facePool.Alloc();
+		Face* rightFace = facePool.Alloc();
+		Face* middleFace = facePool.Alloc();
 
-		Edge* innerLeftEdge = edgePool.PoolPartyAlloc();
-		Edge* innerTopEdge = edgePool.PoolPartyAlloc();
-		Edge* innerRightEdge = edgePool.PoolPartyAlloc();
+		Edge* innerLeftEdge = edgePool.Alloc();
+		Edge* innerTopEdge = edgePool.Alloc();
+		Edge* innerRightEdge = edgePool.Alloc();
 
 		//New triangle, middle
-		Edge* innerRightMidEdge = edgePool.PoolPartyAlloc();
-		Edge* innerLeftMidEdge = edgePool.PoolPartyAlloc();
-		Edge* innerBottomMidEdge = edgePool.PoolPartyAlloc();
+		Edge* innerRightMidEdge = edgePool.Alloc();
+		Edge* innerLeftMidEdge = edgePool.Alloc();
+		Edge* innerBottomMidEdge = edgePool.Alloc();
 
 		Edge* oldLeftEdge = faces.at(i)->edge;
 		Edge* newLeftEdge = faces.at(i)->edge->next;
@@ -394,4 +410,5 @@ void HalfEdgeMesh::ExportMeshToOBJ(HalfEdgeMesh* mesh, OBJ* newOBJ)
 			faceTraverser = faceTraverser->next;
 		} while (faceTraverser != mesh->faces.at(i)->edge);
 	}
+	newOBJ->ProcessIndicesType();
 }

@@ -1,35 +1,37 @@
 #include "Vao.h"
+#include "Vbo.h"
+#include "Ebo.h"
 #include <GL/glew.h>
 
-Vao::Vao()
+VertexArray::VertexArray()
 {
 	primitiveMode = GL_TRIANGLES;
-	indicesType = GL_UNSIGNED_INT;
+	activeCount = 0;
 	glCreateVertexArrays(1, &handle);
 	instanced = false;
-	indexBuffer = UINT_MAX;
+	ebo = nullptr;
 	draw.vao = this;
 	attributeIndex = 0;
 	bindingIndex = 0;
+	bufferIsDynamic = false;
 }
 
-Vao::~Vao()
+VertexArray::~VertexArray()
 {
 	glBindVertexArray(0);
 	glDeleteVertexArrays(1, &handle);
-	glDeleteBuffers(vertexBuffers.size(), &vertexBuffers[0]);
 }
 
-void Vao::Bind()
+void VertexArray::Bind()
 {
-	if (currentVao != this)
+	//if (currentVao != this)
 	{
 		glBindVertexArray(handle);
 		currentVao = this;
 	}
 }
 
-void Vao::Unbind()
+void VertexArray::Unbind()
 {
 	if (currentVao != nullptr)
 	{
@@ -38,35 +40,50 @@ void Vao::Unbind()
 	}
 }
 
-void Vao::SetPrimitiveMode(PrimitiveMode mode)
+void VertexArray::SetPrimitiveMode(PrimitiveMode mode)
 {
 	primitiveMode = PrimitiveModeToOpenGLBaseType(mode);
 }
 
-unsigned int Vao::ShaderDataTypeToOpenGLBaseType(ShaderDataType type)
+PrimitiveMode VertexArray::GetPrimitiveMode()
 {
-	switch (type)
+	switch (primitiveMode)
 	{
-	case ShaderDataType::Float:		return GL_FLOAT;
-	case ShaderDataType::Float2:	return GL_FLOAT;
-	case ShaderDataType::Float3:	return GL_FLOAT;
-	case ShaderDataType::Float4:	return GL_FLOAT;
-	case ShaderDataType::Mat2:		return GL_FLOAT;
-	case ShaderDataType::Mat3:		return GL_FLOAT;
-	case ShaderDataType::Mat4:		return GL_FLOAT;
-	case ShaderDataType::Int:		return GL_INT;
-	case ShaderDataType::Int2:		return GL_INT;
-	case ShaderDataType::Int3:		return GL_INT;
-	case ShaderDataType::Int4:		return GL_INT;
-	case ShaderDataType::Bool:		return GL_BOOL;
-	case ShaderDataType::Bool2:		return GL_BOOL;
-	case ShaderDataType::Bool3:		return GL_BOOL;
-	case ShaderDataType::Bool4:		return GL_BOOL;
+	case GL_POINTS:						return PrimitiveMode::POINTS;
+	case GL_LINE_STRIP:					return PrimitiveMode::LINE_STRIP;
+	case GL_LINE_LOOP:					return PrimitiveMode::LINE_LOOP;
+	case GL_LINES:						return PrimitiveMode::LINES;
+	case GL_LINE_STRIP_ADJACENCY:		return PrimitiveMode::LINE_STRIP_ADJACENCY;
+	case GL_LINES_ADJACENCY:			return PrimitiveMode::LINES_ADJACENCY;
+	case GL_TRIANGLE_STRIP:				return PrimitiveMode::TRIANGLE_STRIP;
+	case GL_TRIANGLE_FAN:				return PrimitiveMode::TRIANGLE_FAN;
+	case GL_TRIANGLES:					return PrimitiveMode::TRIANGLES;
+	case GL_TRIANGLE_STRIP_ADJACENCY:	return PrimitiveMode::TRIANGLE_STRIP_ADJACENCY;
+	case GL_TRIANGLES_ADJACENCY:		return PrimitiveMode::TRIANGLES_ADJACENCY;
 	}
-	return GL_FLOAT;
+	return PrimitiveMode::TRIANGLES;
 }
 
-unsigned int Vao::PrimitiveModeToOpenGLBaseType(PrimitiveMode mode)
+const char* VertexArray::GetPrimitiveModeAsStr()
+{
+	switch (primitiveMode)
+	{
+	case GL_POINTS:						return "POINTS";
+	case GL_LINE_STRIP:					return "LINE_STRIP";
+	case GL_LINE_LOOP:					return "LINE_LOOP";
+	case GL_LINES:						return "LINES";
+	case GL_LINE_STRIP_ADJACENCY:		return "LINE_STRIP_ADJACENCY";
+	case GL_LINES_ADJACENCY:			return "LINES_ADJACENCY";
+	case GL_TRIANGLE_STRIP:				return "TRIANGLE_STRIP";
+	case GL_TRIANGLE_FAN:				return "TRIANGLE_FAN";
+	case GL_TRIANGLES:					return "TRIANGLES";
+	case GL_TRIANGLE_STRIP_ADJACENCY:	return "TRIANGLE_STRIP_ADJACENCY";
+	case GL_TRIANGLES_ADJACENCY:		return "TRIANGLES_ADJACENCY";
+	}
+	return "TRIANGLES";
+}
+
+unsigned int VertexArray::PrimitiveModeToOpenGLBaseType(PrimitiveMode mode)
 {
 	switch (mode)
 	{
@@ -85,104 +102,155 @@ unsigned int Vao::PrimitiveModeToOpenGLBaseType(PrimitiveMode mode)
 	return GL_TRIANGLES;
 }
 
-unsigned int Vao::IndicesTypeToOpenGLBaseType(IndicesType type)
+void VertexArray::RegisterVertexBuffer(VertexBuffer* vbo)
 {
-	switch (type)
+	glVertexArrayVertexBuffer(handle, bindingIndex, vbo->handle, vbo->layout.GetOffset(), vbo->layout.GetStride()); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
+	instanced = bufferIsDynamic = vbo->layout.isDynamic;
+	for (const auto& location : vbo->layout.locations)
 	{
-	case IndicesType::UNSIGNED_BYTE:	return GL_UNSIGNED_BYTE;
-	case IndicesType::UNSIGNED_SHORT:	return GL_UNSIGNED_SHORT;
-	case IndicesType::UNSIGNED_INT:		return GL_UNSIGNED_INT;
-	}
-	return 0;
-}
-
-unsigned int Vao::IndicesTypeSize(IndicesType type)
-{
-	switch (type)
-	{
-	case IndicesType::UNSIGNED_BYTE:	return sizeof(unsigned char);
-	case IndicesType::UNSIGNED_SHORT:	return sizeof(unsigned short);
-	case IndicesType::UNSIGNED_INT:		return sizeof(unsigned int);
-	}
-	return 0;
-}
-
-unsigned int Vao::AddVertexBuffer(const void* data, unsigned int size, const BufferLayout& layout)
-{
-	if (layout.GetLocations().size() == 0)
-		return UINT_MAX;
-
-	GLuint vertexBuffer;
-	glCreateBuffers(1, &vertexBuffer);
-	glNamedBufferStorage(vertexBuffer, size, data, GL_DYNAMIC_STORAGE_BIT);
-
-	glVertexArrayVertexBuffer(handle, bindingIndex, vertexBuffer, layout.GetOffset(), layout.GetStride()); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
-	for (const auto& location : layout.GetLocations())
-	{
-		unsigned int count = location.GetComponentCount();
-		unsigned int type = ShaderDataTypeToOpenGLBaseType(location.type);
-		unsigned int rows = location.GetTypeRows();
+		unsigned int count = ShaderDataType::ComponentCount(location.type);
+		unsigned int type = ShaderDataType::ToOpenGLBaseType(location.type);
+		unsigned int typeSize = ShaderDataType::BaseTypeSize(location.type);
+		unsigned int rows = ShaderDataType::Rows(location.type);
 		for (unsigned int i = 0; i < rows; i++)
 		{
 			glEnableVertexArrayAttrib(handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
-			glVertexArrayAttribFormat(handle, attributeIndex, count, type, location.normalized ? GL_TRUE : GL_FALSE, location.offset + sizeof(float) * count * i); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
+			glVertexArrayAttribFormat(handle, attributeIndex, count, type, location.normalized ? GL_TRUE : GL_FALSE, location.offset + typeSize * count * i); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
 			glVertexArrayAttribBinding(handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
 			glVertexArrayBindingDivisor(handle, bindingIndex, location.instancesPerAttribute);
-			if (location.instancesPerAttribute > 0)
-			{
-				instanced = true;
-			}
 			attributeIndex++;
 		}
 	}
+}
 
-	vertexBuffers.push_back(vertexBuffer);
+unsigned int VertexArray::AddVertexBuffer(VertexBuffer* vbo)
+{
+	vbos.push_back(vbo);
+	attributeIndexes.push_back(attributeIndex);
+	RegisterVertexBuffer(vbo);
+	if (instanced)
+	{
+		dynamicVBOs.push_back((VertexBufferDynamic*)vbo);
+		auto vbo = dynamicVBOs.back();
+		auto res = std::find(vbo->vaos.begin(), vbo->vaos.end(), this);
+		if (res == vbo->vaos.end())
+			vbo->vaos.push_back(this);		
+	}
+	bindingIndexes.push_back(bindingIndex);
 	bindingIndex++;
-	return vertexBuffer;
+	UpdateDrawFunction();
+	return vbo->handle;
 }
 
-void Vao::AddIndexBuffer(const void * indices, unsigned int count, IndicesType type)
+unsigned int VertexArray::ReAddVertexBuffer(VertexBuffer* vbo)
 {
-	GLuint elementbuffer;
-	glCreateBuffers(1, &elementbuffer);
-	glNamedBufferStorage(elementbuffer, count * IndicesTypeSize(type), indices, GL_DYNAMIC_STORAGE_BIT);
-	glVertexArrayElementBuffer(handle, elementbuffer);
-	indicesCount = count;
-	vertexBuffers.push_back(elementbuffer);
-	indexBuffer = elementbuffer;
-	indicesType = IndicesTypeToOpenGLBaseType(type);
+	int index = -1;
+	for (size_t i = 0; i < vbos.size(); i++)
+	{
+		if (vbos[i] == vbo)
+		{
+			index = i;
+			break;
+		}
+	}
+	if (index != -1)
+	{
+		unsigned int oldAttributeIndex = attributeIndex;
+		unsigned int oldBindingIndex = bindingIndex;
+		attributeIndex = attributeIndexes[index];
+		bindingIndex = bindingIndexes[index];
+		RegisterVertexBuffer(vbo);
+		UpdateDrawFunction();
+		attributeIndex = oldAttributeIndex;
+		bindingIndex = oldBindingIndex;
+	}
+	return vbo->handle;
 }
 
-void Vao::ValidateAndCleanup()
+void VertexArray::AddElementBuffer(ElementBuffer* newEbo)
 {
-	drawFunction = vertexBuffers.size() > 0 ? instanced ? (indexBuffer != UINT_MAX ? drawElementsInstanced : drawArraysInstanced) : (indexBuffer != UINT_MAX ? drawElements : drawArrays) : none;
+	ebo = newEbo;
+	glVertexArrayElementBuffer(handle, ebo->handle);
+	UpdateDrawFunction();
 }
 
-void Vao::Draw()
+unsigned int VertexArray::ReAddElementBuffer(ElementBuffer* newEbo)
 {
-	ValidateAndCleanup();
+	ebo = newEbo;
+	glVertexArrayElementBuffer(handle, ebo->handle);
+	UpdateDrawFunction();
+	return ebo->handle;
+}
+
+void VertexArray::UpdateDrawFunction()
+{
+	drawFunction = vbos.size() > 0 ? instanced ? (ebo != nullptr ? DrawFunction::drawElementsInstanced : DrawFunction::drawArraysInstanced) : (ebo != nullptr ? DrawFunction::drawElements : DrawFunction::drawArrays) : DrawFunction::none;
+}
+
+void VertexArray::ResizeVertexBuffer(VertexBuffer* bufferToResize, void* newData, unsigned int newElementCount)
+{
+	int index = -1;
+	for (size_t i = 0; i < vbos.size(); i++)
+	{
+		if (vbos[i] == bufferToResize)
+		{
+			index = i;
+			break;
+		}
+	}
+	if (index != -1)
+	{
+		bufferToResize->Resize(newData, newElementCount);
+
+		ReAddVertexBuffer(bufferToResize);
+
+		if (bufferToResize->layout.isDynamic)
+		{
+			activeCount = 0;
+		}
+	}
+}
+
+void VertexArray::ResizeElementBuffer(ElementBuffer* bufferToResize, void* newData, unsigned int newElementCount)
+{
+	if (ebo == bufferToResize)
+	{
+		bufferToResize->Resize(newData, newElementCount);
+		ReAddElementBuffer(bufferToResize);
+	}
+}
+
+void VertexArray::Draw()
+{
 	switch (drawFunction)
 	{
-	case drawElements:
-		glDrawElements(primitiveMode, indicesCount, indicesType, (void*)0);
+	case DrawFunction::drawElements:
+		glDrawElements(primitiveMode, ebo->indicesCount, ebo->indicesType, (void*)0);
 		break;
-	case drawArrays:
+	case DrawFunction::drawArrays:
 		glDrawArrays(primitiveMode, 0, activeCount);
 		break;
-	case drawArraysInstanced:
-		glDrawArraysInstanced(primitiveMode, 0, indicesCount, activeCount);
+	case DrawFunction::drawArraysInstanced:
+		activeCount = vbos.size() > 0 ? vbos[0]->maxElementCount : 0;
+		glDrawArraysInstanced(primitiveMode, 0, vertexCount, activeCount); // indicesCount is nr of elements that makes up a mesh bound in non dynamic buffer, so basically vertex count
 		break;
-	case drawElementsInstanced:
-		glDrawElementsInstanced(primitiveMode, indicesCount, indicesType, (void*)0, activeCount);
+	case DrawFunction::drawElementsInstanced:
+		activeCount = dynamicVBOs.size() > 0 ? dynamicVBOs[0]->activeCount : activeCount;
+		glDrawElementsInstanced(primitiveMode, ebo->indicesCount, ebo->indicesType, (void*)0, activeCount);
+		for (auto& vbod : dynamicVBOs)
+		{
+			vbod->activeCount = 0;
+		}
+		activeCount = 0;
 		break;
 	default:
 		break;
 	}
 }
 
-void Vao::Execute()
+void VertexArray::Execute()
 {
 	Bind();
 }
 
-Vao* Vao::currentVao = nullptr;
+VertexArray* VertexArray::currentVao = nullptr;

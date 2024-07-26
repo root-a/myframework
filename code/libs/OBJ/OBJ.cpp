@@ -1,20 +1,22 @@
 #define _CRT_SECURE_NO_DEPRECATE
 #include "OBJ.h"
 #include <algorithm>
-
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 
 bool OBJ::LoadAndIndexOBJ(const char* path)
 {
 	// Read our .obj file
-	std::vector<Vector3F> vertices;
-	std::vector<Vector2F> uvs;
-	std::vector<Vector3F> normals; // Won't be used at the moment.
+	std::vector<glm::vec3> vertices;
+	std::vector<glm::vec2> uvs;
+	std::vector<glm::vec3> normals; // Won't be used at the moment.
 	bool res = LoadOBJ(path, vertices, uvs, normals);
 	if (res)
 	{
-		std::vector<Vector3F> tangents;
-		std::vector<Vector3F> bitangents;
+		std::vector<glm::vec3> tangents;
+		std::vector<glm::vec3> bitangents;
 		ComputeTangentBasis(vertices, uvs, normals, tangents, bitangents);
 
 		indexVBO(vertices, uvs, normals, tangents, bitangents);
@@ -23,11 +25,11 @@ bool OBJ::LoadAndIndexOBJ(const char* path)
 }
 
 void OBJ::indexVBO(
-	std::vector<Vector3F> & in_vertices,
-	std::vector<Vector2F> & in_uvs,
-	std::vector<Vector3F> & in_normals,
-	std::vector<Vector3F> & in_tangents,
-	std::vector<Vector3F> & in_bitangents
+	std::vector<glm::vec3> & in_vertices,
+	std::vector<glm::vec2> & in_uvs,
+	std::vector<glm::vec3> & in_normals,
+	std::vector<glm::vec3> & in_tangents,
+	std::vector<glm::vec3> & in_bitangents
 	)
 {
 	std::map<PackedVertex, unsigned int> VertexToOutIndex;
@@ -45,7 +47,7 @@ void OBJ::indexVBO(
 		unsigned int index;
 		bool found = getSimilarVertexIndex_fast(packed, VertexToOutIndex, index);
 
-		if (found){ // A similar vertex is already in the VBO, use it instead !
+		if (found){ // A similar vertex is already in the VertexBuffer, use it instead !
 			indices.emplace_back(index);
 
 			// Average the tangents and the bitangents
@@ -63,8 +65,31 @@ void OBJ::indexVBO(
 			VertexToOutIndex[packed] = newindex;
 		}
 	}
-	
+
+	ProcessIndicesType();
+
 	CalculateDimensions();
+}
+
+void OBJ::ProcessIndicesType()
+{
+	indicesCount = indices.size();
+	if (indicesCount <= UCHAR_MAX)
+	{
+		for (size_t i = 0; i < indices.size(); i++)
+		{
+			indicesUB.push_back(indices[i]);
+		}
+		indices = std::vector<unsigned int>();
+	}
+	else if (indicesCount <= USHRT_MAX)
+	{
+		for (size_t i = 0; i < indices.size(); i++)
+		{
+			indicesUS.push_back(indices[i]);
+		}
+		indices = std::vector<unsigned int>();
+	}
 }
 
 bool OBJ::getSimilarVertexIndex_fast(PackedVertex & packed, std::map<PackedVertex, unsigned int> & VertexToOutIndex, unsigned int & result)
@@ -81,19 +106,19 @@ bool OBJ::getSimilarVertexIndex_fast(PackedVertex & packed, std::map<PackedVerte
 
 bool OBJ::LoadOBJ(
 	const char * path,
-	std::vector<Vector3F> & out_vertices,
-	std::vector<Vector2F> & out_uvs,
-	std::vector<Vector3F> & out_normals
+	std::vector<glm::vec3> & out_vertices,
+	std::vector<glm::vec2> & out_uvs,
+	std::vector<glm::vec3> & out_normals
 	)
 {
 	printf("\nLoading OBJ file %s...", path);
 
 	std::vector<unsigned int> vertexIndices, uvIndices, normalIndices;
-	std::vector<Vector3F> temp_vertices;
-	std::vector<Vector2F> temp_uvs;
-	std::vector<Vector3F> temp_normals;
+	std::vector<glm::vec3> temp_vertices;
+	std::vector<glm::vec2> temp_uvs;
+	std::vector<glm::vec3> temp_normals;
 
-
+	this->path = path;
 	FILE * file;
 	file = fopen(path, "r");
 	float x = 0.f, y = 0.f, z = 0.f;
@@ -164,9 +189,9 @@ bool OBJ::LoadOBJ(
 		//unsigned int normalIndex = normalIndices[i];
 
 		// Get the attributes thanks to the index
-		//Vector3F& vertex = temp_vertices[vertexIndex - 1];
-		//Vector2F& uv = temp_uvs[uvIndex - 1];
-		//Vector3F& normal = temp_normals[normalIndex - 1];
+		//glm::vec3& vertex = temp_vertices[vertexIndex - 1];
+		//glm::vec2& uv = temp_uvs[uvIndex - 1];
+		//glm::vec3& normal = temp_normals[normalIndex - 1];
 
 		// Put the attributes in buffers
 		out_vertices.emplace_back(temp_vertices[vertexIndices[i] - 1]);
@@ -181,12 +206,12 @@ bool OBJ::LoadOBJ(
 
 void OBJ::ComputeTangentBasis(
 	// inputs
-	std::vector<Vector3F> & in_vertices,
-	std::vector<Vector2F> & in_uvs,
-	std::vector<Vector3F> & in_normals,
+	std::vector<glm::vec3> & in_vertices,
+	std::vector<glm::vec2> & in_uvs,
+	std::vector<glm::vec3> & in_normals,
 	// outputs
-	std::vector<Vector3F> & out_tangents,
-	std::vector<Vector3F>& out_bitangents
+	std::vector<glm::vec3> & out_tangents,
+	std::vector<glm::vec3>& out_bitangents
 ) {
 
 	out_tangents.reserve(in_vertices.size());
@@ -194,32 +219,41 @@ void OBJ::ComputeTangentBasis(
 	for (unsigned int i = 0; i < in_vertices.size(); i += 3) {
 
 		// Shortcuts for vertices
-		Vector3F & v0 = in_vertices[i + 0];
-		Vector3F & v1 = in_vertices[i + 1];
-		Vector3F & v2 = in_vertices[i + 2];
+		glm::vec3 & v0 = in_vertices[i + 0];
+		glm::vec3 & v1 = in_vertices[i + 1];
+		glm::vec3 & v2 = in_vertices[i + 2];
 
 		// Shortcuts for UVs
-		Vector2F & uv0 = in_uvs[i + 0];
-		Vector2F & uv1 = in_uvs[i + 1];
-		Vector2F & uv2 = in_uvs[i + 2];
+		glm::vec2 & uv0 = in_uvs[i + 0];
+		glm::vec2 & uv1 = in_uvs[i + 1];
+		glm::vec2 & uv2 = in_uvs[i + 2];
 
 		// Edges of the triangle : postion delta
-		Vector3F deltaPos1 = v1 - v0;
-		Vector3F deltaPos2 = v2 - v0;
+		glm::vec3 deltaPos1 = v1 - v0;
+		glm::vec3 deltaPos2 = v2 - v0;
 
 		// UV delta
-		Vector2F deltaUV1 = uv1 - uv0;
-		Vector2F deltaUV2 = uv2 - uv0;
+		glm::vec2 deltaUV1 = uv1 - uv0;
+		glm::vec2 deltaUV2 = uv2 - uv0;
 
 
 		float r = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV1.y * deltaUV2.x);
-		if (isinf(r)) printf("\nInvalid UVS");
+		if (isinf(r))
+		{
+			printf("\nInvalid UVS, inf, possible cause: uvs of a triangle are at the same position");
+			r = 0.0f;
+		}
+		if (isnan(r))
+		{
+			printf("\nInvalid UVS, nan");
+			r = 0.0f;
+		}
 
-		Vector3F tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y)*r;
-		Vector3F bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x)*r;
+		glm::vec3 tangent = (deltaPos1 * deltaUV2.y - deltaPos2 * deltaUV1.y)*r;
+		glm::vec3 bitangent = (deltaPos2 * deltaUV1.x - deltaPos1 * deltaUV2.x)*r;
 
 		// Set the same tangent for all three vertices of the triangle.
-		// They will be merged later, in vboindexer.cpp
+		// They will be indexed later
 		out_tangents.emplace_back(tangent);
 		out_tangents.emplace_back(tangent);
 		out_tangents.emplace_back(tangent);
@@ -233,30 +267,43 @@ void OBJ::ComputeTangentBasis(
 	// See "Going Further"
 	for (unsigned int i = 0; i < in_vertices.size(); i += 1)
 	{
-		Vector3F & n = in_normals[i];
-		Vector3F & t = out_tangents[i];
-		Vector3F & b = out_bitangents[i];
+		glm::vec3 & n = in_normals[i];
+		glm::vec3 & t = out_tangents[i];
+		glm::vec3 & b = out_bitangents[i];
 		// Gram-Schmidt orthogonalize
-		t = (t - n * n.dotAKAscalar(t)).vectNormalize();
+		t = glm::normalize(t - n * glm::dot(n, t));
 
 		// Calculate handedness
-		if (n.crossProd(t).dotAKAscalar(b) > 0.0f) {
+		if (glm::dot(glm::cross(n, t), b) > 0.0f) {
 			t = t * -1.0f;
 		}
 	}
 }
 
+void* OBJ::GetIndicesData()
+{
+	if (indicesCount <= UCHAR_MAX)
+	{
+		return indicesUB.data();
+	}
+	else if (indicesCount <= USHRT_MAX)
+	{
+		return indicesUS.data();
+	}
+	return indices.data();
+}
+
 void OBJ::CalculateDimensions()
 {
-	Vector3F minValues;
-	Vector3F maxValues;
+	glm::vec3 minValues;
+	glm::vec3 maxValues;
 	
 	minValues = indexed_vertices[0];
 	maxValues = indexed_vertices[0];
 	
 	for(size_t i = 0; i < indexed_vertices.size(); ++i)
 	{
-		Vector3F& currentVertex = indexed_vertices[i];
+		glm::vec3& currentVertex = indexed_vertices[i];
 		maxValues.x = std::max(maxValues.x, currentVertex.x);
 		minValues.x = std::min(minValues.x, currentVertex.x);
 		maxValues.y = std::max(maxValues.y, currentVertex.y);
@@ -269,16 +316,16 @@ void OBJ::CalculateDimensions()
 	dimensions.y = maxValues.y - minValues.y;
 	dimensions.z = maxValues.z - minValues.z;
 	
-	this->center_of_mesh = minValues.toDouble() + this->dimensions/2.0;
+	this->center_of_mesh = minValues + this->dimensions/2.0f;
 
 }
 
-Vector3 OBJ::GetDimensions()
+glm::vec3 OBJ::GetDimensions()
 {
 	return this->dimensions;
 }
 
-Vector3 OBJ::CenterOfOMesh()
+glm::vec3 OBJ::CenterOfOMesh()
 {
 	return this->center_of_mesh;
 }

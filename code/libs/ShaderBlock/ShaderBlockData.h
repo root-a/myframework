@@ -2,6 +2,7 @@
 #include <vector>
 #include <unordered_map>
 #include "CPUBlockData.h"
+#include <string>
 
 class ShaderBlock;
 class DataRegistry;

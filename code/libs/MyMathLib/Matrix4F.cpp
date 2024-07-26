@@ -5,7 +5,6 @@
 #include "Matrix4F.h"
 #include "Matrix3F.h"
 #include "Vector3F.h"
-#include "Vector4F.h"
 #include "mLoc.h"
 #include "QuaternionF.h"
 #include <cstring>
@@ -13,6 +12,15 @@
 Matrix4F::Matrix4F()
 {
 	memset(_matrix, 0, sizeof _matrix);
+}
+
+Matrix4F::Matrix4F(int identity)
+{
+	memset(_matrix, 0, sizeof _matrix);
+	_matrix[0][0] = 1.0f;
+	_matrix[1][1] = 1.0f;
+	_matrix[2][2] = 1.0f;
+	_matrix[3][3] = 1.0f;
 }
 
 Matrix4F::~Matrix4F()
@@ -251,7 +259,7 @@ Matrix4F Matrix4F::rotateAngle(Vector3F& v, float angle)
 	float cosAng = cosf(sAngle * PI / 180.0f);
 	float sinAng = sinf(sAngle * PI / 180.0f);
 	float T = 1.f - cosAng;
-	Vector3F normalizedVector = v.vectNormalize();
+	Vector3F normalizedVector = v.normalize();
 	float x = normalizedVector.x;
 	float y = normalizedVector.y;
 	float z = normalizedVector.z;
@@ -398,8 +406,8 @@ Matrix4F Matrix4F::sPerspective(const float &near, const float &far, const float
 Matrix4F Matrix4F::nolookAt(Vector3F eye, Vector3F target, Vector3F up)
 {
 
-	Vector3F zaxis = (eye - target).vectNormalize();    // The "forward" vector.
-	Vector3F xaxis = up.crossProd(zaxis).vectNormalize(); // The "right" vector.  normal(cross(up, zaxis));
+	Vector3F zaxis = (eye - target).normalize();    // The "forward" vector.
+	Vector3F xaxis = up.crossProd(zaxis).normalize(); // The "right" vector.  normal(cross(up, zaxis));
 	Vector3F yaxis = zaxis.crossProd(xaxis);     // The "up" vector.
 
 	// Create a 4x4 orientation matrix from the right, up, and forward vectors
@@ -446,8 +454,8 @@ Matrix4F Matrix4F::nolookAt(Vector3F eye, Vector3F target, Vector3F up)
 Matrix4F Matrix4F::lookAt(Vector3F eye, Vector3F target, Vector3F up)
 {
 
-	Vector3F zaxis = (eye - target).vectNormalize();    // The "forward" vector.
-	Vector3F xaxis = up.crossProd(zaxis).vectNormalize(); // The "right" vector.  normal(cross(up, zaxis));
+	Vector3F zaxis = (eye - target).normalize();    // The "forward" vector.
+	Vector3F xaxis = up.crossProd(zaxis).normalize(); // The "right" vector.  normal(cross(up, zaxis));
 	Vector3F yaxis = zaxis.crossProd(xaxis);     // The "up" vector.
 
 	// Create a 4x4 orientation matrix from the right, up, and forward vectors
@@ -466,9 +474,9 @@ Matrix4F Matrix4F::lookAt(Vector3F eye, Vector3F target, Vector3F up)
 	orientation[2][1] = yaxis.z;
 	orientation[2][2] = zaxis.z;
 
-	orientation[3][0] = -(xaxis.dotAKAscalar(eye));
-	orientation[3][1] = -(yaxis.dotAKAscalar(eye));
-	orientation[3][2] = -(zaxis.dotAKAscalar(eye));
+	orientation[3][0] = -(xaxis.dot(eye));
+	orientation[3][1] = -(yaxis.dot(eye));
+	orientation[3][2] = -(zaxis.dot(eye));
 	orientation[3][3] = 1;
 
 	// the final view matrix
@@ -510,9 +518,9 @@ Matrix4F Matrix4F::FPScam(Vector3F eye, float pitch, float yaw)
 	FPSView[2][2] = zaxis.z;
 	//FPSView[2][3] = 0;
 
-	FPSView[3][0] = -(xaxis.dotAKAscalar(eye));
-	FPSView[3][1] = -(yaxis.dotAKAscalar(eye));
-	FPSView[3][2] = -(zaxis.dotAKAscalar(eye));
+	FPSView[3][0] = -(xaxis.dot(eye));
+	FPSView[3][1] = -(yaxis.dot(eye));
+	FPSView[3][2] = -(zaxis.dot(eye));
 	FPSView[3][3] = 1;
 
 	return FPSView;
@@ -599,7 +607,7 @@ Matrix4F Matrix4F::OpenGLPersp(float fov, float imageAspectRatio, float near, fl
 }
 
 //no need to transpose that either
-Matrix3F Matrix4F::ConvertToMatrix3() const
+Matrix3F Matrix4F::convertToMatrix3() const
 {
 	Matrix3F mat3;
 	mat3[0][0] = _matrix[0][0];
@@ -630,42 +638,42 @@ Vector3F Matrix4F::getPosition() const
 
 Vector3F Matrix4F::getLeft() const
 {
-	return Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
+	return Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).normalize();
 }
 
 Vector3F Matrix4F::getInvLeft() const
 {
-	return Vector3F(_matrix[0][0], _matrix[1][0], _matrix[2][0]).vectNormalize();
+	return Vector3F(_matrix[0][0], _matrix[1][0], _matrix[2][0]).normalize();
 }
 
 Vector3F Matrix4F::getUp() const
 {
-	return Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
+	return Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).normalize();
 }
 
 Vector3F Matrix4F::getInvUp() const
 {
-	return Vector3F(_matrix[0][1], _matrix[1][1], _matrix[2][1]).vectNormalize();
+	return Vector3F(_matrix[0][1], _matrix[1][1], _matrix[2][1]).normalize();
 }
 
 Vector3F Matrix4F::getBack() const
 {
-	return Vector3F(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
+	return Vector3F(_matrix[2][0] * -1.f, _matrix[2][1] * -1.f, _matrix[2][2] * -1.f).normalize();
 }
 
 Vector3F Matrix4F::getInvBack() const
 {
-	return Vector3F(_matrix[0][2] * -1.f, _matrix[1][2] * -1.f, _matrix[2][2] * -1.f).vectNormalize();
+	return Vector3F(_matrix[0][2] * -1.f, _matrix[1][2] * -1.f, _matrix[2][2] * -1.f).normalize();
 }
 
 Vector3F Matrix4F::getForward() const
 {
-	return Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
+	return Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).normalize();
 }
 
 Vector3F Matrix4F::getInvForward() const
 {
-	return Vector3F(_matrix[0][2], _matrix[1][2], _matrix[2][2]).vectNormalize();
+	return Vector3F(_matrix[0][2], _matrix[1][2], _matrix[2][2]).normalize();
 }
 
 void Matrix4F::setUp(const Vector3F& axis)
@@ -774,14 +782,14 @@ Vector3F Matrix4F::getAxis(int axis) const
 
 Vector3F Matrix4F::getAxisNormalized(int axis) const
 {
-	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
+	return Vector3F(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).normalize();
 }
 
 Vector3F Matrix4F::extractScale() const
 {
-	float scaleX = Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
-	float scaleY = Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
-	float scaleZ = Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
+	float scaleX = Vector3F(_matrix[0][0], _matrix[0][1], _matrix[0][2]).lengt();
+	float scaleY = Vector3F(_matrix[1][0], _matrix[1][1], _matrix[1][2]).lengt();
+	float scaleZ = Vector3F(_matrix[2][0], _matrix[2][1], _matrix[2][2]).lengt();
 	return Vector3F(scaleX, scaleY, scaleZ);
 }
 
@@ -797,7 +805,7 @@ QuaternionF Matrix4F::toQuaternion() const
 		temp.z = (_matrix[0][1] - _matrix[1][0]) / S;
 	}
 
-	else if ((_matrix[0][0] > _matrix[1][1])&(_matrix[0][0] > _matrix[2][2])) {
+	else if ((_matrix[0][0] > _matrix[1][1]) && (_matrix[0][0] > _matrix[2][2])) {
 		float S = sqrtf(1.f + _matrix[0][0] - _matrix[1][1] - _matrix[2][2]) * 2.f; // S=4*qx
 		temp.w = (_matrix[1][2] - _matrix[2][1]) / S;
 		temp.x = 0.25f * S;
@@ -821,6 +829,48 @@ QuaternionF Matrix4F::toQuaternion() const
 		temp.z = 0.25f * S;
 	}
 	return temp;
+}
+
+float Matrix4F::AngleX() const
+{
+	float PI = 3.14159265f;
+	float decompRotX = (atan2(_matrix[2][1], _matrix[2][2]) * 180.0) / PI;
+	if (decompRotX > 180.0f) {
+		decompRotX -= 360.0f;
+	}
+	else if (decompRotX < -180.0f) {
+		decompRotX += 360.0f;
+	}
+	decompRotX = -1.0f * decompRotX;
+	return decompRotX;
+}
+
+float Matrix4F::AngleY() const
+{
+	float PI = 3.14159265f;
+	float decompRotY = (atan2(-_matrix[2][0], sqrt((_matrix[2][1] * _matrix[2][1]) + (_matrix[2][2] * _matrix[2][2]))) * 180.0) / PI;
+	if (decompRotY > 180.0f) {
+		decompRotY -= 360.0f;
+	}
+	else if (decompRotY < -180.0f) {
+		decompRotY += 360.0f;
+	}
+	decompRotY = -1.0f * decompRotY;
+	return decompRotY;
+}
+
+float Matrix4F::AngleZ() const
+{
+	float PI = 3.14159265f;
+	float decompRotZ = (atan2(_matrix[1][0], _matrix[0][0]) * 180.0) / PI;
+	if (decompRotZ > 180.0f) {
+		decompRotZ -= 360.0f;
+	}
+	else if (decompRotZ < -180.0f) {
+		decompRotZ += 360.0f;
+	}
+	decompRotZ = -1.0f * decompRotZ;
+	return decompRotZ;
 }
 
 /*! \fn converts float matrix to double */

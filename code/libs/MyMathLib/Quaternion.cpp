@@ -4,8 +4,7 @@
 #include "Matrix4.h"
 #include "Matrix3.h"
 #include "QuaternionF.h"
-#define _USE_MATH_DEFINES
-#include <cmath>
+#include "MathUtils.h"
 
 Quaternion::Quaternion()
 {
@@ -18,11 +17,33 @@ Quaternion::Quaternion()
 Quaternion::Quaternion(double angle, const Vector3 &axis)
 {
 	double PI = 3.14159265;
-	double dAngle = angle * PI / 180.0;
+	double dAngle = (angle * PI) / 180.0;
 	x = axis.x * sin((dAngle) / 2.0);
 	y = axis.y * sin((dAngle) / 2.0);
 	z = axis.z * sin((dAngle) / 2.0);
 	w = cos((dAngle) / 2.0);
+}
+
+Quaternion Quaternion::toAngleAxis()
+{
+	Quaternion result;
+	if (w > 1.0)
+		result = normalized();
+	double angle = 2.0 * acos(w);
+	double s = sqrt(1.0 - w * w);
+	if (s < 0.001)
+	{
+		result.x = x;
+		result.y = y;
+		result.z = z;
+	}
+	else
+	{
+		result.x = x / s;
+		result.y = y / s;
+		result.z = z / s;
+	}
+	return result;
 }
 
 Quaternion::Quaternion(double pitch, double yaw, double roll)
@@ -41,6 +62,22 @@ Quaternion::Quaternion(double pitch, double yaw, double roll)
 	z = cy * sp*cr - sy * cp*sr;
 }
 
+Quaternion::Quaternion(const Vector3& pitchYawRoll)
+{
+	double cy = cos(pitchYawRoll.y * 0.5);
+	double sy = sin(pitchYawRoll.y * 0.5);
+	double cp = cos(pitchYawRoll.z * 0.5);
+	double sp = sin(pitchYawRoll.z * 0.5);
+	double cr = cos(pitchYawRoll.x * 0.5);
+	double sr = sin(pitchYawRoll.x * 0.5);
+	double c1c2 = cy * cp;
+	double s1s2 = sy * sp;
+	w = c1c2 * cr - s1s2 * sr;
+	x = c1c2 * sr + s1s2 * cr;
+	y = sy * cp * cr + cy * sp * sr;
+	z = cy * sp * cr - sy * cp * sr;
+}
+
 Quaternion::Quaternion(const double x, const double y, const double z, const double w) : x(x), y(y), z(z), w(w) {}
 
 Quaternion::~Quaternion(void) {}
@@ -54,7 +91,7 @@ Quaternion& Quaternion::operator=(const QuaternionF & right)
 	return *this;
 }
 
-void Quaternion::InsertAt(unsigned int index, double value)
+void Quaternion::insertAt(unsigned int index, double value)
 {
 	quaternion[index] = value;
 }
@@ -84,12 +121,12 @@ void Quaternion::operator*=(const Quaternion& v)
 	w = w*v.w - x*v.x - y*v.y - z*v.z;
 }
 
-double Quaternion::Magnitude()
+double Quaternion::length()
 {
 	return sqrt(x*x + y*y + z*z + w*w);
 }
 
-void Quaternion::Normalize()
+void Quaternion::normalize()
 {
 	double length = sqrt(x*x + y*y + z*z + w*w);
 	x /= length;
@@ -98,28 +135,28 @@ void Quaternion::Normalize()
 	w /= length;
 }
 
-Quaternion Quaternion::Normalized() const
+Quaternion Quaternion::normalized() const
 {
 	double length = sqrt(x*x + y*y + z*z + w*w);
 	return Quaternion(x / length, y / length, z / length, w / length);
 }
 
-Matrix4 Quaternion::ConvertToMatrix() const
+Matrix4 Quaternion::convertToMatrix() const
 {
 	Matrix4 rotation;
-	rotation[0][0] = 1.0 - 2.0 * y*y - 2.0 * z*z;
+	rotation[0][0] = 1.0 - 2.0 * y * y - 2.0 * z * z;
 	rotation[1][0] = (2.0 * x * y) - (2.0 * w * z);
 	rotation[2][0] = (2.0 * x * z) + (2.0 * w * y);
 	rotation[3][0] = 0.0;
 
 	rotation[0][1] = (2.0 * x * y) + (2.0 * w * z);
-	rotation[1][1] = 1.0 - 2.0 * x*x - 2.0 * z*z;
+	rotation[1][1] = 1.0 - 2.0 * x * x - 2.0 * z * z;
 	rotation[2][1] = (2.0 * y * z) - (2.0 * w * x);
 	rotation[3][1] = 0.0;
 
 	rotation[0][2] = (2.0 * x * z) - (2.0 * w * y);
 	rotation[1][2] = (2.0 * y * z) + (2.0 * w * x);
-	rotation[2][2] = 1.0 - 2.0 * x*x - 2.0 * y*y;
+	rotation[2][2] = 1.0 - 2.0 * x * x - 2.0 * y * y;
 	rotation[3][2] = 0.0;
 
 	rotation[0][3] = 0.0;
@@ -135,7 +172,7 @@ double& Quaternion::operator[](unsigned int index)
 	return quaternion[index];
 }
 
-Matrix3 Quaternion::ConvertToMatrix3() const
+Matrix3 Quaternion::convertToMatrix3() const
 {
 	Matrix3 rotation;
 	rotation[0][0] = 1.0 - 2.0 * y*y - 2.0 * z*z;
@@ -158,7 +195,7 @@ Vector3 Quaternion::getLeft() const
 	double x1 = 1.0 - 2.0 * y*y - 2.0 * z*z;
 	double y1 = (2.0 * x * y) + (2.0 * w * z);
 	double z1 = (2.0 * x * z) - (2.0 * w * y);
-	return Vector3(x1, y1, z1).vectNormalize();
+	return Vector3(x1, y1, z1).normalize();
 }
 
 Vector3 Quaternion::getInvLeft() const
@@ -166,7 +203,7 @@ Vector3 Quaternion::getInvLeft() const
 	double x1 = 1.0 - 2.0 * y*y - 2.0 * z*z;
 	double y1 = (2.0 * x * y) - (2.0 * w * z);
 	double z1 = (2.0 * x * z) + (2.0 * w * y);
-	return Vector3(x1, y1, z1).vectNormalize();
+	return Vector3(x1, y1, z1).normalize();
 }
 
 Vector3 Quaternion::getUp() const
@@ -175,7 +212,7 @@ Vector3 Quaternion::getUp() const
 	double x1 = (2.0 * x * y) - (2.0 * w * z);
 	double y1 = 1.0 - 2.0 * x*x - 2.0 * z*z;
 	double z1 = (2.0 * y * z) + (2.0 * w * x);
-	return Vector3(x1, y1, z1).vectNormalize();
+	return Vector3(x1, y1, z1).normalize();
 }
 
 Vector3 Quaternion::getInvUp() const
@@ -183,7 +220,7 @@ Vector3 Quaternion::getInvUp() const
 	double x1 = (2.0 * x * y) + (2.0 * w * z);
 	double y1 = 1.0 - 2.0 * x*x - 2.0 * z*z;
 	double z1 = (2.0 * y * z) - (2.0 * w * x);
-	return Vector3(x1, y1, z1).vectNormalize();
+	return Vector3(x1, y1, z1).normalize();
 }
 
 Vector3 Quaternion::getBack() const
@@ -191,7 +228,7 @@ Vector3 Quaternion::getBack() const
 	double x1 = (2.0 * x * z) + (2.0 * w * y);
 	double y1 = (2.0 * y * z) - (2.0 * w * x);
 	double z1 = 1.0 - 2.0 * x*x - 2.0 * y*y;
-	return Vector3(-x1, -y1, -z1).vectNormalize();
+	return Vector3(-x1, -y1, -z1).normalize();
 }
 
 Vector3 Quaternion::getInvBack() const
@@ -199,7 +236,7 @@ Vector3 Quaternion::getInvBack() const
 	double x1 = (2.0 * x * z) - (2.0 * w * y);
 	double y1 = (2.0 * y * z) + (2.0 * w * x);
 	double z1 = 1.0 - 2.0 * x*x - 2.0 * y*y;
-	return Vector3(-x1, -y1, -z1).vectNormalize();
+	return Vector3(-x1, -y1, -z1).normalize();
 }
 
 Vector3 Quaternion::getForward() const
@@ -207,7 +244,7 @@ Vector3 Quaternion::getForward() const
 	double x1 = (2.0 * x * z) + (2.0 * w * y);
 	double y1 = (2.0 * y * z) - (2.0 * w * x);
 	double z1 = 1.0 - 2.0 * x*x - 2.0 * y*y;
-	return Vector3(x1, y1, z1).vectNormalize();
+	return Vector3(x1, y1, z1).normalize();
 }
 
 Vector3 Quaternion::getInvForward() const
@@ -215,7 +252,7 @@ Vector3 Quaternion::getInvForward() const
 	double x1 = (2.0 * x * z) - (2.0 * w * y);
 	double y1 = (2.0 * y * z) + (2.0 * w * x);
 	double z1 = 1.0 - 2.0 * x*x - 2.0 * y*y;
-	return Vector3(x1, y1, z1).vectNormalize();
+	return Vector3(x1, y1, z1).normalize();
 }
 
 QuaternionF Quaternion::toFloat() const
@@ -238,13 +275,13 @@ Vector3 Quaternion::toEulerAngles() const
 	if (test > 0.499*unit) { // singularity at north pole
 		yaw = 2.0 * atan2(x, w);
 		pitch = 0.0;
-		roll = M_PI / 2.0;
+		roll = MathUtils::PI / 2.0;
 		return Vector3(pitch, yaw, roll);
 	}
 	if (test < -0.499*unit) { // singularity at south pole
 		yaw = -2.0 * atan2(x, w);
 		pitch = 0.0;
-		roll = -M_PI / 2.0;
+		roll = -MathUtils::PI / 2.0;
 		return Vector3(pitch, yaw, roll);
 	}
 	yaw = atan2(2.0 * y*w - 2.0 * x*z, sqx - sqy - sqz + sqw);

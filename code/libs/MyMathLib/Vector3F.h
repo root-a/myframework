@@ -23,10 +23,10 @@ public:
 	Vector3F& operator= (const Vector3& right);
 	Vector3F operator+ (const Vector3F& right) const;
 	Vector3F operator- (const Vector3F& right) const;
-	float dotAKAscalar(const Vector3F& right) const;
-	float vectLengt() const;
-	float squareMag() const;
-	Vector3F vectNormalize() const;
+	float dot(const Vector3F& right) const;
+	float lengt() const;
+	float squareLength() const;
+	Vector3F normalize() const;
 	Vector3F crossProd(const Vector3F& right) const;
 	static Vector4F vec3TOvec4(const Vector3F& vector, float w = 0);
 	Vector3 toDouble() const;

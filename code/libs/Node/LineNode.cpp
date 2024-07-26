@@ -1,10 +1,9 @@
 #include "LineNode.h"
 
-
 LineNode::LineNode()
 {
-	this->TopDownTransform = Matrix4(1);
-	this->localPosition = Vector3(0.f,0.f,0.f);
+	this->TopDownTransform = glm::mat4(1);
+	this->localPosition = glm::vec3(0.f,0.f,0.f);
 }
 
 LineNode::~LineNode()

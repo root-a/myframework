@@ -9,31 +9,32 @@ class Bounds : public Component
 	
 public:
 	Bounds();
+	Bounds(const glm::vec3& Center, const glm::vec3& Dimensions, const std::string& Name);
+
 	void Update();
 	void Init(Object* parent);
-	Matrix4 CenteredTopDownTransform;
-	Matrix4 MeshCenterM;
-	Vector3 centeredPosition;
+	glm::mat4 CenteredTopDownTransform;
+	glm::mat4 MeshCenterM;
+	glm::vec3 centeredPosition;
 	AABB aabb;
 	OBB obb;
 	double radius;
 	double circumRadius;
-	Vector3 centerOfMesh;
-	Vector3 dimensions;
+	glm::vec3 centerOfMesh;
+	glm::vec3 dimensions;
 	std::string name;
-	void SetBoundsCenter(const Vector3 & center);
-	void SetBoundsDimensions(const Vector3 & dimensions);
-	Vector3 GetBoundsCenter();
-	Vector3 GetBoundsDimensions();
+	void SetBoundsCenter(const glm::vec3& center);
+	void SetBoundsDimensions(const glm::vec3& dimensions);
+	glm::vec3 GetBoundsCenter();
+	glm::vec3 GetBoundsDimensions();
 	std::string& GetMeshName();
-	Vector3 GetExtents();
-	void SetUp(Vector3& center, Vector3& dimensions, std::string& name);
-	void UpdateMinMax(const Matrix3& modelMatrix, const Vector3& position);
-	void UpdateMinMax(const Matrix4& modelMatrix, const Vector3& position);
-	void UpdateMinMax(const Matrix4& modelMatrix);
-	
-	static const Vector3 vertices[8];
+	glm::vec3 GetExtents();
+	void SetUp(const glm::vec3& center, const glm::vec3& dimensions, const std::string& name);
+	void UpdateMinMax(const glm::mat3& modelMatrix, const glm::vec3& position);
+	void UpdateMinMax(const glm::mat4& modelMatrix, const glm::vec3& position);
+	Component* Clone();
+	static const glm::vec3 vertices[8];
 	static double updateBoundsTime;
 	static double updateMinMaxTime;
-	Vector3 currentVertex;
+	glm::vec3 currentVertex;
 };

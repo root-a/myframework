@@ -20,10 +20,10 @@ public:
 	Vector4& operator= (const Vector4F& right);
 	Vector4 operator+ (const Vector4& right) const;
 	Vector4 operator- (const Vector4& right) const;
-	double dotAKAscalar(const Vector4& right) const;
-	double vectLengt() const;
-	double squareMag() const;
-	Vector4 vectNormalize() const;
+	double dot(const Vector4& right) const;
+	double lengt() const;
+	double squareLength() const;
+	Vector4 normalize() const;
 
 	Vector4 operator* (const double& right) const;
 	friend Vector4 operator* (const double& left, const Vector4& right);

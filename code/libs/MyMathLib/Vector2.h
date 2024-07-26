@@ -18,9 +18,9 @@ public:
 	Vector2 operator+ (const Vector2& right) const;
 	Vector2 operator- (const Vector2& right) const;
 	Vector2& operator= (const Vector2F& right);
-	double dotAKAscalar(const Vector2& right) const;
-	double vectLengt() const;
-	Vector2 vectNormalize() const;
+	double dot(const Vector2& right) const;
+	double lengt() const;
+	Vector2 normalize() const;
 	static Vector3 vec2TOvec3(Vector2 vector, double z = 0);
 
 	Vector2 operator* (const double& right) const;

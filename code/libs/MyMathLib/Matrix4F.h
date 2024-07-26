@@ -1,6 +1,6 @@
 #pragma once
+#include "Vector4F.h"
 
-class Vector4F;
 class Vector3F;
 class Matrix3F;
 class Matrix4;
@@ -11,9 +11,19 @@ struct loc;
 class Matrix4F
 {
 public:
-	float _matrix[4][4];
+	union
+	{
+		float _matrix[4][4];
+		float _matrix16[16];
+		struct
+		{
+			Vector4F right, up, dir, position;
+		} v;
+		Vector4F component[4];
+	};
 
 	Matrix4F();
+	Matrix4F(int identity);
 	~Matrix4F();
 
 	Matrix4F operator~ (); //!< transpose matrix returns new matrix
@@ -29,7 +39,7 @@ public:
 	float* operator[] (int index); //!< operator[] overload for indexing
 	Matrix4F inverse() const; //!< calculates inverse of matrix4x4 and returns as new one
 	friend Matrix4F operator* (const float& leftFloat, const Matrix4F& rightMatrix); //!< num*matrix returns new matrix
-	Matrix3F ConvertToMatrix3() const;
+	Matrix3F convertToMatrix3() const;
 	Vector3F getScale() const;
 	Vector3F getPosition() const;
 	Vector3F getUp() const;
@@ -45,6 +55,9 @@ public:
 
 	Vector3F extractScale() const;
 	QuaternionF toQuaternion() const;
+	float AngleX() const;
+	float AngleY() const;
+	float AngleZ() const;
 
 	void setUp(const Vector3F& axis);
 	void setRight(const Vector3F& axis);

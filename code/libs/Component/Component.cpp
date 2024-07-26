@@ -17,3 +17,8 @@ void Component::Init(Object * parent)
 void Component::Update()
 {
 }
+
+Component* Component::Clone()
+{
+	return new Component(*this);
+}

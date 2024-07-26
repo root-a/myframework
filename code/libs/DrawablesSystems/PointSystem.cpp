@@ -2,28 +2,20 @@
 #include "Material.h"
 #include <algorithm>
 #include <GL/glew.h>
+#include "GraphicsStorage.h"
 
 PointSystem::PointSystem(int maxCount){
 
 	MaxCount = maxCount;
 	LastUsed = 0;
-	ActiveCount = 0;
 	pointsContainer = new FastPoint[maxCount];
-	positions = new Vector3F[maxCount];
-	colors = new Vector4F[maxCount];
-	vao.SetPrimitiveMode(Vao::PrimitiveMode::POINTS);
+	vao.SetPrimitiveMode(PrimitiveMode::POINTS);
 	SetUpBuffers();
 }
-
-const Vector3F PointSystem::vertices[] = {
-	Vector3F(0.f, 0.f, 0.f)
-};
 
 PointSystem::~PointSystem()
 {
 	delete[] pointsContainer;
-	delete[] positions;
-	delete[] colors;
 }
 
 int PointSystem::FindUnused()
@@ -47,17 +39,16 @@ int PointSystem::FindUnused()
 
 void PointSystem::UpdateContainer()
 {
-	ActiveCount = 0;
+	positionColorBuffer->activeCount = 0;
+
 	for (int i = 0; i < MaxCount; i++){
 
 		FastPoint& p = pointsContainer[i];
 
 		if (p.CanDraw())
 		{
-			positions[ActiveCount] = p.node.localPosition.toFloat();
-			colors[ActiveCount] = p.color;
-
-			ActiveCount += 1;
+			positionColorBuffer->SetElementData(positionColorBuffer->activeCount, &p.data);
+			positionColorBuffer->IncreaseInstanceCount();
 
 			p.UpdateDrawState();
 		}
@@ -66,18 +57,19 @@ void PointSystem::UpdateContainer()
 
 void PointSystem::SetUpBuffers()
 {
-	vertexBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector3F), { {ShaderDataType::Float3, "Position"} });
-	colorBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector4F), { {ShaderDataType::Float4, "Color"} });
+	BufferLayout vbPositionColor({ {ShaderDataType::Type::Float3, "Position"}, {ShaderDataType::Type::Float4, "Color"} });
+	positionColorBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbPositionColor);
+	vao.AddVertexBuffer(positionColorBuffer);
+
 }
 
 void PointSystem::UpdateBuffers()
 {
-	glNamedBufferSubData(vertexBuffer, 0, ActiveCount * sizeof(Vector3F), positions);
-	glNamedBufferSubData(colorBuffer, 0, ActiveCount * sizeof(Vector4F), colors);
+	positionColorBuffer->Update();
 }
 
 
-void PointSystem::Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID, float size)
+void PointSystem::Draw(const glm::mat4& ViewProjection, const unsigned int currentShaderID, float size)
 {
 	if (dirty)
 	{
@@ -87,11 +79,8 @@ void PointSystem::Draw(const Matrix4& ViewProjection, const unsigned int current
 	}
 	vao.Bind();
 
-	//ViewProjectionHandle = glGetUniformLocation(currentShaderID, "VP");
-	//glUniformMatrix4fv(ViewProjectionHandle, 1, GL_FALSE, &ViewProjection.toFloat()[0][0]);
-
 	glPointSize(size);
-	vao.activeCount = ActiveCount;
+	vao.activeCount = positionColorBuffer->activeCount;
 	vao.Draw();
 	glPointSize(1.f);
 }
@@ -119,4 +108,9 @@ void PointSystem::Update()
 		UpdateContainer();
 		UpdateBuffers();
 	}
+}
+
+Component* PointSystem::Clone()
+{
+	return new PointSystem(*this);
 }

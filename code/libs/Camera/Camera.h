@@ -2,11 +2,23 @@
 #include <string>
 #include "Vector3.h"
 #include "Vector2F.h"
-#include "Matrix4.h"
 class Camera
 {
 public:
-	Camera(const Vector3& initPos = Vector3(0,0,0), int windowWidth = 1024, int windowHeight = 768, double newNearPlane = 0.1, double newFarPlane = 2000.0, double newFov = 45.0);
+	enum class FrustumVertices
+	{
+		nearUpperLeftCorner,
+		nearUpperRightCorner,
+		nearLowerLeftCorner,
+		nearLowerRightCorner,
+		farUpperLeftCorner,
+		farUpperRightCorner,
+		farLowerLeftCorner,
+		farLowerRightCorner,
+		frustumCenter,
+		frustumOrigin
+	};
+	Camera(const glm::vec3& initPos = glm::vec3(0,0,0), int windowWidth = 1024, int windowHeight = 768, double newNearPlane = 0.1, double newFarPlane = 2000.0, double newFov = 45.0);
 	~Camera();
 	void Update(double deltaTime);
 
@@ -22,14 +34,16 @@ public:
 
 	void UpdateSize(int width, int height);
 
-	Vector3 ConvertMousePosToWorldDir(double mousePosX, double mousePosY);
+	glm::vec3 ConvertMousePosToWorldDir(double mousePosX, double mousePosY);
 
-	Vector3 GetInitPos();
-	Vector3 GetPosition();
-	Vector3 GetPosition2();
+	void CalculateFrustumVertices();
 
-	void SetPosition(Vector3& pos);
-	void SetTarget(Vector3& target);
+	glm::vec3 GetInitPos();
+	glm::vec3 GetPosition();
+	glm::vec3 GetPosition2();
+
+	void SetPosition(const glm::vec3& pos);
+	void SetTarget(const glm::vec3& target);
 
 	bool holdingForward;
 	bool holdingBackward;
@@ -37,15 +51,16 @@ public:
 	bool holdingLeft;
 	bool holdingUp;
 	bool holdingDown;
-
-	Matrix4 ProjectionMatrix;
-	Matrix4 ProjectionInverseMatrix;
-	Matrix4 ViewMatrix;
-	Matrix4 ViewInverseMatrix;
+	float shadowNearOffset;
+	float shadowDistance;
+	glm::mat4 ProjectionMatrix;
+	glm::mat4 ProjectionInverseMatrix;
+	glm::mat4 ViewMatrix;
+	glm::mat4 ViewInverseMatrix;
 	union
 	{
 		struct { float windowWidth, windowHeight; };
-		Vector2F screenSize;
+		glm::vec2 screenSize;
 	};
 	
 	double windowMidX;
@@ -54,15 +69,16 @@ public:
 	float fov;
 	float near;
 	float far;
-	Vector3 target;
-	Vector3 up;
-	Vector3 right;
-	Vector3 forward;
+	glm::vec3 target;
+	glm::vec3 up;
+	glm::vec3 right;
+	glm::vec3 forward;
 	float speed;
 	std::string name;
-private:
-	Vector3 position;
 	double verticalAngle;
 	double horizontalAngle;
+	glm::vec3 frustumVertices[10];
+private:
+	glm::vec3 position;
 	double mouseSpeed;
 };

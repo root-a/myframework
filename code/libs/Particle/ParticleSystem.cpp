@@ -7,150 +7,197 @@
 #include "CameraManager.h"
 #include "Camera.h"
 #include <cstddef>
+#include "Vao.h"
+#include "GraphicsStorage.h"
 
+//OBJ
 //vertices are mathematically clockwise
-const Vector3F ParticleSystem::g_vertex_buffer_data[4] = {
-	Vector3F(-0.5f, -0.5f, 0.0f),
-	Vector3F(-0.5f, 0.5f, 0.0f),
-	Vector3F(0.5f, 0.5f, 0.0f),
-	Vector3F(0.5f, -0.5f, 0.0f),
+const glm::vec3 ParticleSystem::g_vertex_buffer_data[4] = {
+	glm::vec3(-0.5f, -0.5f, 0.0f),
+	glm::vec3(-0.5f, 0.5f, 0.0f),
+	glm::vec3(0.5f, 0.5f, 0.0f),
+	glm::vec3(0.5f, -0.5f, 0.0f),
 };
+
+//OBJ
 //indices are mathematically counter-clockwise
-const GLushort ParticleSystem::elements[] = {
+const GLubyte ParticleSystem::elements[] = {
 	0, 3, 2,
 	2, 1, 0
 };
 
-ParticleSystem::ParticleSystem(int MaxParticles, int emissionRate)
+ParticleSystem::ParticleSystem()
 {
-	this->LastUsedParticle = 0;
-	this->MaxParticles = MaxParticles;
-	ParticlesContainer = new Particle[MaxParticles];
-	g_particule_data = new ParticleData[MaxParticles];
-	for (int i = 0; i < MaxParticles; i++){
-		ParticlesContainer[i].lifeTime = -1.0f;
-		ParticlesContainer[i].cameraDistance = -1.0;
-	}
-	EmissionRate = emissionRate;
-	Color = Vector4F(1.f, 1.f, 1.f, 0.8f);
+	LastUsedParticle = 0;
+	Color = glm::vec4(1.f, 1.f, 1.f, 0.8f);
 	Size = 1.f;
 	LifeTime = 0.2;
-	Direction = Vector3F(0.0f, 10.0f, 0.0f);
+	Direction = glm::vec3(0.0f, 10.0f, 0.0f);
 	Spread = 1.5f;
-	aliveParticles = 0;
+	additive = true;
+	Force = glm::vec3(0.0, -9.81, 0.0);
+	paused = false;
+	timeSinceLastEmission = 0.0;
+	vao = nullptr;
+}
+
+ParticleSystem::ParticleSystem(int maxParticles, int emissionRate)
+{
+	LastUsedParticle = 0;
+	MaxParticles = maxParticles;
+	ParticlesData.resize(maxParticles);
+	ParticlesInfo.resize(maxParticles);
+	DesiredEmissionRate = emissionRate;
+	Color = glm::vec4(1.f, 1.f, 1.f, 0.8f);
+	Size = 1.f;
+	LifeTime = 0.2;
+	Direction = glm::vec3(0.0f, 10.0f, 0.0f);
+	Spread = 1.5f;
 	SetUp();
 	additive = true;
-	Force = Vector3(0.0, -9.81, 0.0);
+	Force = glm::vec3(0.0, -9.81, 0.0);
 	paused = false;
+	timeSinceLastEmission = 0.0;
+	EmissionRate = emissionRate;
+	vao = nullptr;
 }
 
 ParticleSystem::~ParticleSystem()
 {
-	delete[] ParticlesContainer;
-	delete[] g_particule_data;
 }
 
-int ParticleSystem::FindUnusedParticle()
+Component* ParticleSystem::Clone()
 {
-	int particleWithLowestLifeTime = 0;
-	double lowestParticleLifeTime = 10000.0;
-	for (int i = LastUsedParticle; i < MaxParticles; i++){
-		if (ParticlesContainer[i].lifeTime < 0.0){
-			LastUsedParticle = i;
-			return i;
-		}
-		else if(ParticlesContainer[i].lifeTime < lowestParticleLifeTime)
-		{
-			particleWithLowestLifeTime = i;
-			lowestParticleLifeTime = ParticlesContainer[i].lifeTime;
-		}
-	}
-
-	for (int i = 0; i < LastUsedParticle; i++){
-		if (ParticlesContainer[i].lifeTime < 0.0){
-			LastUsedParticle = i;
-			return i;
-		}
-		else if (ParticlesContainer[i].lifeTime < lowestParticleLifeTime)
-		{
-			particleWithLowestLifeTime = i;
-			lowestParticleLifeTime = ParticlesContainer[i].lifeTime;
-		}
-	}
-
-	return particleWithLowestLifeTime;
+	return new ParticleSystem(*this);
 }
 
-void ParticleSystem::UpdateParticles(double deltaTime, const Vector3& camPos)
-{
-	aliveParticles = 0;
-	for (int i = 0; i < MaxParticles; i++){
+//int ParticleSystem::FindUnusedParticle()
+//{
+//	int particleWithLowestLifeTime = 0;
+//	double lowestParticleLifeTime = 10000.0;
+//	for (int i = LastUsedParticle; i < MaxParticles; i++){
+//		if (ParticlesContainer[i].lifeTime < 0.0){
+//			LastUsedParticle = i;
+//			return i;
+//		}
+//		else if(ParticlesContainer[i].lifeTime < lowestParticleLifeTime)
+//		{
+//			particleWithLowestLifeTime = i;
+//			lowestParticleLifeTime = ParticlesContainer[i].lifeTime;
+//		}
+//	}
+//
+//	for (int i = 0; i < LastUsedParticle; i++){
+//		if (ParticlesContainer[i].lifeTime < 0.0){
+//			LastUsedParticle = i;
+//			return i;
+//		}
+//		else if (ParticlesContainer[i].lifeTime < lowestParticleLifeTime)
+//		{
+//			particleWithLowestLifeTime = i;
+//			lowestParticleLifeTime = ParticlesContainer[i].lifeTime;
+//		}
+//	}
+//
+//	return particleWithLowestLifeTime;
+//}
 
-		Particle& p = ParticlesContainer[i]; 
+void ParticleSystem::UpdateParticles(double deltaTime)
+{
+	particles_data_buffer->activeCount = 0;
+	int newTotalParticleCount = std::min(LastParticleIndex + NewParticles, MaxParticles-1); //improve formula for when fps is faster than emission rate
+	LastParticleIndex = 0;
+	DeadParticles = 0;
+	ReallyAliveParticles = 0;
+	int newparticles = NewParticles;
+	for (int i = 0; i < newTotalParticleCount; i++){
+
+		ParticleInfo& p = ParticlesInfo[i]; 
 
 		if (p.lifeTime < 0.0)
 		{
-			// Particles that just died will be put at the end of the buffer in SortParticles();
-			p.cameraDistance = -1.0;
+			if (newparticles > 0)
+			{
+				NewParticle(i);
+				//particles_data_buffer->SetElementData(particles_data_buffer->activeCount, &ParticlesData[i]);
+				//particles_data_buffer->IncreaseInstanceCount();
+				newparticles--;
+				LastParticleIndex = i;
+				ReallyAliveParticles++;
+			}
+			else
+			{
+				p.cameraDistance = -1.0;
+				DeadParticles++;
+			}
 		}
 		else{
-			p.lifeTime -= deltaTime;
-
-			// Simulate simple physics : gravity only, no collisions
-			p.speed += Force * deltaTime * 0.5;
-			p.pos += p.speed * deltaTime;
-			p.cameraDistance = (p.pos - camPos).squareMag();
-			//p.size -= (float)deltaTime*3.5f;
-			//if (p.size < 0.f) p.size = 0.f; p.lifeTime = 0.f;
-			// Fill the GPU buffer
-			g_particule_data[aliveParticles].posAndSize = Vector4F(p.pos.toFloat(), p.size);
-			g_particule_data[aliveParticles].color = p.color;
-
-			aliveParticles++;
+			UpdateParticle(i);
+			//particles_data_buffer->SetElementData(particles_data_buffer->activeCount, &ParticlesData[i]);
+			//particles_data_buffer->IncreaseInstanceCount();
+			LastParticleIndex = i;
+			ReallyAliveParticles++;
 		}
 	}
 }
 
 void ParticleSystem::SortParticles(){
-	std::sort(&ParticlesContainer[0], &ParticlesContainer[MaxParticles]);
+	//std::sort(&ParticlesData[0], &ParticlesData[LastParticleIndex]);
 }
 
+//VAO
 void ParticleSystem::SetUp()
 {
-	vao.vertexBuffers.reserve(3);
-	vao.AddVertexBuffer(g_vertex_buffer_data, sizeof(g_vertex_buffer_data), { {ShaderDataType::Float3, "Vertex"} });
-	particles_data_buffer = vao.AddVertexBuffer(NULL, MaxParticles * sizeof(ParticleData), { {ShaderDataType::Float4, "CenterPositionSize", 1}, {ShaderDataType::Float4, "Color", 1} });
-	vao.AddIndexBuffer(elements, 6, IndicesType::UNSIGNED_SHORT);
+	for (auto& asset : *GraphicsStorage::assetRegistry.GetPool<VertexArray>())
+	{
+		if (asset.name.compare("particlePlane.particlePlane") == 0)
+		{
+			vao = &asset;
+			particles_data_buffer = vao->dynamicVBOs[0];
+		}
+	}
 }
 
+//VAO
 void ParticleSystem::UpdateBuffers()
 {
-	glNamedBufferSubData(particles_data_buffer, 0, aliveParticles * sizeof(ParticleData), g_particule_data);
+	particles_data_buffer->Resize(ReallyAliveParticles + 1);
+	particles_data_buffer->activeCount = ReallyAliveParticles + 1;
+	particles_data_buffer->SetData(0, &ParticlesData[0], particles_data_buffer->layout.GetStride() * ReallyAliveParticles + 1);
+	if (vao != nullptr) vao->activeCount = particles_data_buffer->activeCount;
+	//particles_data_buffer->Update();
 }
 
 int ParticleSystem::Draw()
 {
-	UpdateBuffers();
+	if (MaxParticles > 0)
+	{
+		UpdateBuffers();
 
-	glEnable(GL_BLEND);
-	glEnable(GL_DEPTH_TEST);
-	glDepthMask(GL_FALSE);
-	// Use additive blending to give it a 'glow' effect
-	if (additive) glBlendFunc(GL_SRC_ALPHA, GL_ONE);
-	else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glEnable(GL_BLEND);
+		glEnable(GL_DEPTH_TEST);
+		glDepthMask(GL_FALSE);
+		// Use additive blending to give it a 'glow' effect
+		if (additive) glBlendFunc(GL_SRC_ALPHA, GL_ONE);
+		else glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glActiveTexture(GL_TEXTURE0);
-	glBindTexture(GL_TEXTURE_2D, TextureID);
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, TextureID);
 
-	vao.activeCount = aliveParticles;
-	vao.Bind();
-	vao.Draw();
+		if (vao != nullptr)
+		{
+			vao->Bind();
+			vao->Draw();
+		}
+		
 
-	if (additive) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		if (additive) glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-	glDisable(GL_BLEND);
-	
-	return aliveParticles;
+		glDisable(GL_BLEND);
+
+		return particles_data_buffer->activeCount;
+	}
+	return 0;
 }
 
 void ParticleSystem::SetTexture(GLuint textureID)
@@ -163,44 +210,36 @@ void ParticleSystem::SetAdditive(bool isAdditiveMode)
 	additive = isAdditiveMode;
 }
 
-void ParticleSystem::GenerateNewParticles(double deltaTime)
+int ParticleSystem::GetAliveParticlesCount()
 {
-	// Generate 10 new particule each millisecond,
-	// but limit this to 16 ms (60 fps), or if you have 1 long frame (1sec),
-	// newparticles will be huge and the next frame even longer.
-	newparticles = ceil(deltaTime*EmissionRate);
-	if (newparticles > (int)(0.016*EmissionRate))
-		newparticles = (int)(0.016*EmissionRate);
+	return vao->activeCount;
+}
 
-	for (int i = 0; i < newparticles; i++){
-		int particleIndex = FindUnusedParticle();
-		
-		ParticlesContainer[particleIndex].lifeTime = LifeTime; // This particle will live 5 seconds.
-		ParticlesContainer[particleIndex].pos = object->node->GetWorldPosition(); //Vector3();
-		//printf("%d p: %f %f %f\n", particleIndex, ParticlesContainer[particleIndex].pos.x, ParticlesContainer[particleIndex].pos.y, ParticlesContainer[particleIndex].pos.z);
-		
-		// Very bad way to generate a random direction; 
-		// See for instance http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution instead,
-		// combined with some user-controlled parameters (main direction, spread, etc)
-		Vector3F randomdir = Vector3F(
-			(rand() % 2000 - 1000.0f) / 1000.0f,
-			(rand() % 2000 - 1000.0f) / 1000.0f,
-			(rand() % 2000 - 1000.0f) / 1000.0f
-			);
-		randomdir = Direction + randomdir*Spread;
-		ParticlesContainer[particleIndex].speed = Vector3(randomdir.x, randomdir.y, randomdir.z);
-		ParticlesContainer[particleIndex].color = Color;
+int ParticleSystem::GetNewParticlesCount()
+{
+	return NewParticles;
+}
 
-		ParticlesContainer[particleIndex].size = Size;//(float)((rand() % 1000) / 2000.0f + 0.1f);
+void ParticleSystem::SetMaxParticles(int maxParticles)
+{
+	MaxParticles = std::max(maxParticles, 0);
+	LastUsedParticle = std::clamp(LastUsedParticle, 0, std::max(MaxParticles - 1, 0));
+	ParticlesData.resize(MaxParticles);
+	ParticlesInfo.resize(MaxParticles);
+	EmissionRate = LifeTime <= 0 ? 0 : std::min(DesiredEmissionRate, (int)(MaxParticles / LifeTime));
+	if (vao != nullptr && vao->vbos.size() > 0 && MaxParticles > 0)
+	{
+		particles_data_buffer->Resize(MaxParticles);
 	}
 }
 
 void ParticleSystem::SetEmissionRate(int emissionRate)
 {
-	EmissionRate = emissionRate;
+	DesiredEmissionRate = emissionRate;
+	EmissionRate = LifeTime <= 0 ? 0 : std::min(DesiredEmissionRate, (int)(MaxParticles / LifeTime));
 }
 
-void ParticleSystem::SetColor(const Vector4F& color)
+void ParticleSystem::SetColor(const glm::vec4& color)
 {
 	Color = color;
 }
@@ -214,18 +253,86 @@ void ParticleSystem::Update()
 {
 	if (!paused)
 	{
-		GenerateNewParticles(Times::Instance()->deltaTime);
-		UpdateParticles(Times::Instance()->deltaTime, CameraManager::Instance()->GetCurrentCamera()->GetPosition2());
-		if (!additive) SortParticles();
+		if (MaxParticles > 0)
+		{
+			//calculate nr of new particles
+			CalculateNewEmitedParticles(Times::Instance()->deltaTime);
+			UpdateParticles(Times::Instance()->deltaTime);
+			UpdateBuffers();
+			//if (!additive) SortParticles();
+		}
+		else
+		{
+			vao->activeCount = 0;
+		}
 	}
 }
 
-void ParticleSystem::SetLifeTime(double lifetime)
+inline void ParticleSystem::NewParticle(int index)
 {
-	LifeTime = lifetime;
+	ParticleData& particleData = ParticlesData[ReallyAliveParticles];
+	ParticleInfo& particleInfo = ParticlesInfo[ReallyAliveParticles];
+	particleInfo.lifeTime = LifeTime;
+	particleData.pos = object->node->GetWorldPosition();
+
+	// Very bad way to generate a random direction; 
+	// See for instance http://stackoverflow.com/questions/5408276/python-uniform-spherical-distribution instead,
+	// combined with some user-controlled parameters (main direction, spread, etc)
+	particleInfo.speed = Direction + glm::vec3((rand() % 2000 - 1000.0f) / 1000.0f, (rand() % 2000 - 1000.0f) / 1000.0f, (rand() % 2000 - 1000.0f) / 1000.0f) * Spread;
+	particleData.color = glm::vec4((rand() % 255) / 255.0f, (rand() % 255) / 255.0f, (rand() % 255) / 255.0f, 1.0);
+	particleData.size = Size;//(float)((rand() % 1000) / 2000.0f + 0.1f);
+	glm::vec3 cameraToParticle = particleData.pos - CameraManager::Instance()->cameraPos;
+	particleInfo.cameraDistance = glm::dot(cameraToParticle, cameraToParticle);
 }
 
-void ParticleSystem::SetDirection(const Vector3F& direction)
+inline void ParticleSystem::UpdateParticle(int index)
+{
+	ParticleData& particleData = ParticlesData[index];
+	ParticleInfo& particleInfo = ParticlesInfo[index];
+
+	particleInfo.lifeTime -= Times::Instance()->deltaTime;
+
+	// Simulate simple physics : gravity only, no collisions 
+	particleInfo.speed += Force * (float)Times::Instance()->deltaTime * 0.5f;
+	particleData.pos += particleInfo.speed * (float)Times::Instance()->deltaTime;
+	glm::vec3 cameraToParticle = particleData.pos - CameraManager::Instance()->cameraPos;
+	particleInfo.cameraDistance = glm::dot(cameraToParticle, cameraToParticle);
+	if (index != ReallyAliveParticles)
+	{
+		ParticleData& reallyAliveParticle = ParticlesData[ReallyAliveParticles];
+		ParticleInfo& reallyAliveParticleInfo = ParticlesInfo[ReallyAliveParticles];
+		reallyAliveParticle = particleData;
+		reallyAliveParticleInfo = particleInfo;
+		particleInfo.lifeTime = -1.f;
+	}
+	
+	//p.size -= (float)deltaTime*3.5f;
+	//if (p.size < 0.f) p.size = 0.f; p.lifeTime = 0.f;
+	// Fill the GPU buffer
+}
+
+inline void ParticleSystem::CalculateNewEmitedParticles(double deltaTime)
+{
+	//when fps is higher than emission we end up with 0 particles
+	timeSinceLastEmission += deltaTime;
+	if (timeSinceLastEmission > EmissionRate * 0.016)
+	{
+		timeSinceLastEmission = EmissionRate * 0.016;
+	}
+	NewParticles = timeSinceLastEmission * EmissionRate;
+	if (NewParticles > 0)
+	{
+		timeSinceLastEmission -= (NewParticles / (double)EmissionRate);
+	}
+}
+
+void ParticleSystem::SetLifeTime(float lifetime)
+{
+	LifeTime = lifetime;
+	EmissionRate = LifeTime <= 0 ? 0 : std::min(DesiredEmissionRate, (int)(MaxParticles / LifeTime));
+}
+
+void ParticleSystem::SetDirection(const glm::vec3& direction)
 {
 	Direction = direction;
 }
@@ -235,7 +342,7 @@ void ParticleSystem::SetSpread(float spread)
 	Spread = spread;
 }
 
-void ParticleSystem::SetForce(Vector3 & force)
+void ParticleSystem::SetForce(const glm::vec3& force)
 {
 	Force = force;
 }

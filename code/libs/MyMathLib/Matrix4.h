@@ -1,6 +1,6 @@
 #pragma once
+#include "Vector4.h"
 
-class Vector4;
 class Vector3;
 class Matrix4F;
 class Matrix3;
@@ -12,7 +12,17 @@ class Matrix4
 
 {
 public:
-	double _matrix[4][4];
+	union
+	{
+		double _matrix[4][4];
+		double _matrix16[16];
+		struct
+		{
+			Vector4 right, up, dir, position;
+		} v;
+		Vector4 component[4];
+	};
+	
 
 	Matrix4(); //!< in constructor matrix values are set to 0 with memset
 	Matrix4(int identity); //!< in constructor matrix values are set to 0 with memset
@@ -33,7 +43,7 @@ public:
 
 	Matrix4 inverse() const; //!< calculates inverse of matrix4x4 and returns as new one
 	Matrix4F toFloat() const; //!< just converts double matrix to float matrix
-	Matrix3 ConvertToMatrix3() const;
+	Matrix3 convertToMatrix3() const;
 	Vector3 getScale() const;
 	Vector3 getPosition() const;
 	Vector3 getUp() const;
@@ -50,6 +60,11 @@ public:
 	Matrix3 extractRotation3() const;
 	Matrix4 extractRotation() const;
 	Quaternion toQuaternion() const;
+	double AngleX() const;
+	double AngleY() const;
+	double AngleZ() const;
+	Vector3 Angles() const;
+
 	void setOrientation(const Quaternion& orientation);
 
 	void setUp(const Vector3& axis);

@@ -1,6 +1,22 @@
 #include "Texture.h"
 
-Texture::Texture(GLenum Target, GLint Level, GLint InternalFormat, GLsizei Width, GLsizei Height, GLenum Format, GLenum Type, void * Pixels, GLenum Attachment)
+Texture::Texture(GLenum Target, GLint Level, GLint InternalFormat, GLsizei Width, GLsizei Height, GLenum Format, GLenum Type, void* Pixels, GLenum Attachment)
+{
+	target = Target;
+	level = Level;
+	internalFormat = InternalFormat;
+	width = Width;
+	height = Height;
+	aspect = (double)Width / (double)Height;
+	border = 0;
+	format = Format;
+	type = Type;
+	pixels = Pixels;
+	attachment = Attachment;
+	hasMipMaps = false;
+}
+
+Texture::Texture(GLint Target, GLint Level, GLint InternalFormat, GLsizei Width, GLsizei Height, GLint Format, GLint Type, void* Pixels, GLint Attachment)
 {
 	target = Target;
 	level = Level;
@@ -66,13 +82,12 @@ void Texture::SetClampingToEdge()
 	if (target == GL_TEXTURE_CUBE_MAP) glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_EDGE);
 }
 
-void Texture::SetClampingToBorder(Vector4F& borderColorIn)
+void Texture::SetClampingToBorder(const Vector4F& borderColorIn)
 {
 	glTexParameteri(target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_BORDER);
 	glTexParameteri(target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_BORDER);
 	if (target == GL_TEXTURE_CUBE_MAP) glTexParameteri(target, GL_TEXTURE_WRAP_R, GL_CLAMP_TO_BORDER);
 	glTexParameterfv(target, GL_TEXTURE_BORDER_COLOR, &borderColorIn.x);
-	borderColor = borderColorIn;
 }
 
 void Texture::SetLinear()
@@ -108,7 +123,7 @@ void Texture::Update(int windowWidth, int windowHeight)
 	aspect = (double)width / (double)height;
 	glBindTexture(target, handle);
 	glTexImage2D(target, level, internalFormat, width, height, border, format, type, pixels);
-	//if (hasMipMaps) glGenerateMipmap(GL_TEXTURE_2D);
+	if (hasMipMaps) glGenerateMipmap(GL_TEXTURE_2D);
 }
 
 void Texture::Generate()
@@ -155,8 +170,9 @@ void Texture::SpecifyTexture(GLenum Target, GLsizei Width, GLsizei Height, void*
 
 void Texture::ActivateAndBind(int textureSlot) const
 {
-	glActiveTexture(GL_TEXTURE0 + textureSlot);
-	glBindTexture(target, handle);
+	//glActiveTexture(GL_TEXTURE0 + textureSlot);
+	//glBindTexture(target, handle);
+	glBindTextureUnit(textureSlot, handle);
 }
 
 void Texture::Bind() const

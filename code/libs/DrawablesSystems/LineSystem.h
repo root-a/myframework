@@ -6,14 +6,16 @@
 
 class Material;
 class Node;
+class LocationLayout;
+class VertexBufferDynamic;
 
 class FastLine
 {
 public:
 	FastLine()
 	{ 
-		colorA = Vector4F(0.f, 3.f, 3.f, 0.1f);
-		colorB = Vector4F(3.f, 3.f, 0.f, 0.1f);
+		data.colorA = glm::vec4(0.f, 3.f, 3.f, 0.1f);
+		data.colorB = glm::vec4(3.f, 3.f, 0.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 		nodeA = &localNodeA;
@@ -24,13 +26,19 @@ public:
 	void AttachEndB(Node* node);
 	void DetachEndA();
 	void DetachEndB();
-	Vector3 GetPositionA();
-	Vector3 GetPositionB();
-	void SetPositionA(Vector3& pos);
-	void SetPositionB(Vector3& pos);
+	glm::vec3 GetPositionA();
+	glm::vec3 GetPositionB();
+	void SetPositionA(const glm::vec3& pos);
+	void SetPositionB(const glm::vec3& pos);
 
-	Vector4F colorA;
-	Vector4F colorB;
+	struct LineData
+	{
+		glm::vec3 positionA;
+		glm::vec4 colorA;
+		glm::vec3 positionB;
+		glm::vec4 colorB;
+	};
+	LineData data;
 	LineNode localNodeA;
 	LineNode localNodeB;
 	Node* nodeA;
@@ -48,6 +56,7 @@ protected:
 private:
 	bool draw;
 	bool drawAlways;
+	
 };
 
 
@@ -61,28 +70,19 @@ public:
 	int FindUnused();
 	void SetUpBuffers();
 	void UpdateBuffers();
-	void Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID);
+	void Draw(const glm::mat4& ViewProjection, const unsigned int currentShaderID);
 	FastLine* GetLine();
 	FastLine* GetLineOnce();
 	void UpdateContainer();
 	void Update();
-
-	static const Vector3F vertices[2];
-
-	unsigned int MatrixHandle;
-	unsigned int MaterialColorValueHandle;
+	Component* Clone();
 
 	int LastUsed;
-	int ActiveCount;
-	int MaxCount;
-	Vector3F* positions;
-	Vector4F* colors;
+	unsigned int MaxCount;
 	FastLine* linesContainer;
 	
-	Vao vao;
-	unsigned int vertexBuffer;
-	unsigned int colorBuffer;
-
+	VertexArray vao;
+	VertexBufferDynamic* positionColorBuffer;
 	unsigned int ViewProjectionHandle;
 
 	bool dirty = false;

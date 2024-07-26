@@ -10,10 +10,10 @@ class Box
 	
 public:
 	static Box* Instance();
-	void Draw(const Matrix4& ModelViewProjection, unsigned int shader);
-	Vao vao;
+	void Draw(const glm::mat4& ModelViewProjection, unsigned int shader);
+	VertexArray vao;
 	Texture* tex;
-	Vector3F color;
+	glm::vec3 color;
 private:
 	Box();
 	~Box();

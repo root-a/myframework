@@ -2,24 +2,29 @@
 #include "MyMathLib.h"
 struct ParticleData
 {
-	Vector4F posAndSize;
-	Vector4F color;
+	glm::vec3 pos;
+	float size;
+	glm::vec4 color;
+};
+
+struct ParticleInfo
+{
+	glm::vec3 speed;
+	float angle, weight;
+	double lifeTime = -1.0;
+	double cameraDistance = -1.0;
 };
 
 class Particle{
 public:
 	Particle();
 	~Particle();
-	
-	Vector3 pos, speed;
-	Vector4F color;
-	float size, angle, weight;
-	double lifeTime;
-	double cameraDistance;
+	ParticleData data;
+	ParticleInfo info;
 
 	bool operator<(Particle& that){
 		// Sort in reverse order : far particles drawn first.
-		return this->cameraDistance > that.cameraDistance;
+		return this->info.cameraDistance > that.info.cameraDistance;
 	}
 };
 

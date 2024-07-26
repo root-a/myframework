@@ -10,7 +10,7 @@ public:
 	~LineNode();
 
 	void UpdateNode(const LineNode& parentNode);
-	Vector3 localPosition;
+	glm::vec3 localPosition;
 
 private:
 

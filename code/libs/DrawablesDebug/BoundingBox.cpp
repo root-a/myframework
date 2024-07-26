@@ -2,8 +2,8 @@
 #include "Material.h"
 #include <algorithm>
 #include <GL/glew.h>
-
-
+#include "GraphicsStorage.h"
+#include "Ebo.h"
 
 BoundingBox * BoundingBox::Instance()
 {
@@ -16,7 +16,7 @@ BoundingBox::BoundingBox(){
 	color.x = 1;
 	color.y = 1;
 	color.z = 0;
-	vao.SetPrimitiveMode(Vao::PrimitiveMode::LINES);
+	vao.SetPrimitiveMode(PrimitiveMode::LINES);
 	SetUpBuffers();
 }
 
@@ -35,34 +35,23 @@ void BoundingBox::SetUpBuffers()
 	Vector3(-0.5, -0.5, -0.5),
 	Vector3(0.5, -0.5, -0.5),
 	Vector3(0.5, 0.5, -0.5),
-	Vector3(-0.5, 0.5, -0.5) };
-
-	Vector3F verts[] = {
-	Vector3F(-0.5f, -0.5f, 0.5f),
-	Vector3F(0.5f, -0.5f, 0.5f),
-	Vector3F(0.5f, 0.5f, 0.5f),
-	Vector3F(-0.5f, 0.5f, 0.5f),
-
-	Vector3F(-0.5f, -0.5f, -0.5f),
-	Vector3F(0.5f, -0.5f, -0.5f),
-	Vector3F(0.5f, 0.5f, -0.5f),
-	Vector3F(-0.5f, 0.5f, -0.5f)
+	Vector3(-0.5, 0.5, -0.5)
 	};
-	GLushort elements[] = {
+
+	GLubyte elements[] = {
 	0, 1, 1, 2, 2, 3, 3, 0,
 	4, 5, 5, 6, 6, 7, 7, 4,
 	0, 4, 1, 5, 2, 6, 3, 7
 	};
 
-	vao.vertexBuffers.reserve(2);
-
-	vao.AddVertexBuffer(verts, 8 * sizeof(Vector3F), { {ShaderDataType::Float3, "position"} });
-	vao.AddIndexBuffer(elements, 24, IndicesType::UNSIGNED_SHORT);
+	BufferLayout vbVertex({ {ShaderDataType::Type::Float3, "position"} });
+	vao.AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>(vertices, (unsigned int)8, vbVertex));
+	vao.AddElementBuffer(GraphicsStorage::assetRegistry.AllocAsset<ElementBuffer>(elements, (unsigned int)24));
 }
 
-void BoundingBox::Draw(const Matrix4& Model, const Matrix4& ViewProjection, unsigned int shader)
+void BoundingBox::Draw(const glm::mat4& Model, const glm::mat4& ProjectionView, unsigned int shader)
 {
-	Matrix4F MVP = (Model*ViewProjection).toFloat();
+	glm::mat4 MVP = (ProjectionView * Model);
 	MatrixHandle = glGetUniformLocation(shader, "MVP");
 	MaterialColorValueHandle = glGetUniformLocation(shader, "MaterialColorValue");
 

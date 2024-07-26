@@ -36,36 +36,36 @@ Vector3F Vector3F::operator- (const Vector3F& right) const
 	return Vector3F(x - right.x, y - right.y, z - right.z);
 }
 /*! \fn dot product returns scalar*/
-float Vector3F::dotAKAscalar(const Vector3F& right) const
+float Vector3F::dot(const Vector3F& right) const
 {
 	return x * right.x + y * right.y + z * right.z;
 }
 
 /*! \fn function returning length of instanced vector*/
-float Vector3F::vectLengt() const
+float Vector3F::lengt() const
 {
 	return sqrtf(x*x + y*y + z*z);
 }
 
-float Vector3F::squareMag() const
+float Vector3F::squareLength() const
 {
 	return x*x + y*y + z*z;
 }
 
 /*! \fn function returning new normalized vector*/
-Vector3F Vector3F::vectNormalize() const
+Vector3F Vector3F::normalize() const
 {
-	float squareMag = x * x + y * y + z * z;
-	if (squareMag == 0.0) return Vector3F();
-	float length = sqrt(squareMag);
+	float squareLength = x * x + y * y + z * z;
+	if (squareLength == 0.0) return Vector3F();
+	float length = sqrt(squareLength);
 	return Vector3F(x / length, y / length, z / length);
 }
 /*! \fn cross product function returning normal vector*/
 Vector3F Vector3F::crossProd(const Vector3F& right) const
 {
-	float tx = +((y * right.z) - (right.y * z));
-	float ty = -((x * right.z) - (right.x * z));
-	float tz = +((x * right.y) - (right.x * y));
+	float tx = (y * right.z) - (right.y * z);
+	float ty = (x * right.z) - (right.x * z);
+	float tz = (x * right.y) - (right.x * y);
 	return Vector3F(tx, ty, tz);
 }
 

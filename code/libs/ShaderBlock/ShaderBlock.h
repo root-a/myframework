@@ -2,6 +2,7 @@
 #include <vector>
 #include <unordered_map>
 #include "CPUBlockData.h"
+#include <string>
 
 enum class BlockType
 {
@@ -25,9 +26,9 @@ public:
 	std::string name;
 	int index;
 	int size;
+	GLuint handle;
 private:
 	void Generate();
 	ShaderBlock();
-	GLuint handle;
 	GLenum target;
 };

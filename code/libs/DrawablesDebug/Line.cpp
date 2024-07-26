@@ -1,6 +1,8 @@
 #include "Line.h"
+#include "Material.h"
 #include <algorithm>
 #include <GL/glew.h>
+#include "GraphicsStorage.h"
 
 Line * Line::Instance()
 {
@@ -14,7 +16,7 @@ Line::Line()
 	color.x = 1;
 	color.y = 1;
 	color.z = 0;
-	vao.SetPrimitiveMode(Vao::PrimitiveMode::LINES);
+	vao.SetPrimitiveMode(PrimitiveMode::LINES);
 	SetUpBuffers();
 }
 
@@ -25,15 +27,15 @@ Line::~Line()
 
 void Line::SetUpBuffers()
 {
-	Vector3F vertices[] = { Vector3F(0.f, 0.f, 0.f),Vector3F(0.f, 0.f, 1.f) };
-	
-	vao.AddVertexBuffer(vertices, 2 * sizeof(Vector3F), { {ShaderDataType::Float3, "position"} });
+	glm::vec3 vertices[] = { glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f) };
+	BufferLayout vbVertex = { {ShaderDataType::Type::Float3, "position"} };
+	vao.AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>(vertices, (unsigned int)2, vbVertex));
 	vao.activeCount = 2;
 }
 
-void Line::Draw(const Matrix4& Model, const Matrix4& View, const Matrix4& Projection, const GLuint shader)
+void Line::Draw(const glm::mat4& Model, const glm::mat4& View, const glm::mat4& Projection, const GLuint shader)
 {
-	Matrix4F MVP = (Model*View*Projection).toFloat();
+	glm::mat4 MVP = (Projection * View * Model);
 	MatrixHandle = glGetUniformLocation(shader, "MVP");
 	MaterialColorValueHandle = glGetUniformLocation(shader, "MaterialColorValue");
 

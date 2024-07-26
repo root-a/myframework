@@ -1,13 +1,13 @@
 #pragma once
-#include "MyMathLib.h"
+#include "glm/glm.hpp"
 class Edge;
 
 class Vertex
 {
 public:
-	Vector3F pos, normal, newPos;
-	Vector2F tex;
-	Vector4F color;
+	glm::vec3 pos, normal, newPos;
+	glm::vec2 tex;
+	glm::vec4 color;
 	Edge * edge;
 	Vertex();
 	~Vertex();

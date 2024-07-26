@@ -16,7 +16,8 @@ public:
 	PointLight();
 	~PointLight();
 	void Update();
-	Matrix4 ProjectionMatrix; //used when drawing depth
+	Component* Clone();
+	glm::mat4 ProjectionMatrix; //used when drawing depth
 	float ProjectionSize = 150.f;
 	int activeBlurLevel = 3;
 	float blurIntensity = 0.5f;
@@ -33,7 +34,7 @@ public:
 	float near = 0.1f;
 	//float far = 50;
 	float fov = 90;
-	std::vector<Matrix4> LightMatrixesVP; //used when drawing depth
+	std::vector<glm::mat4> LightMatrixesVP; //used when drawing depth
 
 	bool shadowMapBlurActive = true;
 	bool shadowMapActive = false;

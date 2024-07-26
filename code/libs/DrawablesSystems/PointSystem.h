@@ -5,19 +5,26 @@
 #include "Vao.h"
 
 class Material;
+class LocationLayout;
+class VertexBufferDynamic;
 
 class FastPoint
 {
 public:
 	FastPoint()
 	{
-		color = Vector4F(0.f, 3.f, 3.f, 0.1f);
+		data.color = glm::vec4(0.f, 3.f, 3.f, 0.1f);
 		draw = false;
 		drawAlways = false;
 	};
 	~FastPoint(){};
-	LineNode node;
-	Vector4F color;
+	struct PointData
+	{
+		glm::vec3 position;
+		glm::vec4 color;
+	};
+
+	PointData data;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -44,27 +51,19 @@ public:
 	int FindUnused();
 	void SetUpBuffers();
 	void UpdateBuffers();
-	void Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID, float size = 10.0f);
+	void Draw(const glm::mat4& ViewProjection, const unsigned int currentShaderID, float size = 10.0f);
 	FastPoint* GetPoint();
 	FastPoint* GetPointOnce();
 	void UpdateContainer();
 	void Update();
-
-	static const Vector3F vertices[1];
-
-	unsigned int MatrixHandle;
-	unsigned int MaterialColorValueHandle;
+	Component* Clone();
 
 	int LastUsed;
-	int ActiveCount;
-	int MaxCount;
-	Vector3F* positions;
-	Vector4F* colors;
+	unsigned int MaxCount;
 	FastPoint* pointsContainer;
 	
-	Vao vao;
-	unsigned int vertexBuffer;
-	unsigned int colorBuffer;
+	VertexArray vao;
+	VertexBufferDynamic* positionColorBuffer;
 
 	unsigned int ViewProjectionHandle;
 

@@ -1,37 +1,61 @@
 #pragma once
-#include "MyMathLib.h"
+#include <array>
+#include <string>
 #include <vector>
-class Texture;
+
+class RenderProfile;
+class TextureProfile;
+class MaterialProfile;
+class VertexArray;
 class Shader;
-class Vao;
+class RenderElement;
+class ObjectProfile;
+class RenderPass;
+class DataRegistry;
+class ShaderBlock;
+
+enum class MaterialElements
+{
+	ERenderPass,
+	EShader,
+	ERenderProfile,
+	ETextureProfile,
+	EMaterialProfile,
+	EVao,
+	EObjectProfile
+};
 
 class Material
 {
 public:
-	union
-	{
-		Vector4F colorShininess;
-		struct { Vector3F color; float shininess; };
-	};
-	//every texture should have tiling property in materials
-	union
-	{
-		Vector2F tile;
-		struct { float tileX, tileY; };
-	};
 	Material();
 	~Material();
-	std::vector<Texture*> textures;
-	std::vector<Vao*> vaos;
-	
-	void ActivateAndBind() const;
-	Vector3F emission;
-	void AddTexture(Texture *newTexture);
-	void AssignTexture(Texture *newTexture, int textureSlot = 0);
-	void SetShininess(float s);
-	void SetColor(float r, float g, float b);
-	void SetColor(const Vector3F& colorC);
+	union
+	{
+		std::array<RenderElement*,7> elements;
+		struct
+		{
+			RenderPass* rps;
+			Shader* shader;
+			RenderProfile* rp;
+			TextureProfile* tp;
+			MaterialProfile* mp;
+			VertexArray* vao;
+			ObjectProfile* op;
+		};
+	};
+	bool unbound = false;
+	std::string name;
+	std::string path;
+	void AssignElement(RenderElement* ele, MaterialElements type);
+	void AssignShader(Shader* ns);
+	void AssignRenderProfile(RenderProfile* nrp);
+	void AssignTextureProfile(TextureProfile* ntp);
+	void AssignMaterialProfile(MaterialProfile* nmp);
+	void AssignMesh(VertexArray* nm);
+	void AssignObjectProfile(ObjectProfile* nm);
+	void AssignRenderPass(RenderPass* nrps);
 private:
-
+	void UpdateProfileShaderBlocks(ObjectProfile* objectProfile, MaterialElements elementToCheck, Shader* previousShader, Shader* newShader, std::vector<ShaderBlock*>& shaderBlocks);
+	void UpdateShaderRenderTargets();
 };
-

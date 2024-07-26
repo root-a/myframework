@@ -8,17 +8,18 @@
 #include "GraphicsManager.h"
 #include "SceneGraph.h"
 
-
+InstanceSystem::InstanceSystem()
+{
+	LastUsed = 0;
+	paused = true;
+	objectContainer = nullptr;
+}
 
 InstanceSystem::InstanceSystem(int maxCount, OBJ* object)
 {
 	MaxCount = maxCount;
 	LastUsed = 0;
-	ActiveCount = 0;
 	objectContainer = new Object[maxCount];
-	M = new Matrix4F[maxCount];
-	objectID = new unsigned int[maxCount];
-	materialColorShininess = new Vector4F[maxCount];
 	paused = true;
 	GraphicsManager::LoadOBJToVAO(object, &vao);
 	SetUpGPUBuffers();
@@ -27,9 +28,16 @@ InstanceSystem::InstanceSystem(int maxCount, OBJ* object)
 InstanceSystem::~InstanceSystem()
 {
 	delete[] objectContainer;
-	delete[] M;
-	delete[] objectID;
-	delete[] materialColorShininess;
+}
+
+void InstanceSystem::SetUp(int maxCount, OBJ* object)
+{
+	MaxCount = maxCount;
+	LastUsed = 0;
+	objectContainer = new Object[maxCount];
+	paused = true;
+	GraphicsManager::LoadOBJToVAO(object, &vao);
+	SetUpGPUBuffers();
 }
 
 int InstanceSystem::FindUnused()
@@ -53,18 +61,20 @@ int InstanceSystem::FindUnused()
 
 void InstanceSystem::UpdateCPUBuffers()
 {
-	ActiveCount = 0;
+	modelBuffer->activeCount = 0;
+	objectIDBuffer->activeCount = 0;
 	for (int i = 0; i < MaxCount; i++)
 	{
 		Object& object = objectContainer[i];
 
-		if (object.CanDraw() && FrustumManager::Instance()->isBoundingSphereInView(object.bounds->centeredPosition, object.bounds->circumRadius))
+		if (object.CanDraw() && SceneGraph::Instance()->frustum.isBoundingSphereInView(object.bounds->centeredPosition, object.bounds->circumRadius))
 		{
 			//object.node->UpdateNode(this->object->node);
-			M[ActiveCount] = object.node->TopDownTransform.toFloat();
-			objectID[ActiveCount] = object.ID;
+			modelBuffer->SetData(modelBuffer->activeCount, *model, &object.node->TopDownTransformF);
+			modelBuffer->SetData(objectIDBuffer->activeCount, *id, &object.ID);
 			//materialColorShininess[ActiveCount] = object.mat->colorShininess;
-			ActiveCount += 1;
+			modelBuffer->IncreaseInstanceCount();
+			objectIDBuffer->IncreaseInstanceCount();
 
 			object.UpdateDrawState();
 		}
@@ -73,34 +83,47 @@ void InstanceSystem::UpdateCPUBuffers()
 
 void InstanceSystem::UpdateCPUBuffersNoCulling()
 {
-	ActiveCount = 0;
+	modelBuffer->activeCount = 0;
+	objectIDBuffer->activeCount = 0;
 	for (int i = 0; i < MaxCount; i++)
 	{
 		Object& object = objectContainer[i];
 
 		//object.node->UpdateNode(this->object->node);
-		M[ActiveCount] = object.node->TopDownTransform.toFloat();
-		objectID[ActiveCount] = object.ID;
+		modelBuffer->SetData(modelBuffer->activeCount, *model, &object.node->TopDownTransformF);
+		modelBuffer->SetData(objectIDBuffer->activeCount, *id, &object.ID);
 		//materialColorShininess[ActiveCount] = object.mat->colorShininess;
-		ActiveCount += 1;
+		modelBuffer->IncreaseInstanceCount();
+		objectIDBuffer->IncreaseInstanceCount();
 
 		object.UpdateDrawState();
 	}
-	ActiveCount = std::min(MaxCount, ActiveCount);
 }
 
 void InstanceSystem::SetUpGPUBuffers()
 {
-	modelBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Matrix4F), { {ShaderDataType::Mat4, "Model", 1} });
-	objectIDBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(unsigned int), { {ShaderDataType::Int, "ID", 1} });
-	materialColorBuffer = vao.AddVertexBuffer(NULL, MaxCount * sizeof(Vector4F), { {ShaderDataType::Float4, "MaterialColor", 1} });
+	BufferLayout vbModel({ {ShaderDataType::Type::FloatMat4, "M", 1} });
+	BufferLayout vbID({ {ShaderDataType::Type::Int, "ID", 1} });
+	BufferLayout vbColor({ {ShaderDataType::Type::Float4, "MaterialColor", 1} });
+	
+	modelBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbModel);
+	objectIDBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbID);
+	materialColorBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbColor);
+	
+	vao.AddVertexBuffer(modelBuffer);
+	vao.AddVertexBuffer(objectIDBuffer);
+	vao.AddVertexBuffer(materialColorBuffer);
+	
+	model = &modelBuffer->layout.locations[0];
+	id = &objectIDBuffer->layout.locations[1];
+	color = &materialColorBuffer->layout.locations[0];
 }
 
 void InstanceSystem::UpdateGPUBuffers()
 {
-	glNamedBufferSubData(modelBuffer, 0, ActiveCount * sizeof(Matrix4F), M);
-	glNamedBufferSubData(objectIDBuffer, 0, ActiveCount * sizeof(unsigned int), objectID);
-	glNamedBufferSubData(materialColorBuffer, 0, ActiveCount * sizeof(Vector4F), materialColorShininess);
+	modelBuffer->Update();
+	objectIDBuffer->Update();
+	//glNamedBufferSubData(materialColorBuffer, 0, ActiveCount * sizeof(Vector4F), materialColorShininess);
 }
 
 int InstanceSystem::Draw()
@@ -112,11 +135,10 @@ int InstanceSystem::Draw()
 		dirty = false;
 	}
 	vao.Bind();
-	
-	vao.activeCount = ActiveCount;
+	vao.activeCount = modelBuffer->activeCount;
 	vao.Draw();
 	
-	return ActiveCount;
+	return modelBuffer->activeCount;
 }
 
 Object* InstanceSystem::GetObject()
@@ -150,8 +172,8 @@ void InstanceSystem::Init(Object * parent)
 
 	for (size_t i = 0; i < MaxCount; i++)
 	{
-		Material* newMaterial = new Material();
-		GraphicsStorage::materials.push_back(newMaterial);
+		Material* newMaterial = GraphicsStorage::assetRegistry.AllocAsset<Material>();
+		newMaterial->name = "instSysMat";
 		*newMaterial = mat;
 		objectContainer[i].AssignMaterial(newMaterial);
 		objectContainer[i].node->SetScale(SceneGraph::Instance()->generateRandomIntervallVectorSpherical(5, 15));
@@ -163,4 +185,9 @@ void InstanceSystem::Init(Object * parent)
 	}
 	UpdateCPUBuffersNoCulling();
 	UpdateGPUBuffers();
+}
+
+Component* InstanceSystem::Clone()
+{
+	return new InstanceSystem(*this);
 }

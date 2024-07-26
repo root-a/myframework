@@ -29,18 +29,18 @@ Vector2& Vector2::operator=(const Vector2F& right)
 	return *this;
 }
 /*! \fn dot product returns scalar*/
-double Vector2::dotAKAscalar(const Vector2& right) const
+double Vector2::dot(const Vector2& right) const
 {
 	return x * right.x + y * right.y;
 }
 
 /*! \fn function returning length of instanced vector*/
-double Vector2::vectLengt() const
+double Vector2::lengt() const
 {
 	return sqrt(x*x + y*y);
 }
 /*! \fn function returning new normalized vector*/
-Vector2 Vector2::vectNormalize() const
+Vector2 Vector2::normalize() const
 {
 	double length = sqrt(x*x + y*y);
 	return Vector2(x / length, y / length);

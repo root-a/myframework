@@ -48,18 +48,18 @@ Vector4 Vector4::operator- (const Vector4& right) const
 }
 
 /*! \fn dot product returns scalar*/
-double Vector4::dotAKAscalar(const Vector4& right) const
+double Vector4::dot(const Vector4& right) const
 {
 	return x * right.x + y * right.y + z * right.z + w * right.w;
 }
 
 /*! \fn function returning length of instanced vector*/
-double Vector4::vectLengt() const
+double Vector4::lengt() const
 {
 	return sqrt(x*x + y*y + z*z + w*w);
 }
 
-double Vector4::squareMag() const
+double Vector4::squareLength() const
 {
 	return x*x + y*y + z*z + w*w;
 }
@@ -88,11 +88,11 @@ Vector3 Vector4::get_xyz() const
 }
 
 /*! \fn function returning new normalized vector*/
-Vector4 Vector4::vectNormalize() const
+Vector4 Vector4::normalize() const
 {
-	double squareMag = x * x + y * y + z * z + w * w;
-	if (squareMag == 0.0) return Vector4();
-	double length = sqrt(squareMag);
+	double squareLength = x * x + y * y + z * z + w * w;
+	if (squareLength == 0.0) return Vector4();
+	double length = sqrt(squareLength);
 	return Vector4(x / length, y / length, z / length, w / length);
 }
 

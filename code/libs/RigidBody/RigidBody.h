@@ -13,29 +13,33 @@ public:
 	
 	void SetAwake(const bool awake = true);
 	void SetCanSleep(const bool canSleep);
-	void ApplyImpulse(const Vector3& force, const Vector3& target);
-	void ApplyImpulse(const Vector3& direction, double magnitude, const Vector3& target);
+	void AttractTowardsWithPID(float Kp, float Ki, float Kd, const glm::vec3& target);
+	void ApplyImpulse(const glm::vec3& force, const glm::vec3& target);
+	void ApplyImpulse(const glm::vec3& direction, float magnitude, const glm::vec3& target);
 	double GetMass();
 	double GetMassInverse();
 	void SetMass(double mass);
-	
+	Component* Clone();
 	void Update();
 	double mass;
 	double massInverse;
 	double linearDamping;
 	double angularDamping;
-	Vector3 accum_force;
-	Vector3 accum_torque;
-	Matrix3 inverse_inertia_tensor;
-	Matrix3 inertia_tensor;
-	Vector3 velocity;
-	Vector3 angular_velocity;
+	glm::vec3 accum_force;
+	glm::vec3 accum_torque;
+	glm::mat3 inverse_inertia_tensor;
+	glm::mat3 inertia_tensor;
+	glm::vec3 velocity;
+	glm::vec3 angular_velocity;
 
-	Vector3 acceleration;
-	Vector3 angular_acc;
-	
+	glm::vec3 acceleration;
+	glm::vec3 angular_acc;
+
+	glm::vec3 integral;
+	glm::vec3 prevError;
+
 	bool isAwake;
-	Matrix3 inverse_inertia_tensor_world;
+	glm::mat3 inverse_inertia_tensor_world;
 	
 	double restitution;
 	void SetIsKinematic(bool kinematic);
@@ -45,11 +49,12 @@ private:
 	double motion;
 	bool canSleep;
 	double sleepEpsilon;
-	void UpdateKineticEnergyStoreAndPutToSleep(double timestep);
+	void UpdateKineticEnergyStoreAndPutToSleep(float timestep);
 	void UpdateInertiaTensor();
-	void SetInertiaTensor(const Matrix3& I);
-	void IntegrateEuler(double timestep, const Vector3& gravity);
-	void IntegrateMid(double timestep, const Vector3& gravity);
-	void IntegrateRunge(double timestep, const Vector3& gravity);
+	void SetInertiaTensor(const glm::mat3& I);
+	void IntegrateEuler(float timestep, const glm::vec3& gravity);
+	void IntegrateSemiEuler(float timestep, const glm::vec3& gravity);
+	void IntegrateMid(float timestep, const glm::vec3& gravity);
+	void IntegrateRunge(float timestep, const glm::vec3& gravity);
 };
 

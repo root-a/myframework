@@ -8,6 +8,7 @@ class Texture
 {
 public:
 	Texture(GLenum target, GLint level,	GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, void* pixels, GLenum attachment);
+	Texture(GLint target, GLint level,	GLint internalFormat, GLsizei width, GLsizei height, GLint format, GLint type, void* pixels, GLint attachment);
 	~Texture();
 	void SetTextureParameterI(GLenum pname, GLint param);
 	void SetTextureParameterIV(GLenum pname, int* param);
@@ -15,7 +16,7 @@ public:
 	void SetTextureParameterFV(GLenum pname, float* param);
 	void SetDefaultParameters();
 	void SetClampingToEdge();
-	void SetClampingToBorder(Vector4F& borderColor);
+	void SetClampingToBorder(const Vector4F& borderColor);
 	void SetLinear();
 	void SetNearest();
 	void SetFiltering(GLint MIN_FILTER, GLint MAG_FILTER);
@@ -41,8 +42,9 @@ public:
 	void* pixels;
 	GLenum attachment;
 	std::string name;
+	std::string path;
+	std::string texturePath;
 	bool hasMipMaps;
-	Vector4F borderColor;
 private:
 	Texture() {};
 };

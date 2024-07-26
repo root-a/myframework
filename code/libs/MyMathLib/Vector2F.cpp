@@ -27,18 +27,18 @@ Vector2F& Vector2F::operator=(const Vector2& right)
 	return *this;
 }
 /*! \fn dot product returns scalar*/
-float Vector2F::dotAKAscalar(const Vector2F& right) const
+float Vector2F::dot(const Vector2F& right) const
 {
 	return x * right.x + y * right.y;
 }
 
 /*! \fn function returning length of instanced vector*/
-float Vector2F::vectLengt() const
+float Vector2F::lengt() const
 {
 	return sqrt(x*x + y*y);
 }
 /*! \fn function returning new normalized vector*/
-Vector2F Vector2F::vectNormalize() const
+Vector2F Vector2F::normalize() const
 {
 	float length = sqrtf(x*x + y*y);
 	return Vector2F(x / length, y / length);

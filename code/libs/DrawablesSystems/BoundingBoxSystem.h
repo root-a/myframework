@@ -7,6 +7,8 @@
 #include "Vao.h"
 
 class Material;
+class LocationLayout;
+class VertexBufferDynamic;
 
 class FastBoundingBox
 {
@@ -15,13 +17,16 @@ public:
 	{
 		draw = false;
 		drawAlways = false;
-		inFrustum = &localInFrustum;
 	};
 	~FastBoundingBox(){};
-	Matrix4* model;
-	Vector3F* color;
-	bool* inFrustum;
-	bool localInFrustum = false;
+	
+	struct FBBData
+	{
+		glm::vec3 color;
+		glm::mat4 model;
+	};
+
+	FBBData data;
 
 	void StopDrawing() { draw = false; drawAlways = false; }
 	void DrawOnce() { draw = true; drawAlways = false; }
@@ -30,7 +35,6 @@ public:
 	bool CanDraw() { return draw; }
 	bool CanDrawAlways() { return drawAlways; }
 	void UpdateDrawState() { draw = drawAlways; }
-
 protected:
 private:
 	bool draw;
@@ -47,29 +51,22 @@ public:
 	int FindUnused();
 	void SetUpBuffers();
 	void UpdateBuffers();
-	int Draw(const Matrix4& ViewProjection, const unsigned int currentShaderID);
+	int Draw(const glm::mat4& ViewProjection, const unsigned int currentShaderID);
 	FastBoundingBox* GetBoundingBox();
 	FastBoundingBox* GetBoundingBoxOnce();
 	void UpdateContainer();
 	void Update();
+	Component* Clone();
 
-	static const unsigned short elements[24];
-	static const Vector3F vertices[8];
-
-	unsigned int MatrixHandle;
-	unsigned int MaterialColorValueHandle;
+	static const unsigned char elements[24];
+	static const glm::vec3 vertices[8];
 
 	int LastUsed;
-	int ActiveCount;
-	int MaxCount;
-
-	Matrix4F* models;
-	Vector3F* colors;
+	unsigned int MaxCount;
 	FastBoundingBox* boundingBoxesContainer;
 
-	Vao vao;
-	unsigned int modelBuffer;
-	unsigned int colorBuffer;
+	VertexArray vao;
+	VertexBufferDynamic* colorModelBuffer;
 
 	unsigned int ViewProjectionHandle;
 	bool dirty = false;

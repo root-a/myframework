@@ -18,9 +18,11 @@ public:
 	GLint internalFormat;
 	GLsizei width;
 	GLsizei height;
+	GLenum target;
 	double aspect;
 	GLenum attachment;
 	std::string name;
+	std::string path;
 private:
 	RenderBuffer() {};
 };

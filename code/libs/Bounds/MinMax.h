@@ -3,12 +3,12 @@
 
 struct MinMaxF
 {
-	Vector3F min;
-	Vector3F max;
+	glm::vec3 min;
+	glm::vec3 max;
 };
 
 struct MinMax
 {
-	Vector3 min;
-	Vector3 max;
+	glm::vec3 min;
+	glm::vec3 max;
 };

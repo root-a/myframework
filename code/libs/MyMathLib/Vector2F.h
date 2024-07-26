@@ -18,9 +18,9 @@ public:
 	Vector2F operator+ (const Vector2F& right) const;
 	Vector2F operator- (const Vector2F& right) const;
 	Vector2F& operator= (const Vector2& right);
-	float dotAKAscalar(const Vector2F& right) const;
-	float vectLengt() const;
-	Vector2F vectNormalize() const;
+	float dot(const Vector2F& right) const;
+	float lengt() const;
+	Vector2F normalize() const;
 	Vector2 toDouble() const;
 	static Vector3F vec2TOvec3(Vector2F vector, float z = 0);
 

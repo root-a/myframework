@@ -307,7 +307,7 @@ Matrix3 Matrix3::rotateAngle(Vector3& v, double angle)
 	double cosAng = cos(sAngle * PI / 180.0);
 	double sinAng = sin(sAngle * PI / 180.0);
 	double T = 1 - cosAng;
-	Vector3 normalizedVector = v.vectNormalize();
+	Vector3 normalizedVector = v.normalize();
 	double x = normalizedVector.x;
 	double y = normalizedVector.y;
 	double z = normalizedVector.z;
@@ -409,7 +409,7 @@ double Matrix3::det(double a, double b, double c, double d, double e, double f, 
 }
 
 //no need to transpose
-Matrix3 Matrix3::CuboidInertiaTensor(Vector3& dimensions)
+Matrix3 Matrix3::CuboidInertiaTensor(const Vector3& dimensions)
 {
 	Matrix3 I;
 	I[0][0] = (1.0 / 12.0) * (dimensions.y*dimensions.y + dimensions.z*dimensions.z);
@@ -421,43 +421,43 @@ Matrix3 Matrix3::CuboidInertiaTensor(Vector3& dimensions)
 
 Vector3 Matrix3::getLeft() const
 {
-	return Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectNormalize();
+	return Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).normalize();
 }
 
 Vector3 Matrix3::getInvLeft() const
 {
-	return Vector3(_matrix[0][0], _matrix[1][0], _matrix[2][0]).vectNormalize();
+	return Vector3(_matrix[0][0], _matrix[1][0], _matrix[2][0]).normalize();
 }
 
 Vector3 Matrix3::getUp() const
 {
-	return Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectNormalize();
+	return Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).normalize();
 }
 
 Vector3 Matrix3::getInvUp() const
 {
-	return Vector3(_matrix[0][1], _matrix[1][1], _matrix[2][1]).vectNormalize();
+	return Vector3(_matrix[0][1], _matrix[1][1], _matrix[2][1]).normalize();
 }
 
 Vector3 Matrix3::getBack() const
 {
-	return Vector3(_matrix[2][0] * -1.0, _matrix[2][1] * -1.0, _matrix[2][2] * -1.0).vectNormalize();
+	return Vector3(_matrix[2][0] * -1.0, _matrix[2][1] * -1.0, _matrix[2][2] * -1.0).normalize();
 }
 
 Vector3 Matrix3::getInvBack() const
 {
-	return Vector3(_matrix[0][2] * -1.0, _matrix[1][2] * -1.0, _matrix[2][2] * -1.0).vectNormalize();
+	return Vector3(_matrix[0][2] * -1.0, _matrix[1][2] * -1.0, _matrix[2][2] * -1.0).normalize();
 }
 
 
 Vector3 Matrix3::getForward() const
 {
-	return Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectNormalize();
+	return Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).normalize();
 }
 
 Vector3 Matrix3::getInvForward() const
 {
-	return Vector3(_matrix[0][2], _matrix[1][2], _matrix[2][2]).vectNormalize();
+	return Vector3(_matrix[0][2], _matrix[1][2], _matrix[2][2]).normalize();
 }
 
 
@@ -613,14 +613,14 @@ Vector3 Matrix3::getAxis(int axis) const
 
 Vector3 Matrix3::getAxisNormalized(int axis) const
 {
-	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).vectNormalize();
+	return Vector3(_matrix[axis][0], _matrix[axis][1], _matrix[axis][2]).normalize();
 }
 
 Vector3 Matrix3::extractScale() const
 {
-	double scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).vectLengt();
-	double scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).vectLengt();
-	double scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).vectLengt();
+	double scaleX = Vector3(_matrix[0][0], _matrix[0][1], _matrix[0][2]).lengt();
+	double scaleY = Vector3(_matrix[1][0], _matrix[1][1], _matrix[1][2]).lengt();
+	double scaleZ = Vector3(_matrix[2][0], _matrix[2][1], _matrix[2][2]).lengt();
 	return Vector3(scaleX, scaleY, scaleZ);
 }
 Vector3 Matrix3::getScale() const
@@ -664,4 +664,46 @@ Quaternion Matrix3::toQuaternion() const
 		temp.z = 0.25 * S;
 	}
 	return temp;
+}
+
+double Matrix3::AngleX() const
+{
+	double PI = 3.14159265;
+	double decompRotX = (atan2(_matrix[2][1], _matrix[2][2]) * 180.0) / PI;
+	if (decompRotX > 180.0f) {
+		decompRotX -= 360.0f;
+	}
+	else if (decompRotX < -180.0f) {
+		decompRotX += 360.0f;
+	}
+	decompRotX = -1.0f * decompRotX;
+	return decompRotX;
+}
+
+double Matrix3::AngleY() const
+{
+	double PI = 3.14159265;
+	double decompRotY = (atan2(-_matrix[2][0], sqrt((_matrix[2][1] * _matrix[2][1]) + (_matrix[2][2] * _matrix[2][2]))) * 180.0) / PI;
+	if (decompRotY > 180.0f) {
+		decompRotY -= 360.0f;
+	}
+	else if (decompRotY < -180.0f) {
+		decompRotY += 360.0f;
+	}
+	decompRotY = -1.0f * decompRotY;
+	return decompRotY;
+}
+
+double Matrix3::AngleZ() const
+{
+	double PI = 3.14159265;
+	double decompRotZ = (atan2(_matrix[1][0], _matrix[0][0]) * 180.0) / PI;
+	if (decompRotZ > 180.0f) {
+		decompRotZ -= 360.0f;
+	}
+	else if (decompRotZ < -180.0f) {
+		decompRotZ += 360.0f;
+	}
+	decompRotZ = -1.0f * decompRotZ;
+	return decompRotZ;
 }

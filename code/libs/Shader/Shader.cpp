@@ -1,18 +1,9 @@
 #include "Shader.h"
 #include <GL/glew.h>
 #include <stdio.h>
+#include "MyMathLib.h"
 #include "ShaderBlock.h"
 #include <memory>
-
-struct uniform_info_t
-{
-	union
-	{
-		struct { GLint type, count, offset, blockIndex, arrayStride, matrixStride, isRowMajor, atomicCounterBufferIndex, location, size; };
-		GLint properties[10];
-	};
-	std::string name;
-};
 
 /*
 
@@ -26,8 +17,7 @@ struct block_info_t
 };
 
 */
-
-Shader::Shader(unsigned int ID, std::string& sname, ShaderPaths& sp)
+Shader::Shader(unsigned int ID, const std::string& sname, const ShaderPaths& sp)
 {
 	shaderID = ID;
 	name = sname;
@@ -155,7 +145,7 @@ void Shader::LoadUniforms()
 					break;
 				}
 
-				uniforms.try_emplace(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info);
+				uniforms.emplace(std::make_pair(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info));
 			}
 		}
 		GLint isBlockInVertexShader;
@@ -225,7 +215,7 @@ bool Shader::HasShaderStorageBuffer(int index)
 	return false;
 }
 
-void Shader::ClearBuffers()
+void Shader::Clear()
 {
 	globalUniformBuffers.clear();
 	materialUniformBuffers.clear();
@@ -233,6 +223,9 @@ void Shader::ClearBuffers()
 	globalShaderStorageBuffers.clear();
 	materialShaderStorageBuffers.clear();
 	objectShaderStorageBuffers.clear();
+	outputs.clear();
+	samplers.clear();
+	attributes.clear();
 }
 
 void Shader::Bind()
