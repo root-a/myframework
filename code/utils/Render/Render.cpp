@@ -13,18 +13,29 @@
 #include "LightProperties.h"
 #include <algorithm>
 #include "CameraManager.h"
-#include "Camera.h"
 #include "SceneGraph.h"
 #include "Camera.h"
 #include "Texture.h"
-#include "GraphicsStorage.h"
 #include "InstanceSystem.h"
 #include "FastInstanceSystem.h"
 #include "Vao.h"
 #include "Plane.h"
 #include "Box.h"
+#include "RenderPass.h"
+#include "Shader.h"
+#include "RenderProfile.h"
+#include "TextureProfile.h"
+#include "MaterialProfile.h"
+#include <unordered_set>
+#include <stack>
+#include "ObjectProfile.h"
+#include "ImGuiWrapper.h"
+#include <imgui.h>
+#include <chrono>
+#include "ParticleSystem.h"
 #include "ShaderBlockData.h"
 #include "CPUBlockData.h"
+#include "Times.h"
 
 
 Render::Render()
@@ -36,19 +47,91 @@ Render::Render()
 	bloomIntensity = 0.5f;
 	hdrEnabled = GL_TRUE;
 	bloomEnabled = GL_TRUE;
-
+	previousVao = nullptr;
+	currentVao = nullptr;
 	captureVPs.resize(6);
-	Matrix4F captureProjection = Matrix4F::OpenGLPersp(90, 1.0, 0.1, 10.0);
-	captureVPs[0] = Matrix4F::lookAt(Vector3F(), Vector3F(1.0, 0.0, 0.0), Vector3F(0.0, -1.0, 0.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_POSITIVE_X
-	captureVPs[1] = Matrix4F::lookAt(Vector3F(), Vector3F(-1.0, 0.0, 0.0), Vector3F(0.0, -1.0, 0.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_NEGATIVE_X
-	captureVPs[2] = Matrix4F::lookAt(Vector3F(), Vector3F(0.0, 1.0, 0.0), Vector3F(0.0, 0.0, 1.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_POSITIVE_Y
-	captureVPs[3] = Matrix4F::lookAt(Vector3F(), Vector3F(0.0, -1.0, 0.0), Vector3F(0.0, 0.0, -1.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
-	captureVPs[4] = Matrix4F::lookAt(Vector3F(), Vector3F(0.0, 0.0, 1.0), Vector3F(0.0, -1.0, 0.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_POSITIVE_Z
-	captureVPs[5] = Matrix4F::lookAt(Vector3F(), Vector3F(0.0, 0.0, -1.0), Vector3F(0.0, -1.0, 0.0)) * captureProjection; //GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+	captureVPs[0] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)); //GL_TEXTURE_CUBE_MAP_POSITIVE_X
+	captureVPs[1] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)); //GL_TEXTURE_CUBE_MAP_NEGATIVE_X
+	captureVPs[2] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)); //GL_TEXTURE_CUBE_MAP_POSITIVE_Y
+	captureVPs[3] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(0.0, -1.0, 0.0), glm::vec3(0.0, 0.0, -1.0)); //GL_TEXTURE_CUBE_MAP_NEGATIVE_Y
+	captureVPs[4] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(0.0, 0.0, 1.0), glm::vec3(0.0, -1.0, 0.0)); //GL_TEXTURE_CUBE_MAP_POSITIVE_Z
+	captureVPs[5] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(0.0, 0.0, -1.0), glm::vec3(0.0, -1.0, 0.0)); //GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
 }
 
 Render::~Render()
 {
+}
+
+inline void Render::FindLeastDifferentMaterial(std::vector<RenderElement*>& currentMaterial, std::vector<std::vector<Material*>*>& listOfMaterialSequences, int startFrom, int& outDifferencesCount, Material* outLeastDifferentMaterial, int& outLeastDifferentMaterialIndex)
+{
+	int foundDifferences = INT_MAX;
+	Material* foundMaterial = nullptr;
+	int foundMaterialIndex = -1;
+	for (size_t j = startFrom; j < listOfMaterialSequences.size(); j++)
+	{
+		auto mat = (*listOfMaterialSequences[j])[0];
+		int differences = 0;
+		for (size_t k = 0; k < mat->elements.size(); k++)
+		{
+			if (mat->elements[k] != currentMaterial[k])
+			{
+				differences++;
+			}
+		}
+		if (differences < foundDifferences)
+		{
+			foundDifferences = differences;
+			foundMaterial = mat;
+			foundMaterialIndex = j;
+			if (foundDifferences == 1)
+			{
+				break; //we have found the smallest difference
+			}
+		}
+	}
+	outDifferencesCount = foundDifferences;
+	outLeastDifferentMaterial = foundMaterial;
+	outLeastDifferentMaterialIndex = foundMaterialIndex;
+}
+
+inline void Render::UpdateCurrentMaterialAndRenderList(std::vector<RenderElement*>& currentMaterial, std::vector<RenderElement*>& renderList, std::vector<Material*>& materialSequence)
+{
+	for (auto mat : materialSequence)
+	{
+		//the if here will push draw of previous material if it deems necessary
+		//currentVao = (VertexArray*)mat->elements[(int)MaterialElements::EVao];
+		//if (previousVao == nullptr)
+		//{
+		//	previousVao = currentVao;
+		//}
+		//else if (previousVao != currentVao || previousVao->instanced == false)
+		//{
+		//	// we could store previous shader and check if that shader has dynamicvbos, depending on that we would 
+		//	// be able to tell if the function is instanced or not
+		//	// the safest way is to probably just create another vao
+		//	renderList.push_back(&((VertexArray*)previousVao)->draw);
+		//	previousVao = currentVao;
+		//	totalNrOfDrawCalls++;
+		//}
+		for (size_t j = 0; j < mat->elements.size(); j++)
+		{
+			auto foundMatElement = mat->elements[j];
+			auto activeElement = currentMaterial[j];
+			if (foundMatElement != activeElement)
+			{
+				currentMaterial[j] = foundMatElement;
+				if (foundMatElement != nullptr) renderList.push_back(foundMatElement);
+			}
+		}
+
+		auto vao = currentMaterial[(int)MaterialElements::EVao];
+		if (vao != nullptr)
+		{
+			renderList.push_back(&((VertexArray*)vao)->draw);
+			totalNrOfDrawCalls++;
+		}
+	}
 }
 
 Render*
@@ -57,6 +140,222 @@ Render::Instance()
 	static Render instance;
 
 	return &instance;
+}
+
+void Render::GenerateGraph()
+{
+	std::chrono::time_point<std::chrono::high_resolution_clock> start, end, startGeneration, endGeneration;
+	std::chrono::duration<double> elapsed_seconds;
+
+	start = std::chrono::high_resolution_clock::now();
+	startGeneration = start;
+	//we could say that material is an internal material structure for one object
+	//they are created and changed by the other user friendly material interface
+	//we should reserve the number of materials per pass by looking at how much it was in last frame and adding a bit 
+	uniqueMaterialSequencesPerPass.clear(); //they are not unique unless we use std::set instead of std::vector
+	int materialCount = 0;
+
+	for (auto pass : GraphicsStorage::renderingQueue)
+	{
+		auto vpProperty = ((RenderPass*)pass)->registry.GetProperty("VP");
+		if (vpProperty != nullptr)
+		{
+			((RenderPass*)pass)->frustum.ExtractPlanes(*(glm::mat4*)vpProperty->dataAddress);
+		}
+		else
+		{
+			((RenderPass*)pass)->frustum.ExtractPlanes(CameraManager::Instance()->ViewProjection);
+		}
+	}
+
+	//is it really a good idea to check frustum per pass?
+	//we check all objects multiple times depending on the pass they are rendered in
+	//it would be easier if I got a list of objects per pass
+	//maybe that is what I have to generate?
+	//generate a structure like:
+	//pass -> material1 -> objects
+	//	   -> material2 -> objects
+	//pass -> material3 -> objects
+	// right now we store pass -> material sequences
+	// it's nice when material have all info they need to render
+	// but now we want to share them
+	// but to do that they need to know about objects
+	// they can share object profile
+	// they can also share material profile
+	// in that moment we don't want the object profile to have data registries
+	// if they share object profile but have different material profile
+	// we then set them once render all with red and then render them with blue
+	// problem is, is there a problem?
+	// if two materials have different material profile but same object profile
+	// the problem is that one material has 3 objects and other material has 10 objects
+	// different transforms
+	// so we have to give transforms
+	//we can make the object profile shareable by adding a dynamic vector of data registries
+	//when object profile will become shareable we will be able to share materials
+	//if we can share materials we can also share material sequences
+	//we probably have to create material sequence objects or store pointers to sequences (vectors)
+	//for instanced objects we will push many data registries this is basically us telling material here are your object transforms
+	//on execute we will set and send
+	//for single objects we could also push data registry then set and send but! instances are about one material per instance type
+	//if two single objects have same material or just have same objectprofile they would push into same op but they can't render at the same time
+	//so they would need unique ops
+	//the least we can do is have one op, it will have all data registries
+	for (auto& object : SceneGraph::Instance()->allObjects)
+	{
+		for (auto& materialSq : object->materials)
+		{
+			Material* mat = materialSq[0];
+			if (mat->unbound || materialSq[0]->vao == nullptr)
+			{
+				//we have to figure out how to avoid adding same materials
+				for (auto mat : materialSq)
+				{
+					if (mat->op != nullptr)
+					{
+						if (mat->op->vbos.size() > 0) mat->op->registries.push_back(&object->registry); //only meant for instanced stuff
+						mat->op->SetDataRegistry(&object->registry);
+					}
+				}
+				uniqueMaterialSequencesPerPass[materialSq[0]->rps].push_back(&materialSq);
+				materialCount += materialSq.size();
+			}
+			else
+			{
+				glm::mat4 meshCenter(1);
+
+				MathUtils::SetPosition(meshCenter, materialSq[0]->vao->center);
+				auto centerTransform = meshCenter * object->node->TopDownTransform;
+				auto centeredPosition = MathUtils::GetPosition(centerTransform);
+				auto halfExtents = (materialSq[0]->vao->dimensions * object->node->totalScale) * 0.5f;
+
+				//auto radius = std::max(std::max(halfExtents.x, halfExtents.y), halfExtents.z); //perfect for sphere, radius around geometry
+				auto circumRadius = glm::length(halfExtents);
+				//per mesh frustum culling instead of per object
+				//currently we can do frustum culling per object but you can have multiple materials and draw same object with multiple shapes
+				//we can also create separate objects with one material for each mesh
+				//this way we can easily do the frustum check on the bounds
+				bool inFrustum = materialSq[0]->rps->frustum.isBoundingSphereInView(centeredPosition, circumRadius);
+				//bool inFrustum = materialSq[0]->rps->frustum.isBoundingSphereInView(boundsComp->centeredPosition, boundsComp->circumRadius);
+				object->inFrustum = inFrustum;
+				if (inFrustum)
+				{
+					//we have to figure out how to avoid adding same materials
+					for (auto mat : materialSq)
+					{
+						if (mat->op != nullptr)
+						{
+							if (mat->op->vbos.size() > 0) mat->op->registries.push_back(&object->registry); //only meant for instanced stuff
+							mat->op->SetDataRegistry(&object->registry);
+						}
+					}
+					uniqueMaterialSequencesPerPass[materialSq[0]->rps].push_back(&materialSq);
+					materialCount += materialSq.size();
+				}
+			}
+		}
+	}
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	countingElementsTime = elapsed_seconds.count();
+
+	start = std::chrono::high_resolution_clock::now();
+
+	finalRenderList.clear();
+	finalRenderList.reserve(materialCount * 7);
+	totalNrOfDrawCalls = 0;
+
+	for (auto& pass : GraphicsStorage::renderingQueue) //render passes are in order
+	{
+		auto passMaterialSequencesPairIt = uniqueMaterialSequencesPerPass.find(pass);
+		if (passMaterialSequencesPairIt != uniqueMaterialSequencesPerPass.end())
+		{
+			auto& passMaterialSequencesPair = (*passMaterialSequencesPairIt);
+			auto& passMaterialSequences = passMaterialSequencesPair.second;
+			auto& materialSequence = *passMaterialSequences[0];
+			std::vector<RenderElement*> activeElements(7, nullptr); //maybe we can keep it alive between passes so that if we do new pass we can compare stuff if they are different so we even optimize render pass bindings
+			//for each sequence order is determined
+			//this means we just want to push materials in order to the render list
+			//we just don't want to push same elements
+			UpdateCurrentMaterialAndRenderList(activeElements, finalRenderList, materialSequence);
+			
+			passMaterialSequences[0] = passMaterialSequences.back();
+			passMaterialSequences.pop_back();
+			//for current materialSequence in the pass
+			for (size_t i = 0; i < passMaterialSequences.size(); i++)
+			{
+				int foundDifferences = INT_MAX;
+				Material* foundMaterial = nullptr;
+				int foundMaterialIndex = -1;
+				//find the material with the least differences when compared to current material
+				FindLeastDifferentMaterial(activeElements, passMaterialSequences, i, foundDifferences, foundMaterial, foundMaterialIndex);
+				std::vector<Material*>& foundMaterialSequence = *passMaterialSequences[foundMaterialIndex];
+				if (foundDifferences > 0) //avoid all duplicates, I could avoid it entirely if I used the set instead of vector
+				{
+					UpdateCurrentMaterialAndRenderList(activeElements, finalRenderList, foundMaterialSequence);
+				}
+				//if current material was not the found one then we put it in the index of the found one so that when we go to next material in next iteration we still have a chance to compare this material
+				passMaterialSequences[foundMaterialIndex] = passMaterialSequences[i];
+			}
+		}
+	}
+	//if (currentVao != nullptr) // because last pass could have been without the actual draw, like blit pass, we should really fix this in the UpdateCurrentMaterialAndRenderList function above
+	//{
+	//	//have to push the last draw of the last material, for now this works
+	//	finalRenderList.push_back(&((VertexArray*)currentVao)->draw);
+	//	totalNrOfDrawCalls++;
+	//}
+	
+
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	treeGenerationTime = elapsed_seconds.count();
+	endGeneration = end;
+	elapsed_seconds = endGeneration - startGeneration;
+	totalGenerationTime = elapsed_seconds.count();
+
+	if (showRenderList)
+	{
+		ImGui::Begin("Generated Render List", &showRenderList);
+		ImGui::Text("Draw Calls: %d", totalNrOfDrawCalls);
+		ImGui::Text("Render List Elements: %d", finalRenderList.size());
+		ImGui::Text("Render List Size: %d bytes", finalRenderList.size() * sizeof(RenderElement*));
+		for (auto& element : finalRenderList)
+		{
+			if (dynamic_cast<RenderProfile*>(element) != nullptr)
+			{
+				ImGui::Text("\tRP: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<TextureProfile*>(element) != nullptr)
+			{
+				ImGui::Text("\tTP: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<MaterialProfile*>(element) != nullptr)
+			{
+				ImGui::Text("\tMP: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<VertexArray*>(element) != nullptr)
+			{
+				ImGui::Text("\tVao: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<RenderPass*>(element) != nullptr)
+			{
+				ImGui::Text("RPS: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<ObjectProfile*>(element) != nullptr)
+			{
+				ImGui::Text("\tOP: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<Shader*>(element) != nullptr)
+			{
+				ImGui::Text("\tSH: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<VertexArray::DrawElement*>(element) != nullptr)
+			{
+				ImGui::Text("\t\tDW");
+			}
+		}
+		ImGui::End();
+	}
 }
 
 void Render::captureToTexture2D(const GLuint shaderID, FrameBuffer * captureFBO, Texture* textureToDrawTo)
@@ -113,7 +412,6 @@ void Render::captureTextureToCubeMap(const GLuint shaderID, FrameBuffer* capture
 {
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO->handle);
-	
 	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
 
 	textureToCapture->ActivateAndBind(0);
@@ -141,23 +439,25 @@ Render::drawGeometry(const GLuint shaderID, const std::vector<Object*>& objects,
 
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
+	Vector2F tiling(1, 1);
+	Vector4F matColShininess(0, 0, 0, 40);
 	int objectsRendered = 0;
 	for (auto& object : objects)
 	{
 		if (object->inFrustum)
 		{
-			gsbd->SetData("M", &object->TopDownTransformF, sizeof(Matrix4F));
-			gsbd->SetData("MaterialColorShininess", &object->materials[0]->colorShininess, sizeof(Vector4F));
-			gsbd->SetData("objectID", &object->ID, sizeof(unsigned int));
-			gsbd->SetData("tiling", &object->materials[0]->tile, sizeof(Vector2F));
+			o_gbd->SetData("M", &object->node->TopDownTransformF, sizeof(Matrix4F));
+			o_gbd->SetData("objectID", &object->ID, sizeof(unsigned int));
+			m_gbd->SetData("tiling", &tiling, sizeof(Vector2F));
+			m_gbd->SetData("MaterialColorShininess", &matColShininess, sizeof(Vector4F));
 
-			gsbd->Submit();
+			o_gbd->Submit();
+			m_gbd->Submit();
 
-			object->materials[0]->ActivateAndBind();
+			object->materials[0][0]->tp->ActivateAndBindTextures();
 
-			object->vao->Bind();
-
-			object->vao->Draw();
+			object->materials[0][0]->vao->Bind();
+			object->materials[0][0]->vao->Draw();
 
 			objectsRendered++;
 		}
@@ -165,7 +465,7 @@ Render::drawGeometry(const GLuint shaderID, const std::vector<Object*>& objects,
 	return objectsRendered;
 }
 
-int Render::drawInstancedGeometry(const GLuint shaderID, const std::vector<InstanceSystem*>& iSystems, FrameBuffer * geometryBuffer)
+int Render::drawInstancedGeometry(const GLuint shaderID, PoolParty<InstanceSystem, 1000>& iSystems, FrameBuffer * geometryBuffer)
 {
 	int objectsRendered = 0;
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, geometryBuffer->handle);
@@ -177,18 +477,18 @@ int Render::drawInstancedGeometry(const GLuint shaderID, const std::vector<Insta
 	Texture::Activate(0);
 
 	GLuint tiling = glGetUniformLocation(shaderID, "tiling");
-
-	for(auto& system : iSystems)
+	Vector2F tile(1, 1);
+	for (auto& system : iSystems)
 	{
-		glUniform2fv(tiling, 1, &system->mat.tile.x);
-		system->mat.ActivateAndBind();
-		objectsRendered += system->Draw();
+		glUniform2fv(tiling, 1, &tile.x);
+		system.mat.tp->ActivateAndBindTextures();
+		objectsRendered += system.Draw();
 	}
 	
 	return objectsRendered;
 }
 
-int Render::drawFastInstancedGeometry(const GLuint shaderID, const std::vector<FastInstanceSystem*>& iSystems, FrameBuffer * geometryBuffer)
+int Render::drawFastInstancedGeometry(const GLuint shaderID, PoolParty<FastInstanceSystem, 1000>& iSystems, FrameBuffer * geometryBuffer)
 {
 	int objectsRendered = 0;
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, geometryBuffer->handle);
@@ -200,19 +500,19 @@ int Render::drawFastInstancedGeometry(const GLuint shaderID, const std::vector<F
 	Texture::Activate(0);
 
 	GLuint tiling = glGetUniformLocation(shaderID, "tiling");
-
+	Vector2F tile(1, 1);
 	for (auto& system : iSystems)
 	{
-		glUniform2fv(tiling, 1, &system->mat.tile.x);
-		system->mat.ActivateAndBind();
-		objectsRendered += system->Draw();
+		glUniform2fv(tiling, 1, &tile.x);
+		system.mat.tp->ActivateAndBindTextures();
+		objectsRendered += system.Draw();
 	}
 
 	return objectsRendered;
 }
 
 int 
-Render::draw(const GLuint shaderID, const std::vector<Object*>& objects, const Matrix4& ViewProjection)
+Render::draw(const GLuint shaderID, const std::vector<Object*>& objects, const glm::mat4& ViewProjection)
 {
 	int objectsRendered = 0;
 
@@ -224,26 +524,26 @@ Render::draw(const GLuint shaderID, const std::vector<Object*>& objects, const M
 
 	for (auto& object : objects)
 	{
-		if (FrustumManager::Instance()->isBoundingSphereInView(object->bounds->centeredPosition, object->bounds->circumRadius))
+		if (SceneGraph::Instance()->frustum.isBoundingSphereInView(object->bounds->centeredPosition, object->bounds->circumRadius))
 		{
 			object->inFrustum = true;
-			Matrix4F ModelMatrix = object->node->TopDownTransform.toFloat();
-			Matrix4F MVP = (object->node->TopDownTransform*ViewProjection).toFloat();
+			glm::mat4 ModelMatrix = object->node->TopDownTransform;
+			glm::mat4 MVP = (ViewProjection*object->node->TopDownTransform);
 
-			
-			glUniform2fv(tiling, 1, &object->materials[0]->tile.x);
+			glm::vec2 tile(1, 1);
+			glUniform2fv(tiling, 1, &tile.x);
 
 			glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 			glUniformMatrix4fv(ModelMatrixHandle, 1, GL_FALSE, &ModelMatrix[0][0]);
-
-			glUniform4fv(MaterialColorShininessHandle, 1, &object->materials[0]->colorShininess.x);
+			glm::vec4 colorShininess(0,0,0,40);
+			glUniform4fv(MaterialColorShininessHandle, 1, &colorShininess.x);
 
 			glUniform1ui(PickingObjectIndexHandle, object->ID);
 
-			object->materials[0]->ActivateAndBind();
+			object->materials[0][0]->tp->ActivateAndBindTextures();
 			
-			object->vao->Bind();
-			object->vao->Draw();
+			object->materials[0][0]->vao->Bind();
+			object->materials[0][0]->vao->Draw();
 			
 			objectsRendered++;
 		}
@@ -264,30 +564,30 @@ Render::drawLight(const GLuint pointLightShader, const GLuint pointLightShadowSh
 	if (countOfAttachments > 0) glDrawBuffers(countOfAttachments, attachmentsToDraw);
 	glClear(GL_COLOR_BUFFER_BIT);
 
-	lightsRendered += drawPointLights(pointLightShader, pointLightShadowShader, SceneGraph::Instance()->pointLightComponents, SceneGraph::Instance()->renderList, CameraManager::Instance()->ViewProjection, lightFrameBuffer, geometryBuffer->textures);
-	lightsRendered += drawSpotLights(spotLightShader, spotLightShader, SceneGraph::Instance()->spotLightComponents, SceneGraph::Instance()->renderList, CameraManager::Instance()->ViewProjection, lightFrameBuffer, geometryBuffer->textures);
-	lightsRendered += drawDirectionalLights(directionalLightShader, directionalLightShadowShader, SceneGraph::Instance()->directionalLightComponents, SceneGraph::Instance()->renderList, lightFrameBuffer, geometryBuffer->textures);
+	lightsRendered += drawPointLights(pointLightShader, pointLightShadowShader, *GraphicsStorage::assetRegistry.GetPool<PointLight>(), SceneGraph::Instance()->renderList, CameraManager::Instance()->ViewProjection, lightFrameBuffer, geometryBuffer->textures);
+	lightsRendered += drawSpotLights(spotLightShader, spotLightShader, *GraphicsStorage::assetRegistry.GetPool<SpotLight>(), SceneGraph::Instance()->renderList, CameraManager::Instance()->ViewProjection, lightFrameBuffer, geometryBuffer->textures);
+	lightsRendered += drawDirectionalLights(directionalLightShader, directionalLightShadowShader, *GraphicsStorage::assetRegistry.GetPool<DirectionalLight>(), SceneGraph::Instance()->renderList, lightFrameBuffer, geometryBuffer->textures);
 
 	return lightsRendered;
 }
 
 void
-Render::drawSingle(const GLuint shaderID, const Object * object, const Matrix4 & ViewProjection, const GLuint currentShaderID)
+Render::drawSingle(const GLuint shaderID, const Object* object, const glm::mat4 &ViewProjection, const GLuint currentShaderID)
 {
-	Matrix4F ModelMatrix = object->node->TopDownTransform.toFloat();
-	Matrix4F MVP = (object->node->TopDownTransform*ViewProjection).toFloat();
+	Vector2F tiling(1, 1);
+	Vector4F matColShininess(0, 0, 0, 40);
+	o_gbd->SetData("M", &object->node->TopDownTransformF, sizeof(Matrix4F));
+	o_gbd->SetData("objectID", &object->ID, sizeof(unsigned int));
+	m_gbd->SetData("tiling", &tiling, sizeof(Vector2F));
+	m_gbd->SetData("MaterialColorShininess", &matColShininess, sizeof(Vector4F));
 
-	gsbd->SetData("M", &object->TopDownTransformF, sizeof(Matrix4F));
-	gsbd->SetData("MaterialColorShininess", &object->materials[0]->colorShininess, sizeof(Vector4F));
-	gsbd->SetData("objectID", &object->ID, sizeof(unsigned int));
-	gsbd->SetData("tiling", &object->materials[0]->tile, sizeof(Vector2F));
+	o_gbd->Submit();
+	m_gbd->Submit();
 
-	gsbd->Submit();
+	object->materials[0][0]->tp->ActivateAndBindTextures();
 
-	object->materials[0]->ActivateAndBind();
-
-	object->vao->Bind();
-	object->vao->Draw();
+	object->materials[0][0]->vao->Bind();
+	object->materials[0][0]->vao->Draw();
 }
 
 int
@@ -307,15 +607,12 @@ Render::drawPicking(const GLuint shaderID, std::unordered_map<unsigned int, Obje
 		object = objectPair.second;
 		if (object->inFrustum)
 		{
-			gsbd->SetData("M", &object->TopDownTransformF, sizeof(Matrix4F));
-			gsbd->SetData("objectID", &object->ID, sizeof(unsigned int));
-			gsbd->Submit();
+			o_gbd->SetData("M", &object->node->TopDownTransformF, sizeof(Matrix4F));
+			o_gbd->SetData("objectID", &object->ID, sizeof(unsigned int));
+			o_gbd->Submit();
 
-			//bind vao before drawing
-			object->vao->Bind();
-
-			// Draw the triangles !
-			object->vao->Draw();
+			object->materials[0][0]->vao->Bind();
+			object->materials[0][0]->vao->Draw();
 
 			objectsRendered++;
 		}
@@ -324,40 +621,41 @@ Render::drawPicking(const GLuint shaderID, std::unordered_map<unsigned int, Obje
 }
 
 int 
-Render::drawDepth(const const GLuint shaderID, const std::vector<Object*>& objects, const Matrix4F& ViewProjection)
+Render::drawDepth(const const GLuint shaderID, const std::vector<Object*>& objects, const glm::mat4& ViewProjection)
 {
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	glDepthMask(GL_TRUE);
 	glEnable(GL_DEPTH_TEST);
 	int objectsRendered = 0;
-	GLuint depthMatrixHandle = glGetUniformLocation(shaderID, "depthMVP");
 	//might want to do frustum culling, must extract planes
 	for (auto object : objects)
 	{
-		Matrix4F MVP = (object->node->TopDownTransform.toFloat() * ViewProjection);
+		m_lvpbd->SetData("lightVP", &ViewProjection, sizeof(Matrix4F));
+		o_gbd->SetData("M", &object->node->TopDownTransformF, sizeof(Matrix4F));
+		
+		m_lvpbd->Submit();
+		o_gbd->Submit();
 
-		glUniformMatrix4fv(depthMatrixHandle, 1, GL_FALSE, &MVP[0][0]);
+		object->materials[0][0]->vao->Bind();
+		object->materials[0][0]->vao->Draw();
 
-		object->vao->Bind();
-
-		object->vao->Draw();
 		objectsRendered++;
 	}
 	return objectsRendered;
 }
 
 int
-Render::drawCubeDepth(const GLuint shaderID, const std::vector<Object*>& objects, const std::vector<Matrix4>& ViewProjection, const Object* light)
+Render::drawCubeDepth(const GLuint shaderID, const std::vector<Object*>& objects, const std::vector<glm::mat4>& ViewProjection, const Object* light)
 {
 	for (unsigned int i = 0; i < 6; ++i)
 	{
 		GLuint VPMatrixHandle = glGetUniformLocation(shaderID, ("shadowMatrices[" + std::to_string(i) + "]").c_str());
-		Matrix4F VP = ViewProjection[i].toFloat();
+		glm::mat4 VP = ViewProjection[i];
 		glUniformMatrix4fv(VPMatrixHandle, 1, GL_FALSE, &VP[0][0]);
 	}
 
 	GLuint lightPosForDepth = glGetUniformLocation(shaderID, "lightPos");
-	Vector3F lightPosDepth = light->node->GetWorldPosition().toFloat();
+	glm::vec3 lightPosDepth = light->node->GetWorldPosition();
 	glUniform3fv(lightPosForDepth, 1, &lightPosDepth.x);
 
 	GLuint farPlaneForDepth = glGetUniformLocation(shaderID, "far_plane");
@@ -371,21 +669,21 @@ Render::drawCubeDepth(const GLuint shaderID, const std::vector<Object*>& objects
 	for (auto object : objects)
 	{
 		radiusDistance = light->bounds->radius + object->bounds->radius;
-		centerDistance = (light->bounds->centeredPosition - object->bounds->centeredPosition).vectLengt();
+		centerDistance = glm::length(light->bounds->centeredPosition - object->bounds->centeredPosition);
 		if (centerDistance < radiusDistance)
 		{
-			Matrix4F model = object->node->TopDownTransform.toFloat();
-			glUniformMatrix4fv(ModelHandle, 1, GL_FALSE, &model[0][0]);
+			glUniformMatrix4fv(ModelHandle, 1, GL_FALSE, &object->node->TopDownTransformF[0][0]);
 
-			object->vao->Bind();
-			object->vao->Draw();
+			object->materials[0][0]->vao->Bind();
+			object->materials[0][0]->vao->Draw();
 			objectsRendered++;
 		}
 	}
 	return objectsRendered;
 }
 
-void Render::drawSkyboxWithClipPlane(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture* texture, const Vector4F& plane, const Matrix4& ViewMatrix)
+void
+Render::drawSkyboxWithClipPlane(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture* texture, const glm::vec4& plane, const glm::mat4& ViewMatrix)
 {
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
@@ -396,9 +694,9 @@ void Render::drawSkyboxWithClipPlane(const GLuint shaderID, FrameBuffer * lightF
 	glEnable(GL_CLIP_PLANE0);
 	GLuint planeHandle = glGetUniformLocation(shaderID, "plane");
 	glUniform4fv(planeHandle, 1, &plane.x);
-	Matrix4 View = ViewMatrix;
-	View.zeroPosition();
-	Matrix4& ViewProjection = View * CameraManager::Instance()->GetCurrentCamera()->ProjectionMatrix;
+	glm::mat4 View = ViewMatrix;
+	MathUtils::ZeroPosition(View);
+	glm::mat4 ViewProjection = CameraManager::Instance()->GetCurrentCamera()->ProjectionMatrix * View;
 
 	Box::Instance()->tex = texture;
 	Box::Instance()->Draw(ViewProjection, shaderID);
@@ -421,7 +719,7 @@ Render::drawSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Textur
 
 	//glDepthMask(GL_FALSE);
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
-	Matrix4 View = currentCamera->ViewMatrix;
+	glm::mat4 View = currentCamera->ViewMatrix;
 	View[3][0] = 0;
 	View[3][1] = 0;
 	View[3][2] = 0;
@@ -430,8 +728,8 @@ Render::drawSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Textur
 	//Quaternion qYangled4 = Quaternion(angleY, Vector3(0.0, 1.0, 0.0));
 	//Quaternion dirTotalRotation4 = qYangled4 * qXangled4;
 
-	Matrix4 ViewProjection = View * currentCamera->ProjectionMatrix;
-	//ViewProjection = dirTotalRotation4.ConvertToMatrix() * ViewProjection;
+	glm::mat4 ViewProjection = currentCamera->ProjectionMatrix * View;
+	//ViewProjection = dirTotalRotation4.convertToMatrix() * ViewProjection;
 
 	Box::Instance()->tex = texture;
 	Box::Instance()->Draw(ViewProjection, shaderID);
@@ -443,7 +741,8 @@ Render::drawSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Textur
 	//glDepthMask(GL_TRUE);
 }
 
-void Render::drawGSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture * texture)
+void
+Render::drawGSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, Texture * texture)
 {
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	//glDepthRange(0.999999, 1.0);
@@ -457,22 +756,23 @@ void Render::drawGSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, 
 
 	//glDepthMask(GL_FALSE);
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
-	Matrix4 View = currentCamera->ViewMatrix;
+	glm::mat4 View = currentCamera->ViewMatrix;
 	View[3][0] = 0;
 	View[3][1] = 0;
 	View[3][2] = 0;
-	Matrix4 ViewProjection = View * currentCamera->ProjectionMatrix;
+	glm::mat4 ViewProjection = currentCamera->ProjectionMatrix * View;
 
 	Box::Instance()->tex = texture;
 	
 	float lightPower = 10.0f;
+	glm::vec3 lightColor(1, 1, 1);
 
-	lsbd->SetData("lightColor", &Vector3F(1, 1, 1), sizeof(Vector3F));
-	lsbd->SetData("lightPower", &lightPower, sizeof(float));
+	m_lbd->SetData("lightColor", &lightColor, sizeof(Vector3F));
+	m_lbd->SetData("lightPower", &lightPower, sizeof(float));
 
-	lsbd->Submit();
+	m_lbd->Submit();
 
-	Matrix4F MVP = ViewProjection.toFloat();
+	glm::mat4 MVP = ViewProjection;
 	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 
@@ -486,7 +786,8 @@ void Render::drawGSkybox(const GLuint shaderID, FrameBuffer * lightFrameBuffer, 
 	//glDepthMask(GL_TRUE);
 }
 
-int Render::drawAmbientLight(const GLuint shaderID, FrameBuffer * bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures, const std::vector<Texture*>& pbrEnvTextures)
+int
+Render::drawAmbientLight(const GLuint shaderID, FrameBuffer * bufferToDrawTheLightTO, const std::vector<Texture*>& geometryTextures, const std::vector<Texture*>& pbrEnvTextures)
 {
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
 	glDepthMask(GL_FALSE);
@@ -521,7 +822,7 @@ int Render::drawAmbientLight(const GLuint shaderID, FrameBuffer * bufferToDrawTh
 }
 
 int
-Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<DirectionalLight*>& lights, const std::vector<Object*>& objects, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
+Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID, PoolParty<DirectionalLight>& lights, const std::vector<Object*>& objects, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
 {
 	glDepthMask(GL_FALSE);
 	int lightsRendered = 0;
@@ -530,8 +831,8 @@ Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID
 
 	GLuint lightShaderNoShadows = shaderID;
 	GLuint lightShaderWithShadows = shadowShaderID;
-	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
-	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
+	GLuint depthShader = GraphicsStorage::shaderIDs["Depth"];
+	GLuint blurShader = GraphicsStorage::shaderIDs["FastBlurShadow"];
 
 	geometryTextures[0]->ActivateAndBind(0); //input value same as sampler uniform
 	geometryTextures[1]->ActivateAndBind(1);
@@ -540,7 +841,7 @@ Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID
 	GLuint lightShader = lightShaderNoShadows;
 	for (auto& light : lights)
 	{
-		if (light->CanCastShadow() && dirShadowMapBuffer != nullptr)
+		if (light.CanCastShadow() && dirShadowMapBuffer != nullptr)
 		{
 			lightShader = lightShaderWithShadows;
 
@@ -553,26 +854,26 @@ Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID
 			glCullFace(GL_FRONT);
 			ShaderManager::Instance()->SetCurrentShader(depthShader);
 			glViewport(0, 0, dirShadowMapTexture->width, dirShadowMapTexture->height);
-			drawDepth(depthShader, objects, light->LightMatrixVP);
+			drawDepth(depthShader, objects, light.LightMatrixVP);
 			glViewport(0, 0, currentCamera->windowWidth, currentCamera->windowHeight);
 			glCullFace(GL_BACK);
 			glDepthMask(GL_FALSE);
 			glClearColor(0, 0, 0, 1);
-			if (light->CanBlurShadowMap())
+			if (light.CanBlurShadowMap())
 			{
 				Texture* blurredShadowMap = nullptr;
-				switch (light->blurMode)
+				switch (light.blurMode)
 				{
-				case None:
+				case BlurMode::None:
 					break;
-				case OneSize:
+				case BlurMode::OneSize:
 					if (pingPongBuffers[0] != nullptr)
-					blurredShadowMap = BlurTextureAtSameSize(dirShadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], light->activeBlurLevel, light->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
+						blurredShadowMap = BlurTextureAtSameSize(dirShadowMapTexture, pingPongBuffers[0], pingPongBuffers[1], light.activeBlurLevel, light.blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
 					blurredShadowMap->ActivateAndBind(4);
 					break;
-				case MultiSize:
+				case BlurMode::MultiSize:
 					if (multiBlurBufferStart[0] != nullptr)
-					blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, light->activeBlurLevel, light->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
+						blurredShadowMap = BlurTexture(dirShadowMapTexture, multiBlurBufferStart, multiBlurBufferTarget, light.activeBlurLevel, light.blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
 					blurredShadowMap->ActivateAndBind(4);
 					break;
 				default:
@@ -584,13 +885,17 @@ Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID
 				dirShadowMapTexture->ActivateAndBind(4);
 			}
 
-			lsbd->SetData("shadowTransitionSize", &light->shadowFadeRange, sizeof(float));
-			lsbd->SetData("lightRadius", &light->radius, sizeof(float));
-			lsbd->SetData("depthBiasMVP", &light->BiasedLightMatrixVP, sizeof(Matrix4F));
+			o_ldsbd->SetData("shadowFadeRange", &light.shadowFadeRange, sizeof(float));
+			o_ldsbd->SetData("lightRadius", &light.radius, sizeof(float));
+			o_ldsbd->SetData("depthBiasMVP", &light.BiasedLightMatrixVP, sizeof(Matrix4F));
+			o_ldsbd->SetData("lightInvDir", &light.LightInvDir, sizeof(Vector3F));
+			o_ldsbd->Submit();
 		}
 		else
 		{
 			lightShader = lightShaderNoShadows;
+			o_ldbd->SetData("lightInvDir", &light.LightInvDir, sizeof(Vector3F));
+			o_ldbd->Submit();
 		}
 
 		ShaderManager::Instance()->SetCurrentShader(lightShader);
@@ -603,17 +908,16 @@ Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID
 		glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_ONE, GL_ONE);
 
-		lsbd->SetData("lightInvDir", &light->LightInvDir, sizeof(Vector3F));
-		lsbd->SetData("lightColor", &light->properties.color, sizeof(Vector3F));
-		lsbd->SetData("lightPower", &light->properties.power, sizeof(float));
-		lsbd->SetData("ambient", &light->properties.ambient, sizeof(float));
-		lsbd->SetData("diffuse", &light->properties.diffuse, sizeof(float));
-		lsbd->SetData("specular", &light->properties.specular, sizeof(float));
 
-		lsbd->Submit();
+		m_lbd->SetData("lightColor", &light.properties.color, sizeof(Vector3F));
+		m_lbd->SetData("lightPower", &light.properties.power, sizeof(float));
+		m_lbd->SetData("ambient", &light.properties.ambient, sizeof(float));
+		m_lbd->SetData("diffuse", &light.properties.diffuse, sizeof(float));
+		m_lbd->SetData("specular", &light.properties.specular, sizeof(float));
+
+		m_lbd->Submit();
 
 		Plane::Instance()->vao.Bind();
-
 		Plane::Instance()->vao.Draw();
 
 		glDisable(GL_BLEND);
@@ -624,7 +928,7 @@ Render::drawDirectionalLights(const GLuint shaderID, const GLuint shadowShaderID
 }
 
 int
-Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<PointLight*>& lights, const std::vector<Object*>& objects, const Matrix4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
+Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, PoolParty<PointLight>& lights, const std::vector<Object*>& objects, const glm::mat4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
 {
 	glDepthMask(GL_FALSE);
 	int lightsRendered = 0;
@@ -633,9 +937,9 @@ Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, cons
 	
 	GLuint lightShaderNoShadows = shaderID;
 	GLuint lightShaderWithShadows = shadowShaderID;
-	GLuint depthShader = GraphicsStorage::shaderIDs["depthCube"];
-	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
-	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
+	GLuint depthShader = GraphicsStorage::shaderIDs["CubeDepth"];
+	GLuint blurShader = GraphicsStorage::shaderIDs["FastBlurShadow"];
+	GLuint stencilShader = GraphicsStorage::shaderIDs["Stencil"];
 
 	geometryTextures[0]->ActivateAndBind(0);
 	geometryTextures[1]->ActivateAndBind(1);
@@ -647,16 +951,16 @@ Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, cons
 	glEnable(GL_STENCIL_TEST);
 	for (auto& light : lights)
 	{
-		if (FrustumManager::Instance()->isBoundingSphereInView(light->object->bounds->centeredPosition, light->object->bounds->circumRadius))
+		if (SceneGraph::Instance()->frustum.isBoundingSphereInView(light.object->bounds->centeredPosition, light.object->bounds->circumRadius))
 		{
-			light->object->inFrustum = true;
-			if (light->CanCastShadow())
+			light.object->inFrustum = true;
+			if (light.CanCastShadow())
 			{
 
 				lightShader = lightShaderWithShadows;
-				
-				FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, light->shadowMapBuffer->handle);
-				
+
+				FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, light.shadowMapBuffer->handle);
+
 				glDepthMask(GL_TRUE);
 				glClearColor(1, 1, 0, 1);
 				glClear(GL_DEPTH_BUFFER_BIT);
@@ -664,20 +968,20 @@ Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, cons
 				glCullFace(GL_FRONT);
 				ShaderManager::Instance()->SetCurrentShader(depthShader);
 
-				glViewport(0, 0, light->shadowMapTexture->width, light->shadowMapTexture->height);
-				drawCubeDepth(depthShader, objects, light->LightMatrixesVP, light->object);
+				glViewport(0, 0, light.shadowMapTexture->width, light.shadowMapTexture->height);
+				drawCubeDepth(depthShader, objects, light.LightMatrixesVP, light.object);
 				glViewport(0, 0, currentCamera->windowWidth, currentCamera->windowHeight);
 				glCullFace(GL_BACK);
 				glDepthMask(GL_FALSE);
 				glClearColor(0, 0, 0, 1);
 
-				light->shadowMapTexture->ActivateAndBind(4);
+				light.shadowMapTexture->ActivateAndBind(4);
 			}
 			else
 			{
 				lightShader = lightShaderNoShadows;
 			}
-			
+
 			//-----------phase 1 stencil-----------
 			//enable stencil shader 
 			ShaderManager::Instance()->SetCurrentShader(stencilShader);
@@ -697,24 +1001,28 @@ Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, cons
 			glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
 
-			float lightRadius = (float)light->object->bounds->radius;
-			lsbd->SetData("lightRadius", &lightRadius, sizeof(float));
-			lsbd->SetData("lightPower", &light->properties.power, sizeof(float));
-			lsbd->SetData("ambient", &light->properties.ambient, sizeof(float));
-			lsbd->SetData("diffuse", &light->properties.diffuse, sizeof(float));
-			lsbd->SetData("specular", &light->properties.specular, sizeof(float));
-			lsbd->SetData("lightColor", &light->properties.color, sizeof(Vector3F));
-			lsbd->SetData("lightPosition", light->object->TopDownTransformF[3], sizeof(Vector3F));
-			lsbd->SetData("constant", &light->attenuation.Constant, sizeof(float));
-			lsbd->SetData("linear", &light->attenuation.Linear, sizeof(float));
-			lsbd->SetData("exponential", &light->attenuation.Exponential, sizeof(float));
-			gsbd->SetData("M", &light->object->TopDownTransformF, sizeof(Matrix4F));
-			
-			lsbd->Submit();
-			gsbd->Submit();
+			float lightRadius = (float)light.object->bounds->radius;
 
-			light->object->vao->Bind();
-			light->object->vao->Draw();
+			o_lpbd->SetData("lightPosition", &light.object->node->TopDownTransformF[3], sizeof(glm::vec3));
+			o_lpbd->SetData("lightRadius", &lightRadius, sizeof(float));
+			o_lpbd->SetData("constant", &light.attenuation.Constant, sizeof(float));
+			o_lpbd->SetData("linear", &light.attenuation.Linear, sizeof(float));
+			o_lpbd->SetData("exponential", &light.attenuation.Exponential, sizeof(float));
+
+			m_lbd->SetData("lightColor", &light.properties.color, sizeof(Vector3F));
+			m_lbd->SetData("lightPower", &light.properties.power, sizeof(float));
+			m_lbd->SetData("ambient", &light.properties.ambient, sizeof(float));
+			m_lbd->SetData("diffuse", &light.properties.diffuse, sizeof(float));
+			m_lbd->SetData("specular", &light.properties.specular, sizeof(float));
+
+			o_gbd->SetData("M", &light.object->node->TopDownTransformF, sizeof(Matrix4F));
+
+			o_lpbd->Submit();
+			m_lbd->Submit();
+			o_gbd->Submit();
+
+			light.object->materials[0][0]->vao->Bind();
+			light.object->materials[0][0]->vao->Draw();
 
 			//-----------phase 2 light-----------
 			//enable light shader
@@ -731,16 +1039,16 @@ Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, cons
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
 
-			light->object->vao->Draw();
+			light.object->materials[0][0]->vao->Draw();
 
 			glCullFace(GL_BACK);
 			glDisable(GL_BLEND);
-			
+
 			lightsRendered++;
 		}
 		else
 		{
-			light->object->inFrustum = false;
+			light.object->inFrustum = false;
 		}
 	}
 	glDisable(GL_STENCIL_TEST);
@@ -748,7 +1056,7 @@ Render::drawPointLights(const GLuint shaderID, const GLuint shadowShaderID, cons
 }
 
 int
-Render::drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, const std::vector<SpotLight*>& lights, const std::vector<Object*>& objects, const Matrix4 & ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
+Render::drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, PoolParty<SpotLight>& lights, const std::vector<Object*>& objects, const glm::mat4& ViewProjection, FrameBuffer* fboToDrawTheLightTO, const std::vector<Texture*>& geometryTextures)
 {
 	glDepthMask(GL_FALSE);
 	int lightsRendered = 0;
@@ -762,50 +1070,50 @@ Render::drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, const
 
 	GLuint lightShaderNoShadows = shaderID;
 	GLuint lightShaderWithShadows = shadowShaderID;
-	GLuint depthShader = GraphicsStorage::shaderIDs["depth"];
-	GLuint blurShader = GraphicsStorage::shaderIDs["fastBlurShadow"];
-	GLuint stencilShader = GraphicsStorage::shaderIDs["stencil"];
+	GLuint depthShader = GraphicsStorage::shaderIDs["Depth"];
+	GLuint blurShader = GraphicsStorage::shaderIDs["FastBlurShadow"];
+	GLuint stencilShader = GraphicsStorage::shaderIDs["Stencil"];
 
 	GLuint lightShader = lightShaderNoShadows;
 
 	glEnable(GL_STENCIL_TEST);
 	for (auto& light : lights)
 	{
-		if (FrustumManager::Instance()->isBoundingSphereInView(light->object->bounds->centeredPosition, light->radius))
+		if (SceneGraph::Instance()->frustum.isBoundingSphereInView(light.object->bounds->centeredPosition, light.radius))
 		{
-			light->object->inFrustum = true;
-			if (light->CanCastShadow())
+			light.object->inFrustum = true;
+			if (light.CanCastShadow())
 			{
-				
+
 				lightShader = lightShaderWithShadows;
-				
-				FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, light->shadowMapBuffer->handle);
-				
+
+				FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, light.shadowMapBuffer->handle);
+
 				glDepthMask(GL_TRUE);
 				glClearColor(1, 1, 0, 1);
 				glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 				glEnable(GL_DEPTH_TEST);
 				glCullFace(GL_FRONT);
 				ShaderManager::Instance()->SetCurrentShader(depthShader);
-				glViewport(0, 0, light->shadowMapTexture->width, light->shadowMapTexture->height);
-				drawDepth(depthShader, objects, light->LightMatrixVP);
+				glViewport(0, 0, light.shadowMapTexture->width, light.shadowMapTexture->height);
+				drawDepth(depthShader, objects, light.LightMatrixVP);
 				glViewport(0, 0, currentCamera->windowWidth, currentCamera->windowHeight);
 				glCullFace(GL_BACK);
 				glDepthMask(GL_FALSE);
 				glClearColor(0, 0, 0, 1);
 
-				if (light->CanBlurShadowMap())
+				if (light.CanBlurShadowMap())
 				{
 					Texture* blurredShadowMap = nullptr;
-					switch (light->blurMode)
+					switch (light.blurMode)
 					{
-					case None:
+					case BlurMode::None:
 						break;
-					case OneSize:
-						blurredShadowMap = BlurTextureAtSameSize(light->shadowMapTexture, light->pingPongBuffers[0], light->pingPongBuffers[1], light->activeBlurLevel, light->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
+					case BlurMode::OneSize:
+						blurredShadowMap = BlurTextureAtSameSize(light.shadowMapTexture, light.pingPongBuffers[0], light.pingPongBuffers[1], light.activeBlurLevel, light.blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
 						break;
-					case MultiSize:
-						blurredShadowMap = BlurTexture(light->shadowMapTexture, light->multiBlurBufferStart, light->multiBlurBufferTarget, light->activeBlurLevel, light->blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
+					case BlurMode::MultiSize:
+						blurredShadowMap = BlurTexture(light.shadowMapTexture, light.multiBlurBufferStart, light.multiBlurBufferTarget, light.activeBlurLevel, light.blurIntensity, blurShader, currentCamera->windowWidth, currentCamera->windowHeight);
 						break;
 					default:
 						break;
@@ -814,13 +1122,33 @@ Render::drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, const
 				}
 				else
 				{
-					light->shadowMapTexture->ActivateAndBind(4);
+					light.shadowMapTexture->ActivateAndBind(4);
 				}
-				lsbd->SetData("depthBiasMVP", &light->BiasedLightMatrixVP, sizeof(Matrix4F));
+				float lightRadius = (float)light.object->bounds->radius;
+				o_lssbd->SetData("depthBiasMVP", &light.BiasedLightMatrixVP, sizeof(glm::mat4));
+				o_lssbd->SetData("lightPosition", &light.object->node->TopDownTransformF[3], sizeof(glm::vec3));
+				o_lssbd->SetData("lightInvDir", &light.LightInvDir, sizeof(glm::vec3));
+				o_lssbd->SetData("outerCutOff", &light.cosOuterCutOff, sizeof(float));
+				o_lssbd->SetData("innerCutOff", &light.cosInnerCutOff, sizeof(float));
+				o_lssbd->SetData("lightRadius", &lightRadius, sizeof(float));
+				o_lssbd->SetData("constant", &light.attenuation.Constant, sizeof(float));
+				o_lssbd->SetData("linear", &light.attenuation.Linear, sizeof(float));
+				o_lssbd->SetData("exponential", &light.attenuation.Exponential, sizeof(float));
+				o_lssbd->Submit();
 			}
 			else
 			{
 				lightShader = lightShaderNoShadows;
+				float lightRadius = (float)light.object->bounds->radius;
+				o_lsbd->SetData("lightPosition", &light.object->node->TopDownTransformF[3], sizeof(glm::vec3));
+				o_lsbd->SetData("lightInvDir", &light.LightInvDir, sizeof(glm::vec3));
+				o_lsbd->SetData("outerCutOff", &light.cosOuterCutOff, sizeof(float));
+				o_lsbd->SetData("innerCutOff", &light.cosInnerCutOff, sizeof(float));
+				o_lsbd->SetData("lightRadius", &lightRadius, sizeof(float));
+				o_lsbd->SetData("constant", &light.attenuation.Constant, sizeof(float));
+				o_lsbd->SetData("linear", &light.attenuation.Linear, sizeof(float));
+				o_lsbd->SetData("exponential", &light.attenuation.Exponential, sizeof(float));
+				o_lsbd->Submit();
 			}
 
 			FBOManager::Instance()->BindFrameBuffer(GL_FRAMEBUFFER, fboToDrawTheLightTO->handle);
@@ -841,34 +1169,23 @@ Render::drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, const
 
 			glStencilOpSeparate(GL_BACK, GL_KEEP, GL_INCR_WRAP, GL_KEEP);
 			glStencilOpSeparate(GL_FRONT, GL_KEEP, GL_DECR_WRAP, GL_KEEP);
-			
-			float lightRadius = (float)light->object->bounds->radius;
-			lsbd->SetData("outerCutOff", &light->cosOuterCutOff, sizeof(float));
-			lsbd->SetData("innerCutOff", &light->cosInnerCutOff, sizeof(float));
-			lsbd->SetData("lightInvDir", &light->LightInvDir, sizeof(Vector3F));
-			lsbd->SetData("lightPower", &light->properties.power, sizeof(float));
-			lsbd->SetData("lightColor", &light->properties.color, sizeof(Vector3F));
-			lsbd->SetData("ambient", &light->properties.ambient, sizeof(float));
-			lsbd->SetData("diffuse", &light->properties.diffuse, sizeof(float));
-			lsbd->SetData("specular", &light->properties.specular, sizeof(float));
-			lsbd->SetData("lightPosition", light->object->TopDownTransformF[3], sizeof(Vector3F));
-			lsbd->SetData("lightRadius", &lightRadius, sizeof(float));
-			lsbd->SetData("constant", &light->attenuation.Constant, sizeof(float));
-			lsbd->SetData("linear", &light->attenuation.Linear, sizeof(float));
-			lsbd->SetData("exponential", &light->attenuation.Exponential, sizeof(float));
-			gsbd->SetData("M", &light->object->TopDownTransformF, sizeof(Matrix4F));
 
-			lsbd->Submit();
-			gsbd->Submit();
+			m_lbd->SetData("lightColor", &light.properties.color, sizeof(glm::vec3));
+			m_lbd->SetData("lightPower", &light.properties.power, sizeof(float));
+			m_lbd->SetData("ambient", &light.properties.ambient, sizeof(float));
+			m_lbd->SetData("diffuse", &light.properties.diffuse, sizeof(float));
+			m_lbd->SetData("specular", &light.properties.specular, sizeof(float));
 
-			//bind vao before drawing
-			light->object->vao->Bind();
+			o_gbd->SetData("M", &light.object->node->TopDownTransformF, sizeof(glm::mat4));
 
-			// Draw the triangles !
-			light->object->vao->Draw();
+			m_lbd->Submit();
+			o_gbd->Submit();
+
+			light.object->materials[0][0]->vao->Bind();
+			light.object->materials[0][0]->vao->Draw();
 
 			//-----------phase 2 light-----------
-			
+
 			ShaderManager::Instance()->SetCurrentShader(lightShader);
 
 			glStencilFunc(GL_NOTEQUAL, 0, 0xFF);
@@ -882,7 +1199,7 @@ Render::drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, const
 			glEnable(GL_CULL_FACE);
 			glCullFace(GL_FRONT);
 
-			light->object->vao->Draw();
+			light.object->materials[0][0]->vao->Draw();
 
 			glCullFace(GL_BACK);
 			glDisable(GL_BLEND);
@@ -891,7 +1208,7 @@ Render::drawSpotLights(const GLuint shaderID, const GLuint shadowShaderID, const
 		}
 		else
 		{
-			light->object->inFrustum = false;
+			light.object->inFrustum = false;
 		}
 	}
 	glDisable(GL_STENCIL_TEST);
@@ -907,9 +1224,12 @@ Render::drawHDR(const GLuint shaderID, Texture* colorTexture, Texture* bloomText
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	colorTexture->ActivateAndBind(0);
-	bloomTexture->ActivateAndBind(1);
+	if (bloomTexture != nullptr)
+	{
+		bloomTexture->ActivateAndBind(1);
+	}
 
-	psbd->UpdateAndSubmit();
+	g_psbd->UpdateAndSubmit();
 
 	Plane::Instance()->vao.Bind();
 	Plane::Instance()->vao.Draw();
@@ -921,16 +1241,15 @@ void Render::drawHDRequirectangular(const GLuint shaderID, Texture * colorTextur
 	ShaderManager::Instance()->SetCurrentShader(shaderID);
 
 	Camera* currentCamera = CameraManager::Instance()->GetCurrentCamera();
-	Matrix4 View = currentCamera->ViewMatrix;
+	glm::mat4 View = currentCamera->ViewMatrix;
 	View[3][0] = 0;
 	View[3][1] = 0;
 	View[3][2] = 0;
-	Matrix4 ViewProjection = View * currentCamera->ProjectionMatrix;
+	glm::mat4 ViewProjection = currentCamera->ProjectionMatrix * View;
 
-	Matrix4 model = Matrix4();
-	model.setIdentity();
-	model.setScale(Vector3(20, 20, 20));
-	Matrix4F MVP = (model * CameraManager::Instance()->ViewProjection).toFloat();
+	glm::mat4 model = glm::mat4(1);
+	MathUtils::SetScale(model, glm::vec3(20, 20, 20));
+	glm::mat4 MVP = (CameraManager::Instance()->ViewProjection * model);
 	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVPSkybox");
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 
@@ -941,9 +1260,18 @@ void Render::drawHDRequirectangular(const GLuint shaderID, Texture * colorTextur
 
 	colorTexture->ActivateAndBind(0);
 
-	Vao* vao = GraphicsStorage::vaos["unitCube"];
-	vao->Bind();
-	vao->Draw();
+	VertexArray* unitCube = nullptr;
+	for (auto& vao : *GraphicsStorage::assetRegistry.GetPool<VertexArray>())
+	{
+		if (vao.name.compare("unitCube") == 0)
+		{
+			unitCube = &vao;
+			break;
+		}
+	}
+	
+	unitCube->Bind();
+	unitCube->Draw();
 }
 
 void Render::drawRegion(const GLuint shaderID, int posX, int posY, int width, int height, const Texture * texture)
@@ -971,7 +1299,8 @@ Render::AddPingPongBuffer(int width, int height)
 {
 	for (int i = 0; i < 2; i++)
 	{
-		FrameBuffer* pingPongBuffer = FBOManager::Instance()->GenerateFBO(false);
+		FrameBuffer* pingPongBuffer = GraphicsStorage::assetRegistry.AllocAsset<FrameBuffer>((unsigned int)GL_FRAMEBUFFER);
+		FBOManager::Instance()->AddFrameBuffer(pingPongBuffer, false);
 		Texture* blurTexture = new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
 		blurTexture->GenerateBindSpecify();
 		blurTexture->SetLinear();
@@ -990,7 +1319,8 @@ Render::AddMultiBlurBuffer(int width, int height, int levels, double scaleX, dou
 	std::vector<FrameBuffer*>* bufferStorage = &multiBlurBufferStart;
 	for (int i = 0; i < 2; i++)
 	{
-		FrameBuffer* multiBlurBuffer = FBOManager::Instance()->GenerateFBO();
+		FrameBuffer* multiBlurBuffer = GraphicsStorage::assetRegistry.AllocAsset<FrameBuffer>((unsigned int)GL_FRAMEBUFFER);
+		FBOManager::Instance()->AddFrameBuffer(multiBlurBuffer, true);
 		//multiBlurBuffer->dynamicSize = false;
 		Texture* blurTexture = new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
 		blurTexture->GenerateBindSpecify();
@@ -1005,7 +1335,8 @@ Render::AddMultiBlurBuffer(int width, int height, int levels, double scaleX, dou
 		FrameBuffer* parentBuffer = multiBlurBuffer;
 		for (int j = 1; j < levels; j++)
 		{
-			FrameBuffer* childBlurBuffer = FBOManager::Instance()->GenerateFBO(false);
+			FrameBuffer* childBlurBuffer = GraphicsStorage::assetRegistry.AllocAsset<FrameBuffer>((unsigned int)GL_FRAMEBUFFER);
+			FBOManager::Instance()->AddFrameBuffer(multiBlurBuffer, false);
 			Texture* blurTexture = new Texture(GL_TEXTURE_2D, 0, GL_RGB32F, width, height, GL_RGB, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
 			blurTexture->GenerateBindSpecify();
 			blurTexture->SetClampingToEdge();
@@ -1027,43 +1358,91 @@ Render::AddMultiBlurBuffer(int width, int height, int levels, double scaleX, dou
 	}
 }
 
-void Render::InitializeShderBlockDatas()
+void
+Render::InitializeShderBlockDatas()
 {
-	auto ub = GraphicsStorage::GetUniformBuffer(0);
-	if (ub != nullptr) gsbd = new ShaderBlockData(ub);
-	ub = GraphicsStorage::GetUniformBuffer(1);
-	if (ub != nullptr) lsbd = new ShaderBlockData(ub);
-	ub = GraphicsStorage::GetUniformBuffer(2);
+	//geometry
+	//ShaderBlockData* o_gbd;
+	//ShaderBlockData* m_gbd;
+	//light material buffer
+	//ShaderBlockData* m_lbd;
+	//directional
+	//ShaderBlockData* o_ldbd;
+	//ShaderBlockData* o_ldsbd;
+	//spot
+	//ShaderBlockData* o_lsbd;
+	//ShaderBlockData* o_lssbd;
+	//point
+	//ShaderBlockData* o_lpbd;
+	//camera
+	//ShaderBlockData* g_csbd;
+	//post
+	//ShaderBlockData* g_psbd;
+	//time
+	//ShaderBlockData* g_tsbd;
+	//depth
+	//ShaderBlockData* m_lvpbd;
+	auto ub = GraphicsStorage::GetUniformBuffer("O_GBVars");
+	if (ub != nullptr) o_gbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("M_GBVars");
+	if (ub != nullptr) m_gbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("M_LBVars");
+	if (ub != nullptr) m_lbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("O_LDBVars");
+	if (ub != nullptr) o_ldbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("O_LDSBVars");
+	if (ub != nullptr) o_ldsbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("O_LSBVars");
+	if (ub != nullptr) o_lsbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("O_LSSBVars");
+	if (ub != nullptr) o_lssbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("O_LPBVars");
+	if (ub != nullptr) o_lpbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("M_LVPVars");
+	if (ub != nullptr) m_lvpbd = new ShaderBlockData(ub);
+	ub = GraphicsStorage::GetUniformBuffer("G_CBVars");
 	if (ub != nullptr)
 	{
-		csbd = new ShaderBlockData(ub);
-		csbd->RegisterPropertyData("VP", &CameraManager::Instance()->ViewProjectionF, sizeof(Matrix4F));
-		csbd->RegisterPropertyData("screenSize", &CameraManager::Instance()->screenSize, sizeof(Vector2F));
-		csbd->RegisterPropertyData("far", &CameraManager::Instance()->far, sizeof(float));
-		csbd->RegisterPropertyData("near", &CameraManager::Instance()->near, sizeof(float));
-		csbd->RegisterPropertyData("cameraPos", &CameraManager::Instance()->cameraPos, sizeof(Vector3F));
-		csbd->RegisterPropertyData("cameraUp", &CameraManager::Instance()->cameraUp, sizeof(Vector3F));
-		csbd->RegisterPropertyData("cameraRight", &CameraManager::Instance()->cameraRight, sizeof(Vector3F));
-		csbd->RegisterPropertyData("cameraForward", &CameraManager::Instance()->cameraForward, sizeof(Vector3F));
+		g_csbd = new ShaderBlockData(ub);
+		g_csbd->RegisterPropertyData("VP", &CameraManager::Instance()->ViewProjectionF, sizeof(glm::mat4));
+		g_csbd->RegisterPropertyData("screenSize", &CameraManager::Instance()->screenSize, sizeof(glm::vec2));
+		g_csbd->RegisterPropertyData("far", &CameraManager::Instance()->far, sizeof(float));
+		g_csbd->RegisterPropertyData("near", &CameraManager::Instance()->near, sizeof(float));
+		g_csbd->RegisterPropertyData("cameraPos", &CameraManager::Instance()->cameraPos, sizeof(glm::vec3));
+		g_csbd->RegisterPropertyData("cameraUp", &CameraManager::Instance()->cameraUp, sizeof(glm::vec3));
+		g_csbd->RegisterPropertyData("cameraRight", &CameraManager::Instance()->cameraRight, sizeof(glm::vec3));
+		g_csbd->RegisterPropertyData("cameraForward", &CameraManager::Instance()->cameraForward, sizeof(glm::vec3));
 	}
-	ub = GraphicsStorage::GetUniformBuffer(3);
+	ub = GraphicsStorage::GetUniformBuffer("G_PBVars");
 	if (ub != nullptr)
 	{
-		psbd = new ShaderBlockData(ub);
-		psbd->RegisterPropertyData("gamma", &gamma, sizeof(float));
-		psbd->RegisterPropertyData("exposure", &exposure, sizeof(float));
-		psbd->RegisterPropertyData("brightness", &brightness, sizeof(float));
-		psbd->RegisterPropertyData("contrast", &contrast, sizeof(float));
-		psbd->RegisterPropertyData("bloomIntensity", &bloomIntensity, sizeof(float));
-		psbd->RegisterPropertyData("hdrEnabled", &hdrEnabled, sizeof(bool));
-		psbd->RegisterPropertyData("bloomEnabled", &bloomEnabled, sizeof(bool));
+		g_psbd = new ShaderBlockData(ub);
+		g_psbd->RegisterPropertyData("gamma", &gamma, sizeof(float));
+		g_psbd->RegisterPropertyData("exposure", &exposure, sizeof(float));
+		g_psbd->RegisterPropertyData("brightness", &brightness, sizeof(float));
+		g_psbd->RegisterPropertyData("contrast", &contrast, sizeof(float));
+		g_psbd->RegisterPropertyData("bloomIntensity", &bloomIntensity, sizeof(float));
+		g_psbd->RegisterPropertyData("hdrEnabled", &hdrEnabled, sizeof(bool));
+		g_psbd->RegisterPropertyData("bloomEnabled", &bloomEnabled, sizeof(bool));
+	}
+	ub = GraphicsStorage::GetUniformBuffer("G_TBVars");
+	if (ub != nullptr)
+	{
+		g_tsbd = new ShaderBlockData(ub);
+		g_tsbd->RegisterPropertyData("currentTime", &Times::Instance()->currentTimeF, sizeof(float));
+		g_tsbd->RegisterPropertyData("deltaTime", &Times::Instance()->deltaTimeF, sizeof(float));
+		g_tsbd->RegisterPropertyData("deltaTimeInverse", &Times::Instance()->dtInvF, sizeof(float));
+		g_tsbd->RegisterPropertyData("previousTime", &Times::Instance()->previousTimeF, sizeof(float));
+		g_tsbd->RegisterPropertyData("timeStep", &Times::Instance()->timeStepF, sizeof(float));
 	}
 }
 
-void Render::UpdateShaderBlockDatas()
+void
+Render::UpdateShaderBlockDatas()
 {
-	if (csbd != nullptr) csbd->UpdateAndSubmit();
-	if (psbd != nullptr) psbd->UpdateAndSubmit();
+	if (g_csbd != nullptr) g_csbd->UpdateAndSubmit();
+	if (g_psbd != nullptr) g_psbd->UpdateAndSubmit();
+	if (g_tsbd != nullptr) g_tsbd->UpdateAndSubmit();
 }
 
 Texture*
@@ -1083,7 +1462,8 @@ Render::MultiBlur(Texture* sourceTexture, int outputLevel, float blurSize, GLuin
 FrameBuffer*
 Render::AddDirectionalShadowMapBuffer(int width, int height)
 {
-	dirShadowMapBuffer = FBOManager::Instance()->GenerateFBO(false);
+	dirShadowMapBuffer = GraphicsStorage::assetRegistry.AllocAsset<FrameBuffer>((unsigned int)GL_FRAMEBUFFER);
+	FBOManager::Instance()->AddFrameBuffer(dirShadowMapBuffer, false);
 	dirShadowMapTexture = new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
 	dirShadowMapTexture->GenerateBindSpecify();
 	dirShadowMapTexture->SetLinear();
@@ -1098,6 +1478,66 @@ Render::AddDirectionalShadowMapBuffer(int width, int height)
 	dirShadowMapBuffer->SpecifyTextures();
 	dirShadowMapBuffer->CheckAndCleanup();
 	return dirShadowMapBuffer;
+}
+
+void Render::RenderGraph()
+{
+	std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+	std::chrono::duration<double> elapsed_seconds;
+
+	start = std::chrono::high_resolution_clock::now();
+	/*
+	if (showRenderList)
+	{
+		ImGui::Begin("Render List", &showRenderList);
+		ImGui::Text("Draw Calls: %d", totalNrOfDrawCalls);
+		for (auto& element : finalRenderList)
+		{
+			if (dynamic_cast<RenderProfile*>(element) != nullptr)
+			{
+				ImGui::Text("\tRP: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<TextureProfile*>(element) != nullptr)
+			{
+				ImGui::Text("\tTP: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<MaterialProfile*>(element) != nullptr)
+			{
+				ImGui::Text("\tMP: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<VertexArray*>(element) != nullptr)
+			{
+				ImGui::Text("\tVao: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<RenderPass*>(element) != nullptr)
+			{
+				ImGui::Text("RPS: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<ObjectProfile*>(element) != nullptr)
+			{
+				ImGui::Text("\tOP: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<Shader*>(element) != nullptr)
+			{
+				ImGui::Text("\tSH: %s", element->name.c_str());
+			}
+			else if (dynamic_cast<VertexArray::DrawElement*>(element) != nullptr)
+			{
+				ImGui::Text("\t\tDW");
+			}
+		}
+		ImGui::End();
+	}
+	*/
+
+	for (auto& element : finalRenderList)
+	{
+		element->Execute();
+	}
+
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	executingGraphTime = elapsed_seconds.count();
 }
 
 void
@@ -1128,7 +1568,7 @@ Render::BlurTexture(Texture* sourceTexture, std::vector<FrameBuffer*>& startFram
 	int textureHeight = 0;
 	Texture* HorizontalSourceTexture = sourceTexture;
 
-	for (size_t i = 0; i < outputLevel + 1; i++)
+	for (int i = 0; i < outputLevel + 1; i++)
 	{
 		textureWidth = startFrameBuffer[i]->textures[0]->width;
 		textureHeight = startFrameBuffer[i]->textures[0]->height;
@@ -1168,7 +1608,7 @@ Render::BlurTextureAtSameSize(Texture* sourceTexture, FrameBuffer* startFrameBuf
 	float offsetWidth = blurSize / ((float)textureWidth);
 	float offsetHeight = blurSize / ((float)textureHeight);
 
-	for (size_t i = 0; i < outputLevel + 1; i++)
+	for (int i = 0; i < outputLevel + 1; i++)
 	{
 		BlurOnOneAxis(HorizontalSourceTexture, startFrameBuffer, offsetWidth, 0.f, offset); //horizontally
 		BlurOnOneAxis(startFrameBuffer->textures[0], targetFrameBuffer, 0.f, offsetHeight, offset); //vertically
@@ -1178,4 +1618,46 @@ Render::BlurTextureAtSameSize(Texture* sourceTexture, FrameBuffer* startFrameBuf
 	glViewport(0, 0, windowWidth, windowHeight);
 
 	return targetFrameBuffer->textures[0];
+}
+
+void
+Render::drawParticles(const GLuint shaderID, std::vector<ParticleSystem*>& particleSystems, FrameBuffer* targetFrameBuffer)
+{
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, targetFrameBuffer->handle); //we bind the lightandposteffect buffer for drawing
+
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
+
+	Camera* camera = CameraManager::Instance()->GetCurrentCamera();
+	int windowWidth = camera->windowWidth;
+	int windowHeight = camera->windowHeight;
+	float softScale = 0.5f;
+	float contrastPower = 0.5f;
+
+	//function should take in the render targets list
+	//GraphicsStorage::renderTargets["V_depth"]->ActivateAndBind(1);
+
+	//global
+	GLuint screenSize = glGetUniformLocation(shaderID, "screenSize");
+	glUniform2f(screenSize, windowWidth, windowHeight);
+
+	GLuint farPlane = glGetUniformLocation(shaderID, "far");
+	glUniform1f(farPlane, camera->far);
+
+	GLuint nearPlane = glGetUniformLocation(shaderID, "near");
+	glUniform1f(nearPlane, camera->near);
+
+	//material profile
+	GLuint soft = glGetUniformLocation(shaderID, "softScale");
+	glUniform1f(soft, softScale);
+
+	GLuint contrast = glGetUniformLocation(shaderID, "contrastPower");
+	glUniform1f(contrast, contrastPower);
+
+	int particlesRendered = 0;
+	for (auto& pSystem : particleSystems) //particles not affected by light, rendered in forward rendering
+	{
+		if (SceneGraph::Instance()->frustum.isBoundingSphereInView(pSystem->object->bounds->centeredPosition, 1.0)) {
+			particlesRendered += pSystem->Draw();
+		}
+	}
 }

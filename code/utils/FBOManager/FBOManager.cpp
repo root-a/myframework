@@ -82,9 +82,8 @@ void FBOManager::BindFrameBuffer(GLuint readWriteMode, GLuint frameBuffer)
 	//printf("stored read: %d write: %d\n\n", readBuffer, drawBuffer);
 }
 
-FrameBuffer* FBOManager::Generate2DShadowMapBuffer(int width, int height)
+FrameBuffer* FBOManager::Generate2DShadowMapBuffer(FrameBuffer* staticFrameBuffer, int width, int height)
 {
-	FrameBuffer* shadowMapBuffer = GenerateFBO(false);
 	Texture* shadowMapTexture = new Texture(GL_TEXTURE_2D, 0, GL_RG32F, width, height, GL_RG, GL_FLOAT, NULL, GL_COLOR_ATTACHMENT0);
 	shadowMapTexture->GenerateBindSpecify();
 	shadowMapTexture->SetLinear();
@@ -93,32 +92,69 @@ FrameBuffer* FBOManager::Generate2DShadowMapBuffer(int width, int height)
 	shadowDepthTexture->GenerateBindSpecify();
 	shadowDepthTexture->SetDefaultParameters();
 
-	shadowMapBuffer->RegisterTexture(shadowMapTexture);
-	shadowMapBuffer->RegisterTexture(shadowDepthTexture);
+	staticFrameBuffer->RegisterTexture(shadowMapTexture);
+	staticFrameBuffer->RegisterTexture(shadowDepthTexture);
 
-	shadowMapBuffer->SpecifyTextures();
+	staticFrameBuffer->SpecifyTextures();
 	
-	shadowMapBuffer->CheckAndCleanup();
-	return shadowMapBuffer;
+	staticFrameBuffer->CheckAndCleanup();
+	return staticFrameBuffer;
 }
 
-FrameBuffer* FBOManager::Generate3DShadowMapBuffer(int width, int height)
+FrameBuffer* FBOManager::Generate3DShadowMapBuffer(FrameBuffer* staticFrameBuffer, int width, int height)
 {
-	FrameBuffer* shadowMapBuffer = GenerateFBO(false);
 	Texture* shadowDepthTexture = new Texture(GL_TEXTURE_CUBE_MAP, 0, GL_DEPTH_COMPONENT32, width, height, GL_DEPTH_COMPONENT, GL_FLOAT, NULL, GL_DEPTH_ATTACHMENT);
 	shadowDepthTexture->GenerateBindSpecify();
 	shadowDepthTexture->SetClampingToEdge();
 	shadowDepthTexture->SetNearest();
 
-	shadowMapBuffer->RegisterTexture(shadowDepthTexture);
+	staticFrameBuffer->RegisterTexture(shadowDepthTexture);
 	
-	shadowMapBuffer->SpecifyTextures();
+	staticFrameBuffer->SpecifyTextures();
 	
 	glDrawBuffer(GL_NONE);
 	glReadBuffer(GL_NONE);
 	
-	shadowMapBuffer->CheckAndCleanup();
-	return shadowMapBuffer;
+	staticFrameBuffer->CheckAndCleanup();
+	return staticFrameBuffer;
+}
+
+FrameBuffer* FBOManager::GetCurrentDrawFrameBuffer()
+{
+	for (auto fbo : dynamicBuffers)
+	{
+		if (fbo->handle == drawBuffer)
+		{
+			return fbo;
+		}
+	}
+	for (auto fbo : staticBuffers)
+	{
+		if (fbo->handle == drawBuffer)
+		{
+			return fbo;
+		}
+	}
+	return nullptr;
+}
+
+FrameBuffer* FBOManager::GetCurrentReadFrameBuffer()
+{
+	for (auto fbo : dynamicBuffers)
+	{
+		if (fbo->handle == readBuffer)
+		{
+			return fbo;
+		}
+	}
+	for (auto fbo : staticBuffers)
+	{
+		if (fbo->handle == readBuffer)
+		{
+			return fbo;
+		}
+	}
+	return nullptr;
 }
 
 void FBOManager::DeleteFrameBuffer(FrameBuffer * buffer)
@@ -197,16 +233,14 @@ bool FBOManager::IsDynamic(FrameBuffer * buffer)
 	return false;
 }
 
-FrameBuffer* FBOManager::GenerateFBO(bool dynamic)
+void FBOManager::AddFrameBuffer(FrameBuffer* buffer, bool dynamic)
 {
 	if (dynamic)
 	{
-		dynamicBuffers.push_back(new FrameBuffer(GL_FRAMEBUFFER));
-		return dynamicBuffers.back();
+		dynamicBuffers.push_back(buffer);
 	}
 	else
 	{
-		staticBuffers.push_back(new FrameBuffer(GL_FRAMEBUFFER));
-		return staticBuffers.back();
+		staticBuffers.push_back(buffer);
 	}
 }

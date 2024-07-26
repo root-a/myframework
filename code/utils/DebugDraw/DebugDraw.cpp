@@ -5,6 +5,7 @@
 #include "Node.h"
 #include "GraphicsStorage.h"
 #include "Material.h"
+#include "TextureProfile.h"
 #include "ShaderManager.h"
 #include "Render.h"
 #include "CameraManager.h"
@@ -24,7 +25,8 @@
 #include "Plane.h"
 #include "Point.h"
 #include "Box.h"
-
+#include "ParticleSystem.h"
+#include "CircleSystem.h"
 
 
 DebugDraw::DebugDraw()
@@ -44,165 +46,218 @@ DebugDraw* DebugDraw::Instance()
 
 void DebugDraw::LoadPrimitives()
 {
-	debugMat = new Material();
-	debugMat->AssignTexture(GraphicsStorage::textures.at(0));
-
-	Object* newObject = new Object();
-	newObject->AssignMaterial(debugMat);
-	newObject->vao = GraphicsStorage::vaos["tetra"];
-	newObject->bounds->SetUp(GraphicsStorage::objs["tetra"]->center_of_mesh, GraphicsStorage::objs["tetra"]->dimensions, GraphicsStorage::objs["tetra"]->name);
-	debugShapes["tetra"] = newObject;
-
-	newObject = new Object();
-	newObject->AssignMaterial(debugMat);
-	newObject->vao = GraphicsStorage::vaos["pyramid"];
-	newObject->bounds->SetUp(GraphicsStorage::objs["pyramid"]->center_of_mesh, GraphicsStorage::objs["pyramid"]->dimensions, GraphicsStorage::objs["pyramid"]->name);
-	debugShapes["pyramid"] = newObject;
-
-	newObject = new Object();
-	newObject->AssignMaterial(debugMat);
-	newObject->vao = GraphicsStorage::vaos["cube"];
-	newObject->bounds->SetUp(GraphicsStorage::objs["cube"]->center_of_mesh, GraphicsStorage::objs["cube"]->dimensions, GraphicsStorage::objs["cube"]->name);
-	debugShapes["cube"] = newObject;
-
-	newObject = new Object();
-	newObject->AssignMaterial(debugMat);
-	newObject->vao = GraphicsStorage::vaos["sphere"];
-	newObject->bounds->SetUp(GraphicsStorage::objs["sphere"]->center_of_mesh, GraphicsStorage::objs["sphere"]->dimensions, GraphicsStorage::objs["sphere"]->name);
-	debugShapes["sphere"] = newObject;
-
-	newObject = new Object();
-	newObject->AssignMaterial(debugMat);
-	newObject->vao = GraphicsStorage::vaos["icosphere"];
-	newObject->bounds->SetUp(GraphicsStorage::objs["icosphere"]->center_of_mesh, GraphicsStorage::objs["icosphere"]->dimensions, GraphicsStorage::objs["icosphere"]->name);
-	debugShapes["icosphere"] = newObject;
-
-	newObject = new Object();
-	newObject->AssignMaterial(debugMat);
-	newObject->vao = GraphicsStorage::vaos["unitCube"];
-	newObject->bounds->SetUp(GraphicsStorage::objs["unitCube"]->center_of_mesh, GraphicsStorage::objs["unitCube"]->dimensions, GraphicsStorage::objs["unitCube"]->name);
-	debugShapes["unitCube"] = newObject;
+	//debugMat = new Material();
+	//debugShapes;
 }
 
-void DebugDraw::DrawShapeAtPos(const char* shapeName, const Vector3& pos)
+void DebugDraw::DrawShapeAtPos(const char* shapeName, const glm::vec3& pos)
 {
 	Object* shape = DebugDraw::Instance()->debugShapes[shapeName];
 	shape->node->SetPosition(pos);
-	shape->node->SetScale(Vector3(0.5f, 0.5f, 0.5f));
+	shape->node->SetScale(glm::vec3(0.5f, 0.5f, 0.5f));
 	shape->node->UpdateNode(Node());
-	Render::Instance()->drawSingle(GraphicsStorage::shaderIDs["geometry"], shape, *View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
+	Render::Instance()->drawSingle(GraphicsStorage::shaderIDs["GeometryPicking"], shape, *View**Projection, ShaderManager::Instance()->GetCurrentShaderID());
 }
 
-void DebugDraw::DrawLine(const Vector3& normal, const Vector3& position, float width)
+void DebugDraw::DrawLine(const glm::vec3& normal, const glm::vec3& position)
 {
-	Matrix4 model = Matrix4::translation(position);
-	double length = normal.vectLengt();
-	Vector3 normalized = normal.vectNormalize();
+	glm::mat4 model = glm::translate(glm::mat4(1), position);
+	float length = glm::length(normal);
+	glm::vec3 normalized = glm::normalize(normal);
 	
-	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normalized);
-	double tetha = acos(normalized.z);
-	if (axis.squareMag() < 0.0001f)
+	glm::vec3 axis = glm::cross(glm::vec3(0.f, 0.f, 1.f), normalized);
+	float tetha = acos(normalized.z);
+	if (glm::dot(axis, axis) < 0.0001f)
 	{
-		axis = Vector3(1.f, 0.f, 0.f);
+		axis = glm::vec3(1.f, 0.f, 0.f);
 	}
 	if (tetha != 0)
 	{
-		double  deg = (tetha * 180.f) / 3.14159f;
-		model = Matrix4::rotateAngle(axis, deg)*model;
+		//float  deg = (tetha * 180.f) / 3.14159f;
+		model = glm::rotate(model, tetha, axis);
 	}
 
-	model = Matrix4::scale(Vector3(length, length, length))*model;
+	model = glm::scale(model, glm::vec3(length, length, length));
 	
-	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
-	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Line::Instance()->Draw(model, *View, *Projection, wireframeShader);
-	ShaderManager::Instance()->SetCurrentShader(prevShader);
+	wireframeShader->Execute();
+	Line::Instance()->Draw(model, *View, *Projection, wireframeShader->shaderID);
 }
 
 
-void DebugDraw::DrawNormal(const Vector3& normal, const Vector3& position, float width /*= 4.f*/)
+void DebugDraw::DrawNormal(const glm::vec3& normal, const glm::vec3& position)
 {
-	Matrix4 model = Matrix4::translation(position);
-	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normal);
-	double tetha = acos(normal.z);
-	if (axis.squareMag() < 0.0001f)
+	glm::mat4 model = glm::translate(glm::mat4(1), position);
+	glm::vec3 axis = glm::cross(glm::vec3(0.f, 0.f, 1.f), normal);
+	float tetha = acos(normal.z);
+	if (glm::dot(axis, axis) < 0.0001f)
 	{
-		axis = Vector3(1.f, 0.f, 0.f);
+		axis = glm::vec3(1.f, 0.f, 0.f);
 	}
 	if (tetha != 0)
 	{
-		double  deg = (tetha * 180.f) / 3.14159f;
-		model = Matrix4::rotateAngle(axis, deg)*model;
+		//float  deg = (tetha * 180.f) / 3.14159f;
+		model = glm::rotate(model, tetha, axis);
 	}
-	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
-	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Line::Instance()->Draw(model, *View, *Projection, wireframeShader);
-	Point::Instance()->Draw(model, *View, *Projection, wireframeShader);
-	ShaderManager::Instance()->SetCurrentShader(prevShader);
+
+	wireframeShader->Execute();
+	Line::Instance()->Draw(model, *View, *Projection, wireframeShader->shaderID);
+	Point::Instance()->Draw(model, *View, *Projection, wireframeShader->shaderID);
 }
 
-void DebugDraw::DrawPlane(const Vector3& normal, const Vector3& position, const Vector3& halfExtent)
+void DebugDraw::DrawFrustum(glm::vec3* frustumVertices) const
 {
-	Matrix4 model = Matrix4::translation(position);
-	Vector3 axis = Vector3(0.f,0.f,1.f).crossProd(normal);
-	double tetha = acos(normal.z);
-	if (axis.squareMag() < 0.0001f)
+	FastPoint* point = DebugDraw::Instance()->pointSystems.front()->GetPointOnce();
+	point->data.position = frustumVertices[(int)Camera::FrustumVertices::frustumCenter];
+	point->data.color = glm::vec4(0, 1, 1, 1);
+
+	FastLine* line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::frustumOrigin]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::nearUpperLeftCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::frustumOrigin]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::nearUpperRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::frustumOrigin]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::nearLowerLeftCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::frustumOrigin]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::nearLowerRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::nearUpperLeftCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::farUpperLeftCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::nearUpperRightCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::farUpperRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::nearLowerLeftCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::farLowerLeftCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::nearLowerRightCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::farLowerRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::nearUpperLeftCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::nearUpperRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::nearLowerLeftCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::nearLowerRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::nearLowerLeftCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::nearUpperLeftCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::nearLowerRightCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::nearUpperRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::farUpperLeftCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::farUpperRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::farLowerLeftCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::farLowerRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+	
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::farLowerLeftCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::farUpperLeftCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+
+	line = DebugDraw::Instance()->lineSystems.front()->GetLineOnce();
+	line->SetPositionA(frustumVertices[(int)Camera::FrustumVertices::farLowerRightCorner]);
+	line->SetPositionB(frustumVertices[(int)Camera::FrustumVertices::farUpperRightCorner]);
+	line->data.colorA = glm::vec4(1, 0, 0, 1);
+	line->data.colorB = glm::vec4(1, 0, 0, 1);
+}
+
+void DebugDraw::DrawPlane(const glm::vec3& normal, const glm::vec3& position, const glm::vec3& halfExtent)
+{
+	glm::mat4 model = glm::translate(glm::mat4(1), position);
+	glm::vec3 axis = glm::cross(glm::vec3(0.f,0.f,1.f), normal);
+	float tetha = acos(normal.z);
+	if (glm::dot(axis, axis) < 0.0001f)
 	{
-		axis = Vector3(1.f, 0.f, 0.f);
+		axis = glm::vec3(1.f, 0.f, 0.f);
 	}
 	if (tetha != 0)
 	{
-		double  deg = (tetha * 180.f) / 3.14159f;
-		model = Matrix4::rotateAngle(axis, deg)*model;
+		//float  deg = (tetha * 180.f) / 3.14159f;
+		model = glm::rotate(model, tetha, axis);
 	}
-	model = Matrix4::scale(halfExtent) * model;
+	model = glm::scale(model, halfExtent);
 
-	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
-	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Plane::Instance()->Draw(model, *View, *Projection, wireframeShader);
-	ShaderManager::Instance()->SetCurrentShader(prevShader);
+	wireframeShader->Execute();
+	Plane::Instance()->Draw(model, *View, *Projection, wireframeShader->shaderID);
 }
 
 
-void DebugDraw::DrawPlaneN(const Vector3& normal, const Vector3& position, const Vector3& halfExtent /*= Vector3(1, 1, 1)*/)
+void DebugDraw::DrawPlaneN(const glm::vec3& normal, const glm::vec3& position, const glm::vec3& halfExtent /*= glm::vec3(1, 1, 1)*/)
 {
-	Matrix4 model = Matrix4::translation(position);
-	Vector3 axis = Vector3(0.f, 0.f, 1.f).crossProd(normal);
-	double tetha = acos(normal.z);
-	if (axis.squareMag() < 0.0001f)
+	glm::mat4 model = glm::translate(glm::mat4(1), position);
+	glm::vec3 axis = glm::cross(glm::vec3(0.f, 0.f, 1.f), normal);
+	float tetha = acos(normal.z);
+	if (glm::dot(axis, axis) < 0.0001f)
 	{
-		axis = Vector3(1.f, 0.f, 0.f);
+		axis = glm::vec3(1.f, 0.f, 0.f);
 	}
 	if (tetha != 0)
 	{
-		double  deg = (tetha * 180.f) / 3.14159f;
-		model = Matrix4::rotateAngle(axis, deg)*model;
+		//float  deg = (tetha * 180.f) / 3.14159f;
+		model = glm::rotate(model, tetha, axis);
 	}
-	model = Matrix4::scale(halfExtent) * model;
+	model = glm::scale(model, halfExtent);
 
-	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
-	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Plane::Instance()->Draw(model, *View, *Projection, wireframeShader);
-	Line::Instance()->Draw(model, *View, *Projection, wireframeShader);
-	Point::Instance()->Draw(model, *View, *Projection, wireframeShader);
-	ShaderManager::Instance()->SetCurrentShader(prevShader);
+	wireframeShader->Execute();
+	Plane::Instance()->Draw(model, *View, *Projection, wireframeShader->shaderID);
+	Line::Instance()->Draw(model, *View, *Projection, wireframeShader->shaderID);
+	Point::Instance()->Draw(model, *View, *Projection, wireframeShader->shaderID);
 }
 
 
-void DebugDraw::DrawPoint(const Vector3& position, float size)
+void DebugDraw::DrawPoint(const glm::vec3& position, float size)
 {
-	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
-	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Point::Instance()->Draw(Matrix4::translation(position), *View, *Projection, wireframeShader, size);
-	ShaderManager::Instance()->SetCurrentShader(prevShader);
+	wireframeShader->Execute();
+	Point::Instance()->Draw(glm::translate(glm::mat4(1), position), *View, *Projection, wireframeShader->shaderID, size);
 }
 
-void DebugDraw::DrawCrossHair(const Vector3F& color)
+void DebugDraw::DrawCrossHair(const glm::vec3& color)
 {
 	double scale = 20.0;
 	double offset = scale / 2.0;
@@ -210,24 +265,22 @@ void DebugDraw::DrawCrossHair(const Vector3F& color)
 	double windowHeight = (double)CameraManager::Instance()->GetCurrentCamera()->windowHeight;
 	double x = windowWidth / 2.0;
 	double y = windowHeight / 2.0;
-	Matrix4 model1 = Matrix4::translation(x, y + offset, 0.0);
-	Matrix4 model2 = Matrix4::translation(x - offset, y, 0.0);
+	glm::mat4 model1 = glm::translate(glm::mat4(1), glm::vec3(x, y + offset, 0.0));
+	glm::mat4 model2 = glm::translate(glm::mat4(1), glm::vec3(x - offset, y, 0.0));
 
-	model1 = Matrix4::rotateAngle(Vector3(1.0, 0.0, 0.0), 90.0)*model1;
-	model2 = Matrix4::rotateAngle(Vector3(0.0, 1.0, 0.0), 90.0)*model2;
-	Matrix4 scaleM = Matrix4::scale(scale, scale, scale);
-	model1 = scaleM * model1;
-	model2 = scaleM * model2;
-	Matrix4 view = Matrix4(1);
-	Matrix4 proj = Matrix4::orthographicTopToBottom(-1.0, 2000.0, 0.0, windowWidth, windowHeight, 0.0);
-	Line::Instance()->color = color;
+	model1 = glm::rotate(model1, glm::radians(90.0f), glm::vec3(1.0, 0.0, 0.0));
+	model2 = glm::rotate(model2, glm::radians(90.0f), glm::vec3(0.0, 1.0, 0.0));
+	model1 = glm::scale(model1, glm::vec3(scale, scale, scale));
+	model2 = glm::scale(model2, glm::vec3(scale, scale, scale));
+	glm::mat4 view = glm::mat4(1);
+	glm::mat4 proj = glm::ortho(0.0, windowWidth, 0.0, windowHeight, -1.0, 2000.0);
+	//glm::mat4 proj = glm::mat4::orthographicTopToBottom(-1.0, 2000.0, 0.0, windowWidth, windowHeight, 0.0);
+	
+	//Line::Instance()->mat->color = color;
 
-	GLuint prevShader = ShaderManager::Instance()->GetCurrentShaderID();
-	GLuint wireframeShader = GraphicsStorage::shaderIDs["wireframe"];
-	ShaderManager::Instance()->SetCurrentShader(wireframeShader);
-	Line::Instance()->Draw(model1, view, proj, wireframeShader);
-	Line::Instance()->Draw(model2, view, proj, wireframeShader);
-	ShaderManager::Instance()->SetCurrentShader(prevShader);
+	wireframeShader->Execute();
+	Line::Instance()->Draw(model1, view, proj, wireframeShader->shaderID);
+	Line::Instance()->Draw(model2, view, proj, wireframeShader->shaderID);
 }
 
 void DebugDraw::DrawQuad()
@@ -236,7 +289,7 @@ void DebugDraw::DrawQuad()
 	Plane::Instance()->vao.Bind();
 
 	// Draw the triangles !
-	glDrawElements(GL_TRIANGLES, Plane::Instance()->vao.indicesCount, GL_UNSIGNED_SHORT, (void*)0); // mode, count, type, element array buffer offset
+	Plane::Instance()->vao.Draw();
 }
 
 void DebugDraw::DrawRegion(int posX, int posY, int width, int height, const Texture* texture)
@@ -264,15 +317,43 @@ void DebugDraw::Clear()
 
 void DebugDraw::Init(Object* debugObject)
 {
-	BoundingBoxSystem* bbs = new BoundingBoxSystem(3000);
+	BoundingBoxSystem* bbs = GraphicsStorage::assetRegistry.AllocAsset<BoundingBoxSystem>(3000);
 	bbSystems.push_back(bbs);
-	LineSystem* ls = new LineSystem(4000);
+	LineSystem* ls = GraphicsStorage::assetRegistry.AllocAsset<LineSystem>(4000);
 	lineSystems.push_back(ls);
-	PointSystem* ps = new PointSystem(7000);
+	PointSystem* ps = GraphicsStorage::assetRegistry.AllocAsset<PointSystem>(7000);
 	pointSystems.push_back(ps);
+	CircleSystem* cs = GraphicsStorage::assetRegistry.AllocAsset<CircleSystem>(7000);
+	circleSystems.push_back(cs);
 	debugObject->AddComponent(bbs);
 	debugObject->AddComponent(ls);
 	debugObject->AddComponent(ps);
+	debugObject->AddComponent(cs);
+	debugObject->AddComponent(GraphicsStorage::assetRegistry.AllocAsset<Node>());
+	debugObject->name = "debug draw object";
+
+	for (auto& shader : *GraphicsStorage::assetRegistry.GetPool<Shader>())
+	{
+		if (shader.name.compare("BB") == 0)
+		{
+			wireframeShader = &shader;
+		}
+
+		if (shader.name.compare("FastBB") == 0)
+		{
+			fastBBShader = &shader;
+		}
+
+		if (shader.name.compare("FastLine") == 0)
+		{
+			fastLineShader = &shader;
+		}
+
+		if (shader.name.compare("FastCircle") == 0)
+		{
+			fastCircleShader = &shader;
+		}
+	}
 }
 
 void
@@ -282,13 +363,25 @@ DebugDraw::DrawFastLineSystems(GLuint fboToDrawTo)
 	glEnable(GL_DEPTH_TEST);
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTo);
 
-	GenerateFastLines();
+	//GenerateFastLines();
 
-	GLuint fastLineShader = GraphicsStorage::shaderIDs["fastLine"];
-	ShaderManager::Instance()->SetCurrentShader(fastLineShader);
+	fastLineShader->Execute();
 	for (auto& lSystem : lineSystems)
 	{
-		lSystem->Draw(CameraManager::Instance()->ViewProjection, fastLineShader);
+		lSystem->Draw(CameraManager::Instance()->ViewProjection, fastLineShader->shaderID);
+	}
+}
+
+void DebugDraw::DrawFastCircleSystems(GLuint fboToDrawTo)
+{
+	glDepthMask(GL_TRUE);
+	glEnable(GL_DEPTH_TEST);
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTo);
+
+	fastCircleShader->Execute();
+	for (auto& cSystem : circleSystems)
+	{
+		cSystem->Draw(CameraManager::Instance()->ViewProjection, fastCircleShader->shaderID);
 	}
 }
 
@@ -299,19 +392,17 @@ DebugDraw::DrawFastPointSystems(GLuint fboToDrawTo)
 	glEnable(GL_DEPTH_TEST);
 	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, fboToDrawTo);
 
-	GLuint fastLineShader = GraphicsStorage::shaderIDs["fastLine"];
-	ShaderManager::Instance()->SetCurrentShader(fastLineShader);
+	fastLineShader->Execute();
 	for (auto& poSystem : pointSystems)
 	{
-		poSystem->Draw(CameraManager::Instance()->ViewProjection, fastLineShader, 5.f);
+		poSystem->Draw(CameraManager::Instance()->ViewProjection, fastLineShader->shaderID, 5.f);
 	}
 }
 
 void
 DebugDraw::DrawBoundingBoxes(GLuint fboToDrawTo)
 {
-	GLuint fastBBShader = GraphicsStorage::shaderIDs["fastBB"];
-	ShaderManager::Instance()->SetCurrentShader(fastBBShader);
+	fastBBShader->Execute();
 
 	GenerateBoudingBoxes();
 
@@ -323,7 +414,7 @@ DebugDraw::DrawBoundingBoxes(GLuint fboToDrawTo)
 	boundingBoxesDrawn = 0;
 	for (auto& bbSystem : bbSystems)
 	{
-		boundingBoxesDrawn += bbSystem->Draw(CameraManager::Instance()->ViewProjection, fastBBShader);
+		boundingBoxesDrawn += bbSystem->Draw(CameraManager::Instance()->ViewProjection, fastBBShader->shaderID);
 	}	
 }
 
@@ -331,17 +422,17 @@ void DebugDraw::GenerateBoudingBoxes()
 {	
 	for (auto& bbSystem : bbSystems)
 	{
-		for (auto obj : SceneGraph::Instance()->allObjects)
+		for (auto obj : SceneGraph::Instance()->objectsInFrustum)
 		{
 			if (obj->bounds != nullptr)
 			{
 				FastBoundingBox* fastOBB = bbSystem->GetBoundingBoxOnce();
-				fastOBB->color = &obj->bounds->obb.color;
-				fastOBB->model = &obj->bounds->obb.model;
+				fastOBB->data.color = obj->bounds->obb.color;
+				fastOBB->data.model = obj->bounds->obb.model;
 
 				FastBoundingBox* fastAABB = bbSystem->GetBoundingBoxOnce();
-				fastAABB->color = &obj->bounds->aabb.color;
-				fastAABB->model = &obj->bounds->aabb.model;
+				fastAABB->data.color = obj->bounds->aabb.color;
+				fastAABB->data.model = obj->bounds->aabb.model;
 			}
 		}
 	}
@@ -351,9 +442,9 @@ void
 DebugDraw::GenerateFastLines()
 {
 	if (DebugDraw::Instance()->lineSystems.empty()) return;
-	for (auto& child : SceneGraph::Instance()->SceneObject->node->children)
+	for (auto& child : SceneGraph::Instance()->SceneRoot.children)
 	{
-		GenerateFastLineChildren(SceneGraph::Instance()->SceneObject->node, child);
+		GenerateFastLineChildren(&SceneGraph::Instance()->SceneRoot, child);
 	}
 }
 

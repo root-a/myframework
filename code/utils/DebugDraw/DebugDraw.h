@@ -12,6 +12,8 @@ class BoundingBoxSystem;
 class PointSystem;
 class FrameBuffer;
 class Node;
+class CircleSystem;
+class Shader;
 
 class DebugDraw
 {
@@ -20,32 +22,35 @@ class DebugDraw
 public:
 	static DebugDraw* Instance();
 
-	void DrawShapeAtPos(const char* shapeName, const Vector3& pos);
-	void DrawLine(const Vector3& normal, const Vector3& position, float width = 4.f);
-	void DrawPlane(const Vector3& normal, const Vector3& position, const Vector3& halfExtent = Vector3(1.0, 1.0, 1.0));
-	void DrawPlaneN(const Vector3& normal, const Vector3& position, const Vector3& halfExtent = Vector3(1.0, 1.0, 1.0));
-	void DrawPoint(const Vector3& position, float size = 10.f);
-	void DrawNormal(const Vector3& normal, const Vector3& position, float width = 4.f);
-	void DrawCrossHair(const Vector3F& color = Vector3F(1.f, 1.f, 0.f));
+	void DrawShapeAtPos(const char* shapeName, const glm::vec3& pos);
+	void DrawLine(const glm::vec3& normal, const glm::vec3& position);
+	void DrawPlane(const glm::vec3& normal, const glm::vec3& position, const glm::vec3& halfExtent = glm::vec3(1.0, 1.0, 1.0));
+	void DrawPlaneN(const glm::vec3& normal, const glm::vec3& position, const glm::vec3& halfExtent = glm::vec3(1.0, 1.0, 1.0));
+	void DrawPoint(const glm::vec3& position, float size = 10.f);
+	void DrawNormal(const glm::vec3& normal, const glm::vec3& position);
+	void DrawFrustum(glm::vec3* frustumVertices) const;
+	void DrawCrossHair(const glm::vec3& color = glm::vec3(1.f, 1.f, 0.f));
 	void DrawQuad();
 	void DrawRegion(int posX, int posY, int width, int height, const Texture* texture);
 	void Clear();
 	void Init(Object* debugObject);
 	void DrawFastLineSystems(GLuint fboToDrawTo = 0);
 	void DrawFastPointSystems(GLuint fboToDrawTo = 0);
+	void DrawFastCircleSystems(GLuint fboToDrawTo = 0);
 	void DrawBoundingBoxes(GLuint fboToDrawTo = 0);
 	void GenerateBoudingBoxes();
 	void GenerateFastLines();
 	void GenerateFastLineChildren(Node * parent, Node * child);
 	Material* debugMat;
 	
-	Matrix4* Projection;
-	Matrix4* View;
+	glm::mat4* Projection;
+	glm::mat4* View;
 	void LoadPrimitives();
 	bool debug = false;
 	std::vector<LineSystem*> lineSystems;
 	std::vector<BoundingBoxSystem*> bbSystems;
 	std::vector<PointSystem*> pointSystems;
+	std::vector<CircleSystem*> circleSystems;
 	int boundingBoxesDrawn = 0;
 private:
 	DebugDraw();
@@ -55,5 +60,9 @@ private:
 	//assign
 	DebugDraw& operator=(const DebugDraw&);
 	std::unordered_map<std::string, Object*> debugShapes;
+	Shader* wireframeShader;
+	Shader* fastBBShader;
+	Shader* fastLineShader;
+	Shader* fastCircleShader;
 };
 

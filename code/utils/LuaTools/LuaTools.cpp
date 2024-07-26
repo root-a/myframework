@@ -1,16 +1,13 @@
 #include "LuaTools.h"
 #define luajit_c
+
 extern "C" {
-	//#include "include/lua.h"
-#include "lauxlib.h"
-#include "lualib.h"
-#include "luajit.h"
-//#include "include/luaconf.h"
+	#include "lauxlib.h"
+	#include "lualib.h"
+	#include "luajit.h"
 }
-//#include "luajit.hpp"
 
-
-//#include "lj_arch.h"
+#include "lj_arch.h"
 
 #if LJ_TARGET_POSIX
 #include <unistd.h>
@@ -34,6 +31,8 @@ extern "C" {
 LuaTools::Smain LuaTools::smain;
 lua_State * LuaTools::luaState = NULL;
 const char * LuaTools::progname = LUA_PROGNAME;
+char* LuaTools::empty_argv[] = {NULL, NULL};
+
 LuaTools::LuaTools()
 {
 }
@@ -72,7 +71,7 @@ void LuaTools::StackDump(lua_State * l)
 }
 
 #if !LJ_TARGET_CONSOLE
-void LuaTools::lstop(lua_State *L, lua_Debug *ar)
+void LuaTools::lstop(lua_State* L, lua_Debug* ar)
 {
 	(void)ar;  /* unused arg. */
 	lua_sethook(L, NULL, 0, 0);
@@ -85,7 +84,7 @@ void LuaTools::lstop(lua_State *L, lua_Debug *ar)
 void LuaTools::laction(int i)
 {
 	signal(i, SIG_DFL); /* if another SIGINT happens before lstop,
-						terminate process (default action) */
+			   terminate process (default action) */
 	lua_sethook(luaState, lstop, LUA_MASKCALL | LUA_MASKRET | LUA_MASKCOUNT, 1);
 }
 #endif
@@ -109,25 +108,25 @@ void LuaTools::print_usage(void)
 	fflush(stderr);
 }
 
-void LuaTools::l_message(const char *pname, const char *msg)
+void LuaTools::l_message(const char* msg)
 {
-	if (pname) { fputs(pname, stderr); fputc(':', stderr); fputc(' ', stderr); }
+	if (progname) { fputs(progname, stderr); fputc(':', stderr); fputc(' ', stderr); }
 	fputs(msg, stderr); fputc('\n', stderr);
 	fflush(stderr);
 }
 
-int LuaTools::report(lua_State *L, int status)
+int LuaTools::report(lua_State* L, int status)
 {
 	if (status && !lua_isnil(L, -1)) {
-		const char *msg = lua_tostring(L, -1);
+		const char* msg = lua_tostring(L, -1);
 		if (msg == NULL) msg = "(error object is not a string)";
-		l_message(progname, msg);
+		l_message(msg);
 		lua_pop(L, 1);
 	}
 	return status;
 }
 
-int LuaTools::traceback(lua_State *L)
+int LuaTools::traceback(lua_State* L)
 {
 	if (!lua_isstring(L, 1)) { /* Non-string error object? Try metamethod. */
 		if (lua_isnoneornil(L, 1) ||
@@ -140,14 +139,13 @@ int LuaTools::traceback(lua_State *L)
 	return 1;
 }
 
-int LuaTools::docall(lua_State *L, int narg, int clear)
+int LuaTools::docall(lua_State* L, int narg, int clear)
 {
 	int status;
 	int base = lua_gettop(L) - narg;  /* function index */
 	lua_pushcfunction(L, traceback);  /* push traceback function */
 	lua_insert(L, base);  /* put it under chunk and args */
 #if !LJ_TARGET_CONSOLE
-	luaState = L;
 	signal(SIGINT, laction);
 #endif
 	status = lua_pcall(L, narg, (clear ? 0 : LUA_MULTRET), base);
@@ -155,7 +153,7 @@ int LuaTools::docall(lua_State *L, int narg, int clear)
 	signal(SIGINT, SIG_DFL);
 #endif
 	lua_remove(L, base);  /* remove traceback function */
-						  /* force a complete garbage collection in case of errors */
+	/* force a complete garbage collection in case of errors */
 	if (status != LUA_OK) lua_gc(L, LUA_GCCOLLECT, 0);
 	return status;
 }
@@ -165,10 +163,10 @@ void LuaTools::print_version(void)
 	fputs(LUAJIT_VERSION " -- " LUAJIT_COPYRIGHT ". " LUAJIT_URL "\n", stdout);
 }
 
-void LuaTools::print_jit_status(lua_State *L)
+void LuaTools::print_jit_status(lua_State* L)
 {
 	int n;
-	const char *s;
+	const char* s;
 	lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
 	lua_getfield(L, -1, "jit");  /* Get jit.* module table. */
 	lua_remove(L, -2);
@@ -182,9 +180,10 @@ void LuaTools::print_jit_status(lua_State *L)
 		fputs(s, stdout);
 	}
 	putc('\n', stdout);
+	lua_settop(L, 0);  /* clear stack */
 }
 
-void LuaTools::createargtable(lua_State *L, char **argv, int argc, int argf)
+void LuaTools::createargtable(lua_State* L, char** argv, int argc, int argf)
 {
 	int i;
 	lua_createtable(L, argc - argf, argf);
@@ -195,28 +194,28 @@ void LuaTools::createargtable(lua_State *L, char **argv, int argc, int argf)
 	lua_setglobal(L, "arg");
 }
 
-int LuaTools::dofile(lua_State *L, const char *name)
+int LuaTools::dofile(lua_State* L, const char* name)
 {
 	int status = luaL_loadfile(L, name) || docall(L, 0, 1);
 	return report(L, status);
 }
 
-int LuaTools::dostring(lua_State *L, const char *s, const char *name)
+int LuaTools::dostring(lua_State* L, const char* s, const char* name)
 {
 	int status = luaL_loadbuffer(L, s, strlen(s), name) || docall(L, 0, 1);
 	return report(L, status);
 }
 
-int LuaTools::dolibrary(lua_State *L, const char *name)
+int LuaTools::dolibrary(lua_State* L, const char* name)
 {
 	lua_getglobal(L, "require");
 	lua_pushstring(L, name);
 	return report(L, docall(L, 1, 1));
 }
 
-void LuaTools::write_prompt(lua_State *L, int firstline)
+void LuaTools::write_prompt(lua_State* L, int firstline)
 {
-	const char *p;
+	const char* p;
 	lua_getfield(L, LUA_GLOBALSINDEX, firstline ? "_PROMPT" : "_PROMPT2");
 	p = lua_tostring(L, -1);
 	if (p == NULL) p = firstline ? LUA_PROMPT : LUA_PROMPT2;
@@ -225,12 +224,12 @@ void LuaTools::write_prompt(lua_State *L, int firstline)
 	lua_pop(L, 1);  /* remove global */
 }
 
-int LuaTools::incomplete(lua_State *L, int status)
+int LuaTools::incomplete(lua_State* L, int status)
 {
 	if (status == LUA_ERRSYNTAX) {
 		size_t lmsg;
-		const char *msg = lua_tolstring(L, -1, &lmsg);
-		const char *tp = msg + lmsg - (sizeof(LUA_QL("<eof>")) - 1);
+		const char* msg = lua_tolstring(L, -1, &lmsg);
+		const char* tp = msg + lmsg - (sizeof(LUA_QL("<eof>")) - 1);
 		if (strstr(msg, LUA_QL("<eof>")) == tp) {
 			lua_pop(L, 1);
 			return 1;
@@ -239,7 +238,7 @@ int LuaTools::incomplete(lua_State *L, int status)
 	return 0;  /* else... */
 }
 
-int LuaTools::pushline(lua_State *L, int firstline)
+int LuaTools::pushline(lua_State* L, int firstline)
 {
 	char buf[LUA_MAXINPUT];
 	write_prompt(L, firstline);
@@ -256,7 +255,7 @@ int LuaTools::pushline(lua_State *L, int firstline)
 	return 0;
 }
 
-int LuaTools::loadline(lua_State *L)
+int LuaTools::loadline(lua_State* L)
 {
 	int status;
 	lua_settop(L, 0);
@@ -275,10 +274,10 @@ int LuaTools::loadline(lua_State *L)
 	return status;
 }
 
-void LuaTools::dotty(lua_State *L)
+void LuaTools::dotty(lua_State* L)
 {
 	int status;
-	const char *oldprogname = progname;
+	const char* oldprogname = progname;
 	progname = NULL;
 	while ((status = loadline(L)) != -1) {
 		if (status == LUA_OK) status = docall(L, 0, 0);
@@ -287,9 +286,8 @@ void LuaTools::dotty(lua_State *L)
 			lua_getglobal(L, "print");
 			lua_insert(L, 1);
 			if (lua_pcall(L, lua_gettop(L) - 1, 0, 0) != 0)
-				l_message(progname,
-					lua_pushfstring(L, "error calling " LUA_QL("print") " (%s)",
-						lua_tostring(L, -1)));
+				l_message(lua_pushfstring(L, "error calling " LUA_QL("print") " (%s)",
+					lua_tostring(L, -1)));
 		}
 	}
 	lua_settop(L, 0);  /* clear stack */
@@ -298,10 +296,10 @@ void LuaTools::dotty(lua_State *L)
 	progname = oldprogname;
 }
 
-int LuaTools::handle_script(lua_State *L, char **argx)
+int LuaTools::handle_script(lua_State* L, char** argx)
 {
 	int status;
-	const char *fname = argx[0];
+	const char* fname = argx[0];
 	if (strcmp(fname, "-") == 0 && strcmp(argx[-1], "--") != 0)
 		fname = NULL;  /* stdin */
 	status = luaL_loadfile(L, fname);
@@ -327,14 +325,14 @@ int LuaTools::handle_script(lua_State *L, char **argx)
 }
 
 /* Load add-on module. */
-int LuaTools::loadjitmodule(lua_State *L)
+int LuaTools::loadjitmodule(lua_State* L)
 {
 	lua_getglobal(L, "require");
 	lua_pushliteral(L, "jit.");
 	lua_pushvalue(L, -3);
 	lua_concat(L, 2);
 	if (lua_pcall(L, 1, 1, 0)) {
-		const char *msg = lua_tostring(L, -1);
+		const char* msg = lua_tostring(L, -1);
 		if (msg && !strncmp(msg, "module ", 7))
 			goto nomodule;
 		return report(L, 1);
@@ -342,8 +340,7 @@ int LuaTools::loadjitmodule(lua_State *L)
 	lua_getfield(L, -1, "start");
 	if (lua_isnil(L, -1)) {
 	nomodule:
-		l_message(progname,
-			"unknown luaJIT command or jit.* modules not installed");
+		l_message("unknown luaJIT command or jit.* modules not installed");
 		return 1;
 	}
 	lua_remove(L, -2);  /* Drop module table. */
@@ -351,12 +348,12 @@ int LuaTools::loadjitmodule(lua_State *L)
 }
 
 /* Run command with options. */
-int LuaTools::runcmdopt(lua_State *L, const char *opt)
+int LuaTools::runcmdopt(lua_State* L, const char* opt)
 {
 	int narg = 0;
 	if (opt && *opt) {
 		for (;;) {  /* Split arguments. */
-			const char *p = strchr(opt, ',');
+			const char* p = strchr(opt, ',');
 			narg++;
 			if (!p) break;
 			if (p == opt)
@@ -374,9 +371,9 @@ int LuaTools::runcmdopt(lua_State *L, const char *opt)
 }
 
 /* JIT engine control command: try jit library first or load add-on module. */
-int LuaTools::dojitcmd(lua_State *L, const char *cmd)
+int LuaTools::dojitcmd(lua_State* L, const char* cmd)
 {
-	const char *opt = strchr(cmd, '=');
+	const char* opt = strchr(cmd, '=');
 	lua_pushlstring(L, cmd, opt ? (size_t)(opt - cmd) : strlen(cmd));
 	lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
 	lua_getfield(L, -1, "jit");  /* Get jit.* module table. */
@@ -396,7 +393,7 @@ int LuaTools::dojitcmd(lua_State *L, const char *cmd)
 }
 
 /* Optimization flags. */
-int LuaTools::dojitopt(lua_State *L, const char *opt)
+int LuaTools::dojitopt(lua_State* L, const char* opt)
 {
 	lua_getfield(L, LUA_REGISTRYINDEX, "_LOADED");
 	lua_getfield(L, -1, "jit.opt");  /* Get jit.opt.* module table. */
@@ -407,7 +404,7 @@ int LuaTools::dojitopt(lua_State *L, const char *opt)
 }
 
 /* Save or list bytecode. */
-int LuaTools::dobytecode(lua_State *L, char **argv)
+int LuaTools::dobytecode(lua_State* L, char** argv)
 {
 	int narg = 0;
 	lua_pushliteral(L, "bcsave");
@@ -433,7 +430,7 @@ int LuaTools::dobytecode(lua_State *L, char **argv)
 #define FLAGS_OPTION		8
 #define FLAGS_NOENV		16
 
-int LuaTools::collectargs(char **argv, int *flags)
+int LuaTools::collectargs(char** argv, int* flags)
 {
 	int i;
 	for (i = 1; argv[i] != NULL; i++) {
@@ -455,6 +452,7 @@ int LuaTools::collectargs(char **argv, int *flags)
 			break;
 		case 'e':
 			*flags |= FLAGS_EXEC;
+			/* fallthrough */
 		case 'j':  /* LuaJIT extension */
 		case 'l':
 			*flags |= FLAGS_OPTION;
@@ -477,7 +475,7 @@ int LuaTools::collectargs(char **argv, int *flags)
 	return i;
 }
 
-int LuaTools::runargs(lua_State *L, char **argv, int argn)
+int LuaTools::runargs(lua_State* L, char** argv, int argn)
 {
 	int i;
 	for (i = 1; i < argn; i++) {
@@ -485,7 +483,7 @@ int LuaTools::runargs(lua_State *L, char **argv, int argn)
 		lua_assert(argv[i][0] == '-');
 		switch (argv[i][1]) {
 		case 'e': {
-			const char *chunk = argv[i] + 2;
+			const char* chunk = argv[i] + 2;
 			if (*chunk == '\0') chunk = argv[++i];
 			lua_assert(chunk != NULL);
 			if (dostring(L, chunk, "=(command line)") != 0)
@@ -493,7 +491,7 @@ int LuaTools::runargs(lua_State *L, char **argv, int argn)
 			break;
 		}
 		case 'l': {
-			const char *filename = argv[i] + 2;
+			const char* filename = argv[i] + 2;
 			if (*filename == '\0') filename = argv[++i];
 			lua_assert(filename != NULL);
 			if (dolibrary(L, filename))
@@ -501,7 +499,7 @@ int LuaTools::runargs(lua_State *L, char **argv, int argn)
 			break;
 		}
 		case 'j': {  /* LuaJIT extension. */
-			const char *cmd = argv[i] + 2;
+			const char* cmd = argv[i] + 2;
 			if (*cmd == '\0') cmd = argv[++i];
 			lua_assert(cmd != NULL);
 			if (dojitcmd(L, cmd))
@@ -520,12 +518,12 @@ int LuaTools::runargs(lua_State *L, char **argv, int argn)
 	return LUA_OK;
 }
 
-int LuaTools::handle_luainit(lua_State *L)
+int LuaTools::handle_luainit(lua_State* L)
 {
 #if LJ_TARGET_CONSOLE
-	const char *init = NULL;
+	const char* init = NULL;
 #else
-	const char *init = getenv(LUA_INIT);
+	const char* init = getenv(LUA_INIT);
 #endif
 	if (init == NULL)
 		return LUA_OK;
@@ -535,15 +533,20 @@ int LuaTools::handle_luainit(lua_State *L)
 		return dostring(L, init, "=" LUA_INIT);
 }
 
-int LuaTools::pmain(lua_State *L)
+static struct Smain {
+	char** argv;
+	int argc;
+	int status;
+} smain;
+
+
+int LuaTools::pmain(lua_State* L)
 {
-	struct Smain *s = &smain;
-	char **argv = s->argv;
+	struct Smain* s = &smain;
+	char** argv = s->argv;
 	int argn;
 	int flags = 0;
 	luaState = L;
-	if (argv[0] && argv[0][0]) progname = argv[0];
-
 	LUAJIT_VERSION_SYM();  /* Linker-enforced version check. */
 
 	argn = collectargs(argv, &flags);
@@ -597,12 +600,14 @@ int LuaTools::pmain(lua_State *L)
 	return 0;
 }
 
-int LuaTools::lmain(int argc, char **argv)
+int LuaTools::main(int argc, char** argv)
 {
 	int status;
-	lua_State *L = lua_open();
+	lua_State* L;
+	if (!argv[0]) argv = empty_argv; else if (argv[0][0]) progname = argv[0];
+	L = lua_open();
 	if (L == NULL) {
-		l_message(argv[0], "cannot create state: not enough memory");
+		l_message("cannot create state: not enough memory");
 		return EXIT_FAILURE;
 	}
 	smain.argc = argc;
@@ -612,4 +617,3 @@ int LuaTools::lmain(int argc, char **argv)
 	lua_close(L);
 	return (status || smain.status > 0) ? EXIT_FAILURE : EXIT_SUCCESS;
 }
-

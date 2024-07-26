@@ -22,6 +22,8 @@ ShaderManager* ShaderManager::Instance()
 GLuint ShaderManager::GetCurrentShaderID()
 {
 	return current_shader;
+	//GLint prog = 0;
+	//glGetIntegerv(GL_CURRENT_PROGRAM, &prog);
 }
 
 void ShaderManager::SetCurrentShader(GLuint id)

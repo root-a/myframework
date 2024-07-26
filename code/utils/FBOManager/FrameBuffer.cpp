@@ -4,6 +4,13 @@
 #include "FBOManager.h"
 #include <GL/glew.h>
 
+FrameBuffer::FrameBuffer(GLuint existingHandle, GLenum target, int scaleX, int scaleY)
+{
+	handle = existingHandle;
+	scaleXFactor = scaleX;
+	scaleYFactor = scaleY;
+}
+
 FrameBuffer::FrameBuffer(GLenum target, int scaleX, int scaleY)
 {
 	glGenFramebuffers(1, &handle);
@@ -41,10 +48,33 @@ RenderBuffer* FrameBuffer::RegisterRenderBuffer(RenderBuffer* buffer)
 	return buffer;
 }
 
+void FrameBuffer::UnregisterRenderBuffer(RenderBuffer* buffer)
+{
+	auto res = std::find(renderBuffers.begin(), renderBuffers.end(), buffer);
+	if (res != renderBuffers.end())
+	{
+		renderBuffers.erase(res);
+	}
+}
+
 void FrameBuffer::RegisterTexture(Texture* texture)
 {
 	textures.push_back(texture);
 	if (texture->format != GL_DEPTH_COMPONENT) attachments.push_back(texture->attachment);
+}
+
+void FrameBuffer::UnregisterTexture(Texture* texture)
+{
+	auto res = std::find(attachments.begin(), attachments.end(), texture->attachment);
+	if (res != attachments.end())
+	{
+		attachments.erase(res);
+	}
+	auto res2 = std::find(textures.begin(), textures.end(), texture);
+	if (res2 != textures.end())
+	{
+		textures.erase(res2);
+	}
 }
 
 void FrameBuffer::SpecifyTexture(Texture * texture)
@@ -67,6 +97,7 @@ void FrameBuffer::SpecifyTextureAndMip(Texture * texture, GLenum target, GLint l
 {
 	if (target == GL_TEXTURE_CUBE_MAP) glFramebufferTexture(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->handle, level);
 	else glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, texture->attachment, target, texture->handle, level);
+	ActivateDrawBuffers();
 }
 
 void FrameBuffer::UpdateTextures(int newBufferSizeX, int newBufferSizeY)
@@ -136,6 +167,12 @@ void FrameBuffer::DeleteAllTextures()
 	}
 	renderBuffers.clear();
 	attachments.clear();
+}
+
+void FrameBuffer::SetTextureAndMip(Texture* texture, int mip)
+{
+	if (texture->target == GL_TEXTURE_CUBE_MAP) glFramebufferTexture(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->handle, mip);
+	else glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, texture->attachment, texture->target, texture->handle, mip);
 }
 
 void FrameBuffer::ActivateDrawBuffers()

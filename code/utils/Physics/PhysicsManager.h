@@ -7,8 +7,8 @@
 
 struct Contact
 {
-	Vector3 contactPoint;
-	Vector3 contactNormal;
+	glm::vec3 contactPoint;
+	glm::vec3 contactNormal;
 	double penetration = -1;
 	RigidBody* one = nullptr;
 	RigidBody* two = nullptr;
@@ -18,6 +18,9 @@ struct Contact
 		return penetration < rhs.penetration;  
 	}
 	*/
+public:
+	Contact(const glm::vec3& cp, const glm::vec3& cn, double p, RigidBody* oneb, RigidBody* twob)
+		: contactPoint(cp),contactNormal(cn),penetration(p), one(oneb), two(twob) {}
 };
 
 /*
@@ -30,7 +33,7 @@ namespace std
 	public:		
 		size_t operator()(const Contact val) const {
 			return val.contactPoint.a ^ val.contactPoint.b ^ val.contactPoint.c;
-			//return val->contactPoint.squareMag();//works
+			//return val->contactPoint.squareLength();//works
 
 		}
 	};
@@ -64,15 +67,15 @@ public:
 	void SortAndSweep();
 	void NarrowTestSAT(double deltaTime);
 	
-	Vector3F defAabbColor;
-	Vector3F defObbColor;
+	glm::vec3 defAabbColor;
+	glm::vec3 defObbColor;
 	std::vector<ObjectPoint*> xAxis;
 	std::vector<ObjectPoint*> yAxis;
 	std::vector<ObjectPoint*> zAxis;
 	std::unordered_set<OverlapPair> fullOverlaps;
 	std::unordered_set<OverlapPair> satOverlaps;
 
-	Vector3 gravity = Vector3(0.0, -9.0, 0.0);
+	glm::vec3 gravity = glm::vec3(0.0, -9.0, 0.0);
 
 	void Update(double deltaTime);
 	void Clear();
@@ -84,8 +87,8 @@ public:
 	double positionalCorrectionTime;
 	int iterCount;
 	std::vector<Contact> contacts;
-	std::vector<Vector3> clipPolygon;
-	std::vector<Vector3> newClipPolygon;
+	std::vector<glm::vec3> clipPolygon;
+	std::vector<glm::vec3> newClipPolygon;
 	const double k_allowedPenetration = 0.01;
 	double BAUMGARTE = 0.2;
 private:
@@ -95,49 +98,49 @@ private:
 	PhysicsManager(const PhysicsManager&);
 	//assign
 	PhysicsManager& operator=(const PhysicsManager&);
-	void ProcessContact(const Contact& contact, Vector3&vel1, Vector3& ang_vel1, Vector3&vel2, Vector3& ang_vel2, double dtInv);
-	void CalcFaceVertices(const Vector3& pos, Vector3* vertices, const Vector3& axis, const Matrix3& model, const Vector3& halfExtents, bool counterClockwise = true);
+	void ProcessContact(const Contact& contact, glm::vec3&vel1, glm::vec3& ang_vel1, glm::vec3&vel2, glm::vec3& ang_vel2, double dtInv);
+	void CalcFaceVertices(const glm::vec3& pos, glm::vec3* vertices, const glm::vec3& axis, const glm::mat3& model, const glm::vec3& halfExtents, bool counterClockwise = true);
 	
 
-	size_t DrawPlaneClipContacts(std::vector<Vector3> &contacts, const Vector3& normal, size_t vertCount, const Vector3F& normalColor);
+	size_t DrawPlaneClipContacts(std::vector<glm::vec3> &contacts, const glm::vec3& normal, size_t vertCount, const glm::vec3& normalColor);
 
 	void SortAxis(std::vector<ObjectPoint*>& axisList, axis axisToSort);
 	bool CheckBoundingBoxes(RigidBody* body1, RigidBody* body2);
-	void FlipMTVTest(Vector3 &mtv, const Vector3 &toCentre);
+	void FlipMTVTest(glm::vec3&mtv, const glm::vec3 &toCentre);
 
-	void FilterContactsAgainstReferenceFace(const Vector3& refNormal, double pos_offsett, double penetration, RigidBody* one, RigidBody* two);
+	void FilterContactsAgainstReferenceFace(const glm::vec3& refNormal, double pos_offsett, double penetration, RigidBody* one, RigidBody* two);
 	
-	void ClaculateIncidentAxis(Vector3& incident_axis, const Matrix3 &two, Vector3 smallestAxis);
+	void ClaculateIncidentAxis(glm::vec3& incident_axis, const glm::mat3 &two, glm::vec3& smallestAxis);
 
-	void CreateSidePlanesOffsetsAndNormals(const Vector3& onePosition, int typeOfCollision, Vector3 &normal1, const Matrix3 &one, Vector3 &normal2, double &neg_offset1, Vector3 oneHalfSize, double &pos_offset1, double &neg_offset2, double &pos_offset2);
+	void CreateSidePlanesOffsetsAndNormals(const glm::vec3& onePosition, int typeOfCollision, glm::vec3& normal1, const glm::mat3& one, glm::vec3& normal2, double &neg_offset1, glm::vec3 oneHalfSize, double &pos_offset1, double &neg_offset2, double &pos_offset2);
 
-	void ClipFaceToSidePlane(std::vector<Vector3>& clipPolygon, std::vector<Vector3>& newClipPolygon, const Vector3& normal, double plane_offset);
+	void ClipFaceToSidePlane(std::vector<glm::vec3>& clipPolygon, std::vector<glm::vec3>& newClipPolygon, const glm::vec3& normal, double plane_offset);
 	void DrawCollisionNormal(Contact& contact);
 	void DrawReferenceNormal(Contact& contact, int typeOfCollision);
-	void DrawSidePlanes(const Vector3& normal1, const Vector3& normal2, const Vector3& onePosition, int index1, int index2, const Vector3& oneHalfSize);
-	void PositionalCorrection(RigidBody* one, RigidBody* two, double penetration, Vector3& normal);
+	void DrawSidePlanes(const glm::vec3& normal1, const glm::vec3& normal2, const glm::vec3& onePosition, int index1, int index2, const glm::vec3& oneHalfSize);
+	void PositionalCorrection(RigidBody* one, RigidBody* two, double penetration, glm::vec3& normal);
 	void PositionalImpulseCorrection(RigidBody* one, RigidBody* two, Contact& contact);
-	bool IntersectionTest(const RigidBody* oneObj, const RigidBody* twoObj, double& smallestPenetration, Vector3& smallestAxis, Vector3& toCentre, int& axisNumRes, int& bestSingleAxis);
-	bool overlapOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const Vector3 &axis, const int axisNum, int& resAxisNum, const Vector3 &toCentre, double& smallestPenetration, Vector3& smallestAxis);
-	double penetrationOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const Vector3 &axis, const Vector3 &toCentre);
-	double transformToAxis(const Matrix3 &boxModel, const Vector3 &axis, const Vector3 &boxHalfSize);
-	void GenerateContacts(Vector3& MTV, const double& penetration, Vector3& toCentre, RigidBody* oneObj, RigidBody* twoObj, int axisNumRes, int& bestSingleAxis);
+	bool IntersectionTest(const RigidBody* oneObj, const RigidBody* twoObj, double& smallestPenetration, glm::vec3& smallestAxis, glm::vec3& toCentre, int& axisNumRes, int& bestSingleAxis);
+	bool overlapOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const glm::vec3 &axis, const int axisNum, int& resAxisNum, const glm::vec3&toCentre, double& smallestPenetration, glm::vec3& smallestAxis);
+	double penetrationOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const glm::vec3 &axis, const glm::vec3&toCentre);
+	double transformToAxis(const glm::mat3 &boxModel, const glm::vec3 &axis, const glm::vec3 &boxHalfSize);
+	void GenerateContacts(glm::vec3& MTV, const double& penetration, glm::vec3& toCentre, RigidBody* oneObj, RigidBody* twoObj, int axisNumRes, int& bestSingleAxis);
 
-	void DrawFaceDebug(Vector3 * reference_face, Vector3 * incident_face, int typeOfCollision);
+	void DrawFaceDebug(glm::vec3 * reference_face, glm::vec3 * incident_face, int typeOfCollision);
 
-	void DrawReferenceAndIncidentFace(Vector3 * reference_face, Vector3 * incident_face);
+	void DrawReferenceAndIncidentFace(glm::vec3 * reference_face, glm::vec3 * incident_face);
 
-	void GenerateContactPointToFace(Vector3 &toCentre, Vector3& smallestAxis, double smallestPen, RigidBody* oneObj, RigidBody* twoObj, int typeOfCollision);
-	void GenerateContactEdgeToEdge(const Vector3 &toCentre, Vector3& smallestAxis, double smallestPen, RigidBody* oneObj, RigidBody* twoObj, int axisNumRes, int& bestSingleAxis);
-	Vector3 contactPoint(const Vector3 &pOne, const Vector3 &dOne, double oneSize, const Vector3 &pTwo, const Vector3 &dTwo, double twoSize, bool useOne) const;
+	void GenerateContactPointToFace(const glm::vec3& toCentre, glm::vec3& smallestAxis, double smallestPen, RigidBody* oneObj, RigidBody* twoObj, int typeOfCollision);
+	void GenerateContactEdgeToEdge(const glm::vec3& toCentre, glm::vec3& smallestAxis, double smallestPen, RigidBody* oneObj, RigidBody* twoObj, int axisNumRes, int& bestSingleAxis);
+	glm::vec3 contactPoint(const glm::vec3& pOne, const glm::vec3& dOne, double oneSize, const glm::vec3& pTwo, const glm::vec3& dTwo, double twoSize, bool useOne) const;
 
 };
 
-inline bool PhysicsManager::overlapOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const Vector3 &axis, const int axisNum, int& resAxisNum, const Vector3 &toCentre, double& smallestPenetration, Vector3& smallestAxis)
+inline bool PhysicsManager::overlapOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const glm::vec3& axis, const int axisNum, int& resAxisNum, const glm::vec3& toCentre, double& smallestPenetration, glm::vec3& smallestAxis)
 {
-	if (axis.squareMag() < 0.0001) return true;
+	if (glm::dot(axis, axis) < 0.0001) return true;
 
-	Vector3& axisn = axis.vectNormalize();
+	glm::vec3 axisn = glm::normalize(axis);
 
 	double penetration = penetrationOnAxis(oneObj, twoObj, axisn, toCentre);
 
@@ -151,46 +154,46 @@ inline bool PhysicsManager::overlapOnAxis(const RigidBody* oneObj, const RigidBo
 }
 
 
-inline double PhysicsManager::penetrationOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const Vector3 &axis, const Vector3 &toCentre)
+inline double PhysicsManager::penetrationOnAxis(const RigidBody* oneObj, const RigidBody* twoObj, const glm::vec3 &axis, const glm::vec3&toCentre)
 {
 	// Project the half-size of one onto axis
 	double oneProject = transformToAxis(oneObj->object->bounds->obb.rot, axis, oneObj->object->bounds->obb.halfExtents);
 	double twoProject = transformToAxis(twoObj->object->bounds->obb.rot, axis, twoObj->object->bounds->obb.halfExtents);
 
 	// Project this onto the axis
-	double distance = abs(toCentre.dotAKAscalar(axis));
-	//printf("\naxis %f %f %f pen: %f", axis.x, axis.y, axis.z, toCentre.dotAKAscalar(axis));
+	double distance = abs(glm::dot(toCentre, axis));
+	//printf("\naxis %f %f %f pen: %f", axis.x, axis.y, axis.z, toCentre.dot(axis));
 	// Return the overlap (i.e. positive indicates
 	// overlap, negative indicates separation).
 	double overlap = oneProject + twoProject - distance;
 	return overlap;
 }
 
-inline double PhysicsManager::transformToAxis(const Matrix3 &boxModel, const Vector3 &axis, const Vector3 &boxHalfSize)
+inline double PhysicsManager::transformToAxis(const glm::mat3&boxModel, const glm::vec3&axis, const glm::vec3&boxHalfSize)
 {
 	return
-		boxHalfSize.x * abs(axis.dotAKAscalar(boxModel.getAxis(0))) + //get not normalized axes otherwise you will get floating errors!
-		boxHalfSize.y * abs(axis.dotAKAscalar(boxModel.getAxis(1))) +
-		boxHalfSize.z * abs(axis.dotAKAscalar(boxModel.getAxis(2)));
+		boxHalfSize.x * abs(glm::dot(axis, MathUtils::GetAxis(boxModel, 0))) + //get not normalized axes otherwise you will get floating errors!
+		boxHalfSize.y * abs(glm::dot(axis, MathUtils::GetAxis(boxModel, 1))) +
+		boxHalfSize.z * abs(glm::dot(axis, MathUtils::GetAxis(boxModel, 2)));
 }
 
-inline Vector3 PhysicsManager::contactPoint(const Vector3 &pOne, const Vector3 &dOne, double oneSize, const Vector3 &pTwo, const Vector3 &dTwo, double twoSize, bool useOne) const
+inline glm::vec3 PhysicsManager::contactPoint(const glm::vec3& pOne, const glm::vec3& dOne, double oneSize, const glm::vec3& pTwo, const glm::vec3& dTwo, double twoSize, bool useOne) const
 {
 	// If useOne is true, and the contact point is outside
 	// the edge (in the case of an edge-face contact) then
 	// we use one's midpoint, otherwise we use two's.
 
-	Vector3 toSt, cOne, cTwo;
-	double dpStaOne, dpStaTwo, dpOneTwo, smOne, smTwo;
-	double denom, mua, mub;
+	glm::vec3 toSt, cOne, cTwo;
+	float dpStaOne, dpStaTwo, dpOneTwo, smOne, smTwo;
+	float denom, mua, mub;
 
-	smOne = dOne.squareMag();
-	smTwo = dTwo.squareMag();
-	dpOneTwo = dTwo.dotAKAscalar(dOne);
+	smOne = glm::dot(dOne, dOne);
+	smTwo = glm::dot(dTwo, dTwo);
+	dpOneTwo = glm::dot(dTwo, dOne);
 
 	toSt = pOne - pTwo;
-	dpStaOne = dOne.dotAKAscalar(toSt);
-	dpStaTwo = dTwo.dotAKAscalar(toSt);
+	dpStaOne = glm::dot(dOne, toSt);
+	dpStaTwo = glm::dot(dTwo, toSt);
 
 	denom = smOne * smTwo - dpOneTwo * dpOneTwo;
 
@@ -218,7 +221,7 @@ inline Vector3 PhysicsManager::contactPoint(const Vector3 &pOne, const Vector3 &
 		cOne = pOne + mua * dOne;
 		cTwo = pTwo + mub * dTwo;
 
-		return cOne * 0.5 + cTwo * 0.5;
+		return cOne * 0.5f + cTwo * 0.5f;
 	}
 }
 

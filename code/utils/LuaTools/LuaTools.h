@@ -20,6 +20,7 @@ public:
 	static Smain smain;
 	static lua_State *luaState;
 	static const char *progname;
+	static char* empty_argv[2];
 
 	static void StackDump(lua_State* l);
 
@@ -71,11 +72,11 @@ public:
 
 	static int pmain(lua_State * L);
 
-	int lmain(int argc, char ** argv);
+	static int main(int argc, char ** argv);
 
 private:
 	static void laction(int i);
 	static void lstop(lua_State * L, lua_Debug * ar);
-	static void l_message(const char * pname, const char * msg);
+	static void l_message(const char* msg);
 	static int traceback(lua_State * L);
 };

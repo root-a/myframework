@@ -3,8 +3,15 @@
 #include "GraphicsStorage.h"
 #include "OBJ.h"
 #include "Vao.h"
+#include "Ebo.h"
 #include "Material.h"
 #include "Texture.h"
+#include "RenderBuffer.h"
+#include "RenderPass.h"
+#include "RenderProfile.h"
+#include "MaterialProfile.h"
+#include "TextureProfile.h"
+#include "ScriptsComponent.h"
 #include <string>
 #include <vector>
 #include <fstream>
@@ -12,18 +19,27 @@
 #include <sstream>
 #include <regex>
 #include <algorithm>
-#include "dirent.h"
 #include "Shader.h"
 #include "CPUBlockData.h"
 #include "ShaderBlock.h"
 #include "FrameBuffer.h"
 #include "ShaderBlockData.h"
+#include "Script.h"
 #include <GL/glew.h>
 #include <mutex>
-#include <thread>
 #include <iosfwd>
 #include "SOIL2.h"
 #include "stb_image.h"
+#include <filesystem>
+
+extern "C" {
+	//#include "include/lua.h"
+#include "lauxlib.h"
+#include "lualib.h"
+#include "luajit.h"
+//#include "include/luaconf.h"
+}
+#include "LuaTools.h"
 
 #define FOURCC_DXT1 0x31545844 // Equivalent to "DXT1" in ASCII
 #define FOURCC_DXT3 0x33545844 // Equivalent to "DXT3" in ASCII
@@ -32,15 +48,12 @@
 static std::mutex objLoadMutex;
 static std::mutex tiLoadMutex;
 
-struct uniform_info_t
-{
-	union
-	{
-		struct { GLint type, count, offset, blockIndex, arrayStride, matrixStride, isRowMajor, atomicCounterBufferIndex, location, size; };
-		GLint properties[10];
-	};
-	std::string name;
-};
+std::string str_tolower(std::string s) {
+	std::transform(s.begin(), s.end(), s.begin(),
+		[](unsigned char c) { return std::tolower(c); }
+	);
+	return s;
+}
 
 void splitLine(const std::string& str, std::vector<std::string>& cont, const std::string& delims = " ")
 {
@@ -116,7 +129,7 @@ void GraphicsManager::LoadPaths(const char* path)
 	fclose(file);
 }
 
-bool GraphicsManager::LoadOBJs(const char* path)
+bool GraphicsManager::LoadOBJs(const char* path, std::vector<OBJ*>& parsedOBJs)
 {
 	FILE* file;
 	file = fopen(path, "r");
@@ -124,35 +137,29 @@ bool GraphicsManager::LoadOBJs(const char* path)
 		printf("%s could not be opened.\n", path);
 		return false;
 	}
-	std::vector<std::thread> threadPool;
-	while (1) {
-
+	std::vector<std::string> meshPaths;
+	while (1)
+	{
 		char lineHeader[128];
-		//meshID not in use currently
-		int objID = 0;
 		// read the first word of the line
 		int res = fscanf(file, "%s", lineHeader);
 		if (res == EOF)
 		{
 			break; // EOF = End Of File. Quit the loop.
 		}
-		// else : parse lineHeader
-		threadPool.push_back(std::thread(LoadOBJ, &GraphicsStorage::objs, GraphicsStorage::paths["resources"] + lineHeader));
-	}
-	for (auto& th : threadPool)
-	{
-		th.join();
+		meshPaths.push_back(GraphicsStorage::paths["resources"] + lineHeader);
 	}
 	fclose(file);
+	LoadOBJs(meshPaths, parsedOBJs);
 	return true;
 }
 
-bool GraphicsManager::LoadOBJs(std::unordered_map<std::string, std::string>& meshes)
+bool GraphicsManager::LoadOBJs(std::vector<std::string>& meshPaths, std::vector<OBJ*>& parsedOBJs)
 {
 	std::vector<std::thread> threadPool;
-	for (auto namePath : meshes)
+	for (auto& path : meshPaths)
 	{
-		threadPool.push_back(std::thread(LoadOBJ, &GraphicsStorage::objs, namePath.second));
+		threadPool.push_back(std::thread(LoadOBJ, &parsedOBJs, path));
 	}
 	for (auto& th : threadPool)
 	{
@@ -161,25 +168,43 @@ bool GraphicsManager::LoadOBJs(std::unordered_map<std::string, std::string>& mes
 	return true;
 }
 
-void GraphicsManager::LoadOBJ(std::unordered_map<std::string, OBJ*>* objs, std::string path)
+void GraphicsManager::LoadOBJ(std::vector<OBJ*>* objs, std::string path)
 {
-	OBJ* tempOBJ = new OBJ();
+	OBJ* tempOBJ = GraphicsStorage::assetRegistry.AllocAsset<OBJ>();
 	bool res = tempOBJ->LoadAndIndexOBJ(path.c_str());
 	if (res)
 	{
-		tempOBJ->name = path;
-		size_t sep = tempOBJ->name.find_last_of("\\/");
+		std::filesystem::path objPath(path);
+		tempOBJ->name = objPath.stem().string();
+		
+		std::scoped_lock<std::mutex> lock(objLoadMutex);
+		(*objs).push_back(tempOBJ);
+	}
+}
 
-		if (sep != std::string::npos)
-			tempOBJ->name = tempOBJ->name.substr(sep + 1, tempOBJ->name.size() - sep - 1);
+VertexArray* GraphicsManager::LoadOBJToVAO(OBJ* object, VertexArray* vao)
+{
+	vao->AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>((const void*)&object->indexed_vertices[0], (unsigned int)object->indexed_vertices.size(), BufferLayout({ {ShaderDataType::Type::Float3, "position"} })));
+	vao->AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>((const void*)&object->indexed_uvs[0], (unsigned int)object->indexed_uvs.size(), BufferLayout({ {ShaderDataType::Type::Float2, "uv"} })));
+	vao->AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>((const void*)&object->indexed_normals[0], (unsigned int)object->indexed_normals.size(), BufferLayout({ {ShaderDataType::Type::Float3, "normal"} })));
+	if (object->indexed_tangents.size() > 0)
+	{
+		vao->AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>((const void*)&object->indexed_tangents[0], (unsigned int)object->indexed_tangents.size(), BufferLayout({ {ShaderDataType::Type::Float3, "tangent"} })));
+		vao->AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>((const void*)&object->indexed_bitangents[0], (unsigned int)object->indexed_bitangents.size(), BufferLayout({ {ShaderDataType::Type::Float3, "bitangent"} })));
+	}
+	vao->AddElementBuffer(GraphicsStorage::assetRegistry.AllocAsset<ElementBuffer>(object->GetIndicesData(), object->indicesCount));
+	vao->center = object->center_of_mesh;
+	vao->dimensions = object->dimensions;
+	return vao;
+}
 
-		size_t dot = tempOBJ->name.find_last_of(".");
-		if (dot != std::string::npos)
-		{
-			tempOBJ->name = tempOBJ->name.substr(0, dot);
-		}
-		std::lock_guard<std::mutex> lock(objLoadMutex);
-		(*objs)[tempOBJ->name] = tempOBJ;
+void GraphicsManager::LoadOBJsToVAOs(std::vector<OBJ*>& parsedOBJs)
+{
+	for (auto& obj : parsedOBJs)
+	{
+		VertexArray* newVao = GraphicsStorage::assetRegistry.AllocAsset<VertexArray>();
+		newVao->name = obj->name;
+		LoadOBJToVAO(obj, newVao);
 	}
 }
 
@@ -193,11 +218,11 @@ bool GraphicsManager::SaveToOBJ(OBJ* obj)
 		ss.precision(5);
 		ss << std::fixed;
 		ss << "v ";
-		ss << obj->indexed_vertices.at(i).vect[0];
+		ss << obj->indexed_vertices.at(i)[0];
 		ss << " ";
-		ss << obj->indexed_vertices.at(i).vect[1];
+		ss << obj->indexed_vertices.at(i)[1];
 		ss << " ";
-		ss << obj->indexed_vertices.at(i).vect[2];
+		ss << obj->indexed_vertices.at(i)[2];
 		ss << "\n";
 		std::string s(ss.str());
 		fputs(s.c_str(), file);
@@ -209,11 +234,11 @@ bool GraphicsManager::SaveToOBJ(OBJ* obj)
 		ss.precision(5);
 		ss << std::fixed;
 		ss << "vt ";
-		ss << obj->indexed_uvs.at(i).vect[0];
+		ss << obj->indexed_uvs.at(i)[0];
 		ss << " ";
-		ss << obj->indexed_uvs.at(i).vect[1];
+		ss << obj->indexed_uvs.at(i)[1];
 		ss << " ";
-		ss << obj->indexed_uvs.at(i).vect[2];
+		ss << obj->indexed_uvs.at(i)[2];
 		ss << "\n";
 		std::string s(ss.str());
 		fputs(s.c_str(), file);
@@ -225,11 +250,11 @@ bool GraphicsManager::SaveToOBJ(OBJ* obj)
 		ss.precision(5);
 		ss << std::fixed;
 		ss << "vn ";
-		ss << obj->indexed_normals.at(i).vect[0];
+		ss << obj->indexed_normals.at(i)[0];
 		ss << " ";
-		ss << obj->indexed_normals.at(i).vect[1];
+		ss << obj->indexed_normals.at(i)[1];
 		ss << " ";
-		ss << obj->indexed_normals.at(i).vect[2];
+		ss << obj->indexed_normals.at(i)[2];
 		ss << "\n";
 		std::string s(ss.str());
 		fputs(s.c_str(), file);
@@ -270,8 +295,8 @@ bool GraphicsManager::LoadTextures(const char* path)
 		}
 		
 		printf("Loading texture: %s\n", texturePath);
-		threadPool.push_back(std::thread(LoadTextureInfo, &GraphicsStorage::texturesToLoad, GraphicsStorage::paths["resources"] + texturePath, 0));
-		//LoadTexture(texturePath);
+		//threadPool.push_back(std::thread(LoadTextureInfo, &GraphicsStorage::texturesToLoad, GraphicsStorage::paths["resources"] + texturePath, 0));
+		LoadTextureInfo(&GraphicsStorage::texturesToLoad, GraphicsStorage::paths["resources"] + texturePath, 0);
 	}
 	for (auto& th : threadPool)
 	{
@@ -286,40 +311,45 @@ bool GraphicsManager::LoadTextures(const char* path)
 void GraphicsManager::LoadTextureInfo(std::unordered_map<std::string, TextureInfo*>* texturesToLoad, std::string path, int forcedNumOfEle)
 {
 	TextureInfo* ti = SOIL_load_image(path.c_str(), forcedNumOfEle);
-	std::string fullName = path;
-	size_t pos = fullName.find_last_of(".");
-	std::string ext = fullName.substr(pos + 1, fullName.length() - pos);
-	size_t fileNameStart = fullName.find_last_of("/\\");
-	std::string fileName = fullName.substr(fileNameStart + 1, pos - fileNameStart - 1);
-	std::lock_guard<std::mutex> lock(tiLoadMutex);
-	texturesToLoad->insert({ fileName , ti });
-	printf("Finished loading texture: %s\n", fullName.c_str());
+	std::filesystem::path texturePath(path);
+	std::scoped_lock<std::mutex> lock(tiLoadMutex);
+	texturesToLoad->insert({ texturePath.string() , ti});
+	printf("Finished loading texture: %s\n", path.c_str());
 }
 
 void GraphicsManager::LoadTexturesIntoGPU(std::unordered_map<std::string, TextureInfo*>& texturesToLoad)
 {
 	for (auto& fti : texturesToLoad)
 	{
-		LoadTextureIntoGPU(fti.first.c_str(), fti.second);
+		LoadTextureIntoGPU(nullptr, fti.first.c_str(), fti.second);
 	}
 	texturesToLoad.clear();
 }
 
-Texture* GraphicsManager::LoadTextureIntoGPU(const char* fileName, TextureInfo* ti)
+Texture* GraphicsManager::LoadTextureIntoGPU(const char* guid, const char* filePath, TextureInfo* ti)
 {
+	std::filesystem::path texturePath(filePath);
+	std::string fileName = texturePath.stem().string();
 	Texture* tex = nullptr;
 	if (ti != nullptr)
 	{
 		DDSExtraInfo* ei = NULL;
 		int internalFormat;
-		unsigned int format;
+		int format;
 		switch (ti->type)
 		{
 		case HDR:
-			tex = new Texture(GL_TEXTURE_2D, 0, GL_RGB16F, ti->width, ti->height, GL_RGB, GL_FLOAT, ti->data, GL_COLOR_ATTACHMENT0);
+			if (guid != nullptr)
+			{
+				tex = GraphicsStorage::assetRegistry.AllocAssetWithStrUUID<Texture>(guid, GL_TEXTURE_2D, 0, GL_RGB16F, ti->width, ti->height, GL_RGB, GL_FLOAT, ti->data, GL_COLOR_ATTACHMENT0);
+			}
+			else
+			{
+				tex = GraphicsStorage::assetRegistry.AllocAsset<Texture>(GL_TEXTURE_2D, 0, GL_RGB16F, ti->width, ti->height, GL_RGB, GL_FLOAT, ti->data, GL_COLOR_ATTACHMENT0);
+			}
 			tex->GenerateBindSpecify();
 			tex->name = fileName;
-			GraphicsStorage::textures[tex->name] = tex;
+			tex->texturePath = filePath;
 			break;
 		case DDS:
 			ei = (DDSExtraInfo*)ti->extraInfo;
@@ -327,12 +357,19 @@ Texture* GraphicsManager::LoadTextureIntoGPU(const char* fileName, TextureInfo* 
 			{
 				if (ei->compressed)
 				{
-					tex = new Texture(GL_TEXTURE_2D, 0, GL_RGB, ti->width, ti->height, GL_RGB, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					if (guid != nullptr && ei->nrOfCubeMapFaces == 1)
+					{
+						tex = GraphicsStorage::assetRegistry.AllocAssetWithStrUUID<Texture>(guid, GL_TEXTURE_2D, 0, GL_RGB, ti->width, ti->height, GL_RGB, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					}
+					else
+					{
+						tex = GraphicsStorage::assetRegistry.AllocAsset<Texture>(GL_TEXTURE_2D, 0, GL_RGB, ti->width, ti->height, GL_RGB, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					}
 					LoadCompressedDDS(tex, ti, i);
 					std::string name = fileName;
 					if (i > 0) name = fileName + std::to_string(i);
 					tex->name = name;
-					GraphicsStorage::textures[tex->name] = tex;
+					tex->texturePath = filePath;
 				}
 				else
 				{
@@ -354,15 +391,22 @@ Texture* GraphicsManager::LoadTextureIntoGPU(const char* fileName, TextureInfo* 
 						internalFormat = GL_RGB; format = GL_RGB;
 						break;
 					}
-					tex = new Texture(GL_TEXTURE_2D, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					if (guid != nullptr && ei->nrOfCubeMapFaces == 1)
+					{
+						tex = GraphicsStorage::assetRegistry.AllocAssetWithStrUUID<Texture>(guid, GL_TEXTURE_2D, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					}
+					else
+					{
+						tex = GraphicsStorage::assetRegistry.AllocAsset<Texture>(GL_TEXTURE_2D, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					}
 					tex->pixels = &((unsigned char*)ti->data)[i * ti->height * ti->width * ti->numOfElements];
 					tex->GenerateBindSpecify();
 					std::string name = fileName;
 					if (i > 0) name = fileName + std::to_string(i);
 					tex->name = name;
-					GraphicsStorage::textures[tex->name] = tex;
+					tex->texturePath = filePath;
 				}
-				if (!tex->hasMipMaps) tex->GenerateMipMaps();
+				if (!tex->hasMipMaps) tex->GenerateMipMaps(); // we should have it stored in the settings so that we don't generate it here!
 			}
 			break;
 		default:
@@ -384,11 +428,18 @@ Texture* GraphicsManager::LoadTextureIntoGPU(const char* fileName, TextureInfo* 
 				internalFormat = GL_RGB; format = GL_RGB;
 				break;
 			}
-			tex = new Texture(GL_TEXTURE_2D, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+			if (guid != nullptr)
+			{
+				tex = GraphicsStorage::assetRegistry.AllocAssetWithStrUUID<Texture>(guid, GL_TEXTURE_2D, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+			}
+			else
+			{
+				tex = GraphicsStorage::assetRegistry.AllocAsset<Texture>(GL_TEXTURE_2D, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+			}
 			tex->GenerateBindSpecify();
-			tex->GenerateMipMaps();
+			tex->GenerateMipMaps(); // we should have it stored in the settings so that we don't generate it here!
 			tex->name = fileName;
-			GraphicsStorage::textures[tex->name] = tex;
+			tex->texturePath = filePath;
 			break;
 		}
 		tex->SetDefaultParameters();
@@ -413,28 +464,9 @@ bool GraphicsManager::LoadCubeMaps(const char* path)
 		{
 			break; // EOF = End Of File. Quit the loop.
 		}
-		FILE* texturesFile;
-		std::string texturesFilePath = GraphicsStorage::paths["resources"] + cubemapDirectory;
-		texturesFile = fopen(texturesFilePath.c_str(), "r");
-		if (texturesFile == NULL) {
-			printf("%s could not be opened.\n", texturesFilePath.c_str());
-			return false;
-		}
-		std::vector<std::string> texturesPaths;
-		while (1)
-		{
-			char cubeMapTexturePath[128];
-			int res = fscanf(texturesFile, "%s", cubeMapTexturePath);
-			if (res == EOF)
-			{
-				break; // EOF = End Of File. Quit the loop.
-			}
-			texturesPaths.push_back(GraphicsStorage::paths["resources"] + cubeMapTexturePath);
-		}
 		
-		printf("Loading cubemap: %s\n", cubemapDirectory);
-		LoadCubeMap(texturesPaths);
-		fclose(texturesFile);
+		std::string texturesFilePath = GraphicsStorage::paths["resources"] + cubemapDirectory;
+		LoadCubeMap(nullptr, texturesFilePath.c_str());
 	}
 	fclose(file);
 	return true;
@@ -442,28 +474,14 @@ bool GraphicsManager::LoadCubeMaps(const char* path)
 
 void GraphicsManager::GetFileNames(std::vector<std::string>& out, const char* directory, const char* extension)
 {
-	DIR* dir;
-	struct dirent* ent;
-
-	if ((dir = opendir(directory)) != NULL) {
-		/* print all the files and directories within directory */
-		while ((ent = readdir(dir)) != NULL) {
-			if (ent->d_type == DT_REG) {
-				std::string fileFullName = ent->d_name;
-				size_t pos = fileFullName.find_last_of(".");
-				std::string fileNameExt = fileFullName.substr(pos + 1, fileFullName.length() - 1);
-				if (strcmp("*", extension) == 0 || strcmp(fileNameExt.c_str(), extension) == 0)
-				{
-					std::string fileName = fileFullName.substr(0, pos);
-					out.push_back(fileName);
-				}
-			}
+	std::filesystem::path ext(extension);
+	for (const auto& it : std::filesystem::directory_iterator(directory))
+	{
+		if (it.is_regular_file())
+		{
+			if (it.path().extension() == ext)
+				out.push_back(it.path().stem().string());
 		}
-		closedir(dir);
-	}
-	else {
-		/* could not open directory */
-		perror("could not open directory");
 	}
 }
 
@@ -500,28 +518,36 @@ void GraphicsManager::RemoveComments(std::string& shaderCode)
 bool GraphicsManager::LoadShaders(const char* path)
 {
 	//GraphicsStorage::ClearShaders();
-	GraphicsStorage::shaderPaths = LoadShadersPaths(LoadShadersFiles(path));
+	auto shadersPaths = LoadShadersPaths(LoadShadersFiles(path));
 
-	for (auto& program : GraphicsStorage::shaderPaths)
+	for (auto& paths : shadersPaths)
 	{
-		ReloadShaderFromPath(program.first.c_str(), GraphicsStorage::shaderPaths[program.first]);
+		ReloadShaderFromPath(nullptr, paths.second);
 	}
 
 	return true;
 }
 
-std::unordered_map<std::string, std::string> GraphicsManager::LoadShadersFiles(const char* path)
+Shader* GraphicsManager::LoadShader(const char* guid, const char* path)
+{
+	ShaderPaths sp = LoadShaderPaths(std::move(path));
+	Shader* shader = ReloadShaderFromPath(guid, sp);
+	return shader;
+}
+
+std::vector<std::string> GraphicsManager::LoadShadersFiles(const char* path)
 {
 	FILE* file;
 	file = fopen(path, "r");
 	if (file == NULL) {
 		printf("%s could not be opened.\n", path);
-		return std::unordered_map<std::string, std::string>();
+		return std::vector<std::string>();
 	}
 	char line[128];
-	std::unordered_map<std::string, std::string> shaders;
+	std::vector<std::string> shaders;
 	while (fgets(line, sizeof(line), file)) {
 		if (line[0] == '/' || line[0] == ';' || line[0] == '#') continue; // ignore comment line
+		//programName, the first word, we should remove them and clean up all configs
 		char programName[128];
 		char filePath[128];
 		int matches = sscanf(line, "%s %s", programName, filePath);
@@ -530,158 +556,112 @@ std::unordered_map<std::string, std::string> GraphicsManager::LoadShadersFiles(c
 			printf("Wrong shader information!\n");
 		}
 		else {
-			shaders[programName] = GraphicsStorage::paths["resources"] + filePath;
+			shaders.emplace_back(GraphicsStorage::paths["resources"] + filePath);
 		}
 	}
 	fclose(file);
 	return shaders;
 }
 
-std::unordered_map<std::string, ShaderPaths> GraphicsManager::LoadShadersPaths(std::unordered_map<std::string, std::string>& shaders)
+std::unordered_map<std::string, ShaderPaths> GraphicsManager::LoadShadersPaths(const std::vector<std::string>& shaders)
 {
-
-	DIR* dir;
-	struct dirent* ent;
-	std::unordered_map<std::string, ShaderPaths> shaderPaths;
+	//we should go over directory and check if shader with name exists in shader list instead
+	std::unordered_map<std::string, ShaderPaths> shadersPaths;
 	for (auto& shader : shaders)
 	{
-		size_t pos = shader.second.find_last_of("/");
-		std::string shaderPath = shader.second.substr(0, pos + 1);
-		std::string name = shader.second.substr(pos + 1, shader.second.length() - 1);
-		bool shaderFound = false;
-		if ((dir = opendir(shaderPath.c_str())) != NULL) {
-			/* print all the files and directories within directory */
-			while ((ent = readdir(dir)) != NULL) {
-				switch (ent->d_type) {
-				case DT_REG:
+		std::filesystem::path shaderPath(shader);
+		auto shaderDirectory = shaderPath.parent_path();
+		if (std::filesystem::exists(shaderDirectory))
+		{
+			auto shaderDirectoryStr = shaderDirectory.string();
+			auto shaderName = shaderPath.stem();
+			bool shaderFound = false;
+			for (auto& dirEntry : std::filesystem::directory_iterator(shaderDirectory))
+			{
+				if (dirEntry.is_regular_file())
 				{
-					std::string currentShaderFullName = ent->d_name;
-					size_t pos = currentShaderFullName.find_last_of(".");
-					std::string currentShaderName = currentShaderFullName.substr(0, pos);
-					std::string currentShaderExt = currentShaderFullName.substr(pos + 1, currentShaderFullName.length() - 1);
-					if (strcmp(name.c_str(), currentShaderName.c_str()) == 0)
+					auto currentShaderPath = dirEntry.path();
+					auto currentShaderFullName = currentShaderPath.filename().string();
+					auto currentShaderName = currentShaderPath.stem();
+					if (shaderName == currentShaderName)
 					{
-						//printf("%s\n", ent->d_name);
-						if (strcmp(currentShaderExt.c_str(), "fs") == 0)
+						if (currentShaderPath.extension() == ".fs")
 						{
-							shaderPaths[shader.first].fs = shaderPath + currentShaderFullName;
+							shadersPaths[shader].fs = std::format("{}/{}", shaderDirectoryStr, currentShaderFullName);
 							shaderFound = true;
 						}
-						else if (strcmp(currentShaderExt.c_str(), "vs") == 0)
+						else if (currentShaderPath.extension() == ".vs")
 						{
-							shaderPaths[shader.first].vs = shaderPath + currentShaderFullName;
+							shadersPaths[shader].vs = std::format("{}/{}", shaderDirectoryStr, currentShaderFullName);
 							shaderFound = true;
 						}
-						else if (strcmp(currentShaderExt.c_str(), "gs") == 0)
+						else if (currentShaderPath.extension() == ".gs")
 						{
-							shaderPaths[shader.first].gs = shaderPath + currentShaderFullName;
+							shadersPaths[shader].gs = std::format("{}/{}", shaderDirectoryStr, currentShaderFullName);
 							shaderFound = true;
 						}
-						else
-						{
-							printf("wrong shader file extension: %s\n", currentShaderExt.c_str());
-						}
-
 					}
-					break;
-				}
-				case DT_DIR:
-					//printf("%s/\n", ent->d_name);
-					break;
-
-				case DT_LNK:
-					//printf("%s@\n", ent->d_name);
-					break;
-
-				default:
-				{
-					//printf("%s*\n", ent->d_name);
-				}
 				}
 			}
-			closedir(dir);
 			if (!shaderFound)
 			{
-				printf("\nSHADER PROGRAM: %s not found in directory: %s !\n", name.c_str(), shaderPath.c_str());
+				printf("\nSHADER PROGRAM: %s not found in directory: %s !\n", shaderName.string().c_str(), shaderPath.string().c_str());
+			}
+			else
+			{
+				shadersPaths[shader].path = shader;
 			}
 		}
-		else {
-			/* could not open directory */
-			perror("could not open directory");
-		}
 	}
-	return shaderPaths;
+	return shadersPaths;
 }
 
-ShaderPaths GraphicsManager::LoadShaderPaths(std::string& path)
+ShaderPaths GraphicsManager::LoadShaderPaths(const std::string& path)
 {
-	DIR* dir;
-	struct dirent* ent;
 	ShaderPaths shaderPaths;
 	
-	size_t pos = path.find_last_of("/");
-	std::string shaderPath = path.substr(0, pos + 1);
-	std::string name = path.substr(pos + 1, path.length() - 1);
-	bool shaderFound = false;
-	if ((dir = opendir(shaderPath.c_str())) != NULL) {
-		/* print all the files and directories within directory */
-		while ((ent = readdir(dir)) != NULL) {
-			switch (ent->d_type) {
-			case DT_REG:
+	std::filesystem::path shaderPath(path);
+	auto shaderDirectory = shaderPath.parent_path();
+	if (std::filesystem::exists(shaderDirectory))
+	{
+		auto shaderDirectoryStr = shaderDirectory.string();
+		auto shaderName = shaderPath.stem();
+		bool shaderFound = false;
+		for (auto& dirEntry : std::filesystem::directory_iterator(shaderDirectory))
+		{
+			if (dirEntry.is_regular_file())
 			{
-				std::string currentShaderFullName = ent->d_name;
-				size_t pos = currentShaderFullName.find_last_of(".");
-				std::string currentShaderName = currentShaderFullName.substr(0, pos);
-				std::string currentShaderExt = currentShaderFullName.substr(pos + 1, currentShaderFullName.length() - 1);
-				if (strcmp(name.c_str(), currentShaderName.c_str()) == 0)
+				auto currentShaderPath = dirEntry.path();
+				auto currentShaderFullName = currentShaderPath.filename().string();
+				auto currentShaderName = currentShaderPath.stem();
+				if (shaderName == currentShaderName)
 				{
-					//printf("%s\n", ent->d_name);
-					if (strcmp(currentShaderExt.c_str(), "fs") == 0)
+					if (currentShaderPath.extension() == ".fs")
 					{
-						shaderPaths.fs = shaderPath + currentShaderFullName;
+						shaderPaths.fs = std::format("{}/{}", shaderDirectoryStr, currentShaderFullName);
 						shaderFound = true;
 					}
-					else if (strcmp(currentShaderExt.c_str(), "vs") == 0)
+					else if (currentShaderPath.extension() == ".vs")
 					{
-						shaderPaths.vs = shaderPath + currentShaderFullName;
+						shaderPaths.vs = std::format("{}/{}", shaderDirectoryStr, currentShaderFullName);
 						shaderFound = true;
 					}
-					else if (strcmp(currentShaderExt.c_str(), "gs") == 0)
+					else if (currentShaderPath.extension() == ".gs")
 					{
-						shaderPaths.gs = shaderPath + currentShaderFullName;
+						shaderPaths.gs = std::format("{}/{}", shaderDirectoryStr, currentShaderFullName);
 						shaderFound = true;
 					}
-					else
-					{
-						printf("wrong shader file extension: %s\n", currentShaderExt.c_str());
-					}
-
 				}
-				break;
-			}
-			case DT_DIR:
-				//printf("%s/\n", ent->d_name);
-				break;
-
-			case DT_LNK:
-				//printf("%s@\n", ent->d_name);
-				break;
-
-			default:
-			{
-				//printf("%s*\n", ent->d_name);
-			}
 			}
 		}
-		closedir(dir);
 		if (!shaderFound)
 		{
-			printf("\nSHADER PROGRAM: %s not found in directory: %s !\n", name.c_str(), shaderPath.c_str());
+			printf("\nSHADER PROGRAM: %s not found in directory: %s !\n", shaderName.string().c_str(), shaderPath.string().c_str());
 		}
-	}
-	else {
-		/* could not open directory */
-		perror("could not open directory");
+		else
+		{
+			shaderPaths.path = path;
+		}
 	}
 	return shaderPaths;
 }
@@ -691,63 +671,119 @@ bool GraphicsManager::ReloadShaders()
 	return LoadShaders("config/shaders.txt");
 }
 
-bool GraphicsManager::ReloadShader(const char* name)
+Shader* GraphicsManager::ReloadShader(Shader* shader)
 {
-	ShaderPaths spath = LoadShaderPaths(LoadShadersFiles("config/shaders.txt")[name]);
-	if (!spath.fs.empty() || !spath.vs.empty() || !spath.gs.empty())
+	ShaderPaths spath = LoadShaderPaths(shader->shaderPaths.path);
+	if (spath.fs.empty() && spath.vs.empty() && spath.gs.empty())
 	{
-		auto& shaderPaths = GraphicsStorage::shaderPaths[name] = spath;
-
-		return ReloadShaderFromPath(name, shaderPaths);
+		return nullptr;
 	}
-	return false;
+	else
+	{
+		return ReloadShaderFromPath(GraphicsStorage::assetRegistry.GetAssetIDAsString(shader).c_str(), spath);
+	}
 }
 
-bool GraphicsManager::ReloadShaderFromPath(const char* name, ShaderPaths& paths)
+Shader* GraphicsManager::ReloadShaderFromPath(const char* guid, const ShaderPaths& paths)
 {
-	printf("\033[1;36m\nLoading Shader: %s\033[0m", name);
-	std::string& VertexShaderCode = ReadTextFileIntoString(paths.vs);
-	std::string& FragmentShaderCode = ReadTextFileIntoString(paths.fs);
-	std::string& GeometryShaderCode = ReadTextFileIntoString(paths.gs);
+	std::string name = std::filesystem::path(paths.path).stem().string();
+	printf("\033[1;36m\nLoading Shader: %s\033[0m", name.c_str());
+	std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
+	std::chrono::duration<double> elapsed_seconds;
+	start = std::chrono::high_resolution_clock::now();
+	std::string VertexShaderCode = std::move(ReadTextFileIntoString(paths.vs));
+	std::string FragmentShaderCode = std::move(ReadTextFileIntoString(paths.fs));
+	std::string GeometryShaderCode = std::move(ReadTextFileIntoString(paths.gs));
 	std::unordered_set<std::string> vsIncludes;
 	std::unordered_set<std::string> fsIncludes;
 	std::unordered_set<std::string> gsIncludes;
 	ReloadShaderCode(VertexShaderCode, vsIncludes);
 	ReloadShaderCode(FragmentShaderCode, fsIncludes);
 	ReloadShaderCode(GeometryShaderCode, gsIncludes);
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	printf("\nParsing Took %fs\n", elapsed_seconds.count());
+	start = std::chrono::high_resolution_clock::now();
 	unsigned int result = LoadProgram(VertexShaderCode, FragmentShaderCode, GeometryShaderCode);
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	printf("\nLoading Took %fs\n", elapsed_seconds.count());
+	Shader* shader = nullptr;
 	if (result > 0)
 	{
-		if (GraphicsStorage::shaders.find(name) == GraphicsStorage::shaders.end())
+		bool existingShader = false;
+		if (guid != nullptr)
 		{
-			Shader* shader = new Shader(result, std::string(name), paths);
-			GraphicsStorage::shaders[name] = shader;
+			shader = (Shader*)GraphicsStorage::assetRegistry.GetAssetByStringID(guid);
+			if (shader == nullptr)
+			{
+				shader = GraphicsStorage::assetRegistry.AllocAssetWithStrUUID<Shader>(guid, result, name, paths);
+			}
+			else
+			{
+				existingShader = true;
+			}
 		}
 		else
 		{
+			if (GraphicsStorage::shaderPathsAndGuids.find(paths.path) != GraphicsStorage::shaderPathsAndGuids.end())
+			{
+				shader = (Shader*)GraphicsStorage::assetRegistry.GetAssetByStringID(GraphicsStorage::shaderPathsAndGuids[paths.path]);
+				existingShader = true;
+			}
+			else
+			{
+				shader = GraphicsStorage::assetRegistry.AllocAsset<Shader>(result, name, paths);
+			}
+		}
+
+		if (existingShader)
+		{
 			glDeleteProgram(GraphicsStorage::shaderIDs[name]);
-			GraphicsStorage::shaders[name]->shaderID = result;
-			GraphicsStorage::shaders[name]->name = name;
-			GraphicsStorage::shaders[name]->shaderPaths = paths;
+			shader->shaderID = result;
+			shader->name = name;
+			shader->shaderPaths = paths;
 		}
 		
+		GraphicsStorage::shaderPathsAndGuids[paths.path] = GraphicsStorage::assetRegistry.GetAssetIDAsString(shader);
 		GraphicsStorage::shaderIDs[name] = result;
 
-		Shader& shader = *GraphicsStorage::shaders[name];
-		shader.ClearBuffers();
-		shader.outputs.clear();
-
-		BlockType type = BlockType::Uniform;
-		LoadBlocks(&shader, type);
-		type = BlockType::Storage;
-		LoadBlocks(&shader, type);
-		ParseShaderForOutputs(FragmentShaderCode, shader);
-		return true;
+		shader->Clear();
+		start = std::chrono::high_resolution_clock::now();
+		LoadBlocks(shader, BlockType::Uniform);
+		LoadBlocks(shader, BlockType::Storage);
+		LoadOutputs(shader);
+		LoadSamplers(shader);
+		LoadAttributes(shader);
+		end = std::chrono::high_resolution_clock::now();
+		elapsed_seconds = end - start;
+		printf("\nLoading Blocks Outputs Samplers and Attributes Took %fs\n", elapsed_seconds.count());
+		start = std::chrono::high_resolution_clock::now();
+		std::sort(shader->outputs.begin(), shader->outputs.end(), [](const auto& lhs, const auto& rhs)
+		{
+			return lhs.index < rhs.index;
+		});
+		std::sort(shader->attributes.begin(), shader->attributes.end(), [](const auto& lhs, const auto& rhs)
+		{
+			return lhs.index < rhs.index;
+		});
+		for (auto& attr : shader->attributes)
+		{
+			printf("\033[1;32min attr %d %s %s\033[0m\n", attr.index, ShaderDataType::Str(attr.type).data(), attr.name.c_str());
+		}
+		for (auto& sampler : shader->samplers)
+		{
+			printf("\033[1;32msampler %d %s %s\033[0m\n", sampler.index, sampler.type.c_str(), sampler.name.c_str());
+		}
+		end = std::chrono::high_resolution_clock::now();
+		elapsed_seconds = end - start;
+		printf("\nSorting and printing Took %fs\n", elapsed_seconds.count());
+		return shader;
 	}
 	else
 	{
-		printf("\033[1;31mFailed to load shader: %s\033[0m\n", name);
-		return false;
+		printf("\033[1;31mFailed to load shader: %s\033[0m\n", name.c_str());
+		return shader;
 	}
 }
 
@@ -760,7 +796,7 @@ bool GraphicsManager::ReloadShaderCode(std::string& shaderCode, std::unordered_s
 
 bool GraphicsManager::LoadShaderIncludes(std::string& shaderCode, std::unordered_set<std::string>& shaderIncludes)
 {
-	while (true)
+	while(true)
 	{
 		size_t nFPos = shaderCode.find("#include");
 		if (nFPos + 1)
@@ -772,7 +808,7 @@ bool GraphicsManager::LoadShaderIncludes(std::string& shaderCode, std::unordered
 			if (shaderIncludes.find(includeFile) == shaderIncludes.end())
 			{
 				shaderIncludes.insert(includeFile);
-				std::string& includeShaderCode = ReadTextFileIntoString(pathToIncludeFile);
+				std::string includeShaderCode = std::move(ReadTextFileIntoString(pathToIncludeFile));
 				shaderCode.insert(nFPos, includeShaderCode);
 				ReloadShaderCode(pathToIncludeFile, shaderIncludes);
 			}
@@ -785,7 +821,7 @@ bool GraphicsManager::LoadShaderIncludes(std::string& shaderCode, std::unordered
 	return false;
 }
 
-void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
+void GraphicsManager::LoadBlocks(Shader* shader, BlockType type)
 {
 	GLenum blockInterface;
 	GLenum resourceInterface;
@@ -814,7 +850,14 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 	glGetProgramInterfaceiv(shader->shaderID, blockInterface, GL_ACTIVE_RESOURCES, &numBlocks);
 	const GLenum blockProperties[4] = { GL_NUM_ACTIVE_VARIABLES, GL_BUFFER_DATA_SIZE, GL_BUFFER_BINDING, GL_NAME_LENGTH };
 	const GLenum activeUnifProp[1] = { GL_ACTIVE_VARIABLES };
-	const GLenum shaderReferences[6] = { GL_REFERENCED_BY_VERTEX_SHADER, GL_REFERENCED_BY_TESS_CONTROL_SHADER, GL_REFERENCED_BY_TESS_EVALUATION_SHADER, GL_REFERENCED_BY_GEOMETRY_SHADER, GL_REFERENCED_BY_FRAGMENT_SHADER, GL_REFERENCED_BY_COMPUTE_SHADER };
+	const GLenum shaderReferences[6] = { 
+		GL_REFERENCED_BY_VERTEX_SHADER,
+		GL_REFERENCED_BY_TESS_CONTROL_SHADER,
+		GL_REFERENCED_BY_TESS_EVALUATION_SHADER,
+		GL_REFERENCED_BY_GEOMETRY_SHADER,
+		GL_REFERENCED_BY_FRAGMENT_SHADER,
+		GL_REFERENCED_BY_COMPUTE_SHADER
+	};
 	const GLenum unifProperties[10] = {
 		GL_NAME_LENGTH, GL_TYPE,
 		GL_ARRAY_SIZE, GL_OFFSET, GL_BLOCK_INDEX,
@@ -844,12 +887,58 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 		else shaderBlock = GraphicsStorage::GetShaderStorageBuffer(blockPropertyValues[2]);
 		if (shaderBlock == nullptr)
 		{
-			shaderBlock = new ShaderBlock(blockPropertyValues[1], blockPropertyValues[2], type);
+			shaderBlock = GraphicsStorage::assetRegistry.AllocAsset<ShaderBlock>(blockPropertyValues[1], blockPropertyValues[2], type);
 			shaderBlock->name = std::string(blockName.begin(), blockName.end() - 1);
 			if (type == BlockType::Uniform) GraphicsStorage::uniformBuffers.push_back(shaderBlock);
 			else GraphicsStorage::shaderStorageBuffers.push_back(shaderBlock);
 		}
-
+		else
+		{
+			//Without this when shader is reloaded after being changed the uniform buffers can mismatch, offsets can be different, size and index
+			//also if we reload shader and uniform buffer then what happens to other shaders that use it?
+			//it is quite unnecessary when reloading all shader or on startup
+			glDeleteBuffers(1, &shaderBlock->handle); //should put in destructor
+			GraphicsStorage::assetRegistry.DeallocAsset<ShaderBlock>(shaderBlock);
+			shaderBlock = GraphicsStorage::assetRegistry.AllocAsset<ShaderBlock>(blockPropertyValues[1], blockPropertyValues[2], type);
+			shaderBlock->name = std::string(blockName.begin(), blockName.end() - 1);
+		}
+		std::string shaderBlockConfigPath = "resources/shader_blocks/" + shaderBlock->name + ".json";
+		std::string config = LoadShaderBlockConfig(shaderBlockConfigPath.c_str());
+		if (!config.empty())
+		{
+			if (type == BlockType::Uniform)
+			{
+				if (config == "Pass")
+				{
+					shader->globalUniformBuffers.push_back(shaderBlock);
+				}
+				else if (config == "Material")
+				{
+					shader->materialUniformBuffers.push_back(shaderBlock);
+				}
+				else
+				{
+					shader->objectUniformBuffers.push_back(shaderBlock);
+				}
+			}
+			else
+			{
+				if (config == "Pass")
+				{
+					shader->globalShaderStorageBuffers.push_back(shaderBlock);
+				}
+				else if (config == "Material")
+				{
+					shader->materialShaderStorageBuffers.push_back(shaderBlock);
+				}
+				else
+				{
+					shader->objectShaderStorageBuffers.push_back(shaderBlock);
+				}
+			}
+		}
+		GraphicsStorage::shaderBlockTypes[shaderBlock->name] = config;
+		/*
 		if (type == BlockType::Uniform)
 		{
 			std::string bufferType = shaderBlock->name.substr(0, 2);
@@ -866,6 +955,7 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 			else if (bufferType == "G_") shader->globalShaderStorageBuffers.push_back(shaderBlock);
 			else shader->globalShaderStorageBuffers.push_back(shaderBlock);
 		}
+		*/
 
 		std::unordered_map<std::string, uniform_info_t> uniforms;
 		for (int unifIx = 0; unifIx < blockPropertyValues[0]; ++unifIx)
@@ -885,54 +975,163 @@ void GraphicsManager::LoadBlocks(Shader* shader, BlockType& type)
 			}
 			uniform_info.location = values[8] == -1 ? blockUnifs[unifIx] : values[8];
 
-			switch (values[1])
-			{
-			case GL_FLOAT:				uniform_info.size = 4; break;
-			case GL_FLOAT_VEC2:			uniform_info.size = 4 * 2; break;
-			case GL_FLOAT_VEC3:			uniform_info.size = 4 * 3; break;
-			case GL_FLOAT_VEC4:			uniform_info.size = 4 * 4; break;
-			case GL_DOUBLE:				uniform_info.size = 2 * 4; break;
-			case GL_DOUBLE_VEC2:		uniform_info.size = 2 * 4 * 2; break;
-			case GL_DOUBLE_VEC3:		uniform_info.size = 2 * 4 * 3; break;
-			case GL_DOUBLE_VEC4:		uniform_info.size = 2 * 4 * 4; break;
-			case GL_INT:				uniform_info.size = 4; break;
-			case GL_INT_VEC2:			uniform_info.size = 4 * 2; break;
-			case GL_INT_VEC3:			uniform_info.size = 4 * 3; break;
-			case GL_INT_VEC4:			uniform_info.size = 4 * 4; break;
-			case GL_UNSIGNED_INT:		uniform_info.size = 4; break;
-			case GL_UNSIGNED_INT_VEC2:	uniform_info.size = 4 * 2; break;
-			case GL_UNSIGNED_INT_VEC3:	uniform_info.size = 4 * 3; break;
-			case GL_UNSIGNED_INT_VEC4:	uniform_info.size = 4 * 4; break;
-			case GL_BOOL:				uniform_info.size = 4; break;
-			case GL_BOOL_VEC2:			uniform_info.size = 4 * 2; break;
-			case GL_BOOL_VEC3:			uniform_info.size = 4 * 3; break;
-			case GL_BOOL_VEC4:			uniform_info.size = 4 * 4; break;
-			case GL_FLOAT_MAT2:			uniform_info.size = 4 * 2 * 2; break;
-			case GL_FLOAT_MAT3:			uniform_info.size = 4 * 3 * 3; break;
-			case GL_FLOAT_MAT4:			uniform_info.size = 4 * 4 * 4; break;
-			case GL_FLOAT_MAT2x3:		uniform_info.size = 4 * 2 * 3; break;
-			case GL_FLOAT_MAT2x4:		uniform_info.size = 4 * 2 * 4; break;
-			case GL_FLOAT_MAT3x2:		uniform_info.size = 4 * 3 * 2; break;
-			case GL_FLOAT_MAT3x4:		uniform_info.size = 4 * 3 * 4; break;
-			case GL_FLOAT_MAT4x2:		uniform_info.size = 4 * 4 * 2; break;
-			case GL_FLOAT_MAT4x3:		uniform_info.size = 4 * 4 * 3; break;
-			case GL_DOUBLE_MAT2:		uniform_info.size = 2 * 4 * 2 * 2; break;
-			case GL_DOUBLE_MAT3:		uniform_info.size = 2 * 4 * 3 * 3; break;
-			case GL_DOUBLE_MAT4:		uniform_info.size = 2 * 4 * 4 * 4; break;
-			case GL_DOUBLE_MAT2x3:		uniform_info.size = 2 * 4 * 2 * 3; break;
-			case GL_DOUBLE_MAT2x4:		uniform_info.size = 2 * 4 * 2 * 4; break;
-			case GL_DOUBLE_MAT3x2:		uniform_info.size = 2 * 4 * 3 * 2; break;
-			case GL_DOUBLE_MAT3x4:		uniform_info.size = 2 * 4 * 3 * 4; break;
-			case GL_DOUBLE_MAT4x2:		uniform_info.size = 2 * 4 * 4 * 2; break;
-			case GL_DOUBLE_MAT4x3:		uniform_info.size = 2 * 4 * 4 * 3; break;
-			default:
-				break;
-			}
+			unsigned int uniformType = values[1];
+			uniform_info.size = ShaderDataType::Size(ShaderDataType::FromOpenGLType(uniformType));
 
 			uniforms.try_emplace(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info);
 			shaderBlock->AddVariableOffset(std::string(uniformName.begin(), uniformName.end() - 1), uniform_info.offset);
 		}
+		GraphicsStorage::shaderBlockUniforms[shaderBlock->name] = uniforms;
 	}
+}
+
+void GraphicsManager::LoadOutputs(Shader* shader)
+{
+	GLint numResources = 0;
+	GLenum resourceInterface = GL_PROGRAM_OUTPUT;
+	glGetProgramInterfaceiv(shader->shaderID, resourceInterface, GL_ACTIVE_RESOURCES, &numResources);
+	const GLenum resourceProperties[5] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION, GL_LOCATION_INDEX, GL_LOCATION_COMPONENT };
+
+	shader->outputs.resize(numResources);
+
+	for (int resIndex = 0; resIndex < numResources; ++resIndex)
+	{
+		GLint resourcePropertyValues[5];
+		glGetProgramResourceiv(shader->shaderID, resourceInterface, resIndex, 5, resourceProperties, 5, NULL, resourcePropertyValues);
+
+		std::vector<char> resourceName(resourcePropertyValues[0]);
+		glGetProgramResourceName(shader->shaderID, resourceInterface, resIndex, resourceName.size(), NULL, &resourceName[0]);
+		std::string outputName = std::string(resourceName.begin(), resourceName.end() - 1);
+
+		GLint resourceType = resourcePropertyValues[1];
+
+		GLint resourceLocation = resourcePropertyValues[2];
+
+		ShaderOutput& output = shader->outputs[resIndex];
+		output.index = resourceLocation;
+		output.type = ShaderDataType::FromOpenGLType(resourceType);
+		output.name = outputName;
+		printf("\033[1;32mout %d %s %s\033[0m\n", output.index, ShaderDataType::Str(output.type).data(), output.name.c_str());
+	}
+}
+
+void GraphicsManager::LoadSamplers(Shader* shader)
+{
+	GLint numResources = 0;
+	GLenum resourceInterface = GL_UNIFORM;
+	glGetProgramInterfaceiv(shader->shaderID, resourceInterface, GL_ACTIVE_RESOURCES, &numResources);
+	const GLenum resourceProperties[3] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION };
+
+	ShaderSampler sampler;
+	for (int resIndex = 0; resIndex < numResources; ++resIndex)
+	{
+		GLint resourcePropertyValues[3];
+		glGetProgramResourceiv(shader->shaderID, resourceInterface, resIndex, 3, resourceProperties, 3, NULL, resourcePropertyValues);
+
+		std::vector<char> resourceName(resourcePropertyValues[0]);
+		glGetProgramResourceName(shader->shaderID, resourceInterface, resIndex, resourceName.size(), NULL, &resourceName[0]);
+
+		std::string uniformName = std::string(resourceName.begin(), resourceName.end() - 1);
+
+		GLint resourceType = resourcePropertyValues[1];
+		
+		GLint resourceLocation = resourcePropertyValues[2];
+
+		switch (resourceType)
+		{
+		case GL_SAMPLER_1D:
+		{
+			sampler.index = resourceLocation;
+			sampler.type = "sampler1D";
+			sampler.name = uniformName;
+			shader->samplers.emplace_back(std::move(sampler));
+			break;
+		}
+		case GL_SAMPLER_2D:
+		{
+			sampler.index = resourceLocation;
+			sampler.type = "sampler2D";
+			sampler.name = uniformName;
+			shader->samplers.emplace_back(std::move(sampler));
+			break;
+		}
+		case GL_SAMPLER_3D:
+		{
+			sampler.index = resourceLocation;
+			sampler.type = "sampler3D";
+			sampler.name = uniformName;
+			shader->samplers.emplace_back(std::move(sampler));
+			break;
+		}
+		case GL_SAMPLER_CUBE:
+		{
+			sampler.index = resourceLocation;
+			sampler.type = "samplerCUBE";
+			sampler.name = uniformName;
+			shader->samplers.emplace_back(std::move(sampler));
+			break;
+		}
+		default:
+		{
+			break;
+		}
+		}
+	}
+}
+
+void GraphicsManager::LoadAttributes(Shader* shader)
+{
+	GLint numResources = 0;
+	GLenum resourceInterface = GL_PROGRAM_INPUT;
+	glGetProgramInterfaceiv(shader->shaderID, resourceInterface, GL_ACTIVE_RESOURCES, &numResources);
+	const GLenum resourceProperties[4] = { GL_NAME_LENGTH, GL_TYPE, GL_LOCATION, GL_LOCATION_COMPONENT };
+
+	shader->attributes.resize(numResources);
+
+	for (int resIndex = 0; resIndex < numResources; ++resIndex)
+	{
+		GLint resourcePropertyValues[4];
+		glGetProgramResourceiv(shader->shaderID, resourceInterface, resIndex, 4, resourceProperties, 4, NULL, resourcePropertyValues);
+
+		std::vector<char> resourceName(resourcePropertyValues[0]);
+		glGetProgramResourceName(shader->shaderID, resourceInterface, resIndex, resourceName.size(), NULL, &resourceName[0]);
+		std::string outputName = std::string(resourceName.begin(), resourceName.end() - 1);
+
+		GLint resourceType = resourcePropertyValues[1];
+
+		ShaderDataType::Type outputType = ShaderDataType::FromOpenGLType(resourceType);
+
+		GLint resourceLocation = resourcePropertyValues[2];
+
+		ShaderOutput& output = shader->attributes[resIndex];
+		output.index = resourceLocation;
+		output.type = outputType;
+		output.name = outputName;
+		//std::string attributeType = output.name.substr(0, 3);
+		//if (attributeType == "IA_")
+		//{
+		//	shader->dynamicAttributes.push_back(output);
+		//}
+	}
+}
+
+std::string GraphicsManager::LoadShaderBlockConfig(const char* path)
+{
+	lua_State* L = luaL_newstate();
+	luaL_openlibs(L);
+	std::string scriptPath = "resources/serialization/shader_block_config_loader.lua";
+	LuaTools::dofile(L, scriptPath.c_str());
+	lua_getglobal(L, "LoadShaderBlockConfig");
+	std::string config;
+	if (lua_isfunction(L, -1))
+	{
+		lua_pushstring(L, path);
+		int result = LuaTools::report(L, LuaTools::docall(L, 1, 0));
+		config = lua_tostring(L, -1);
+		lua_pop(L, 1);
+	}
+	lua_close(L);
+	return config;
 }
 
 std::string GraphicsManager::ReadTextFileIntoString(const char* path)
@@ -954,7 +1153,7 @@ std::string GraphicsManager::ReadTextFileIntoString(const char* path)
 	return std::string();
 }
 
-std::string GraphicsManager::ReadTextFileIntoString(std::string& path)
+std::string GraphicsManager::ReadTextFileIntoString(const std::string& path)
 {
 	if (path.length() > 0)
 	{
@@ -1025,367 +1224,7 @@ void GraphicsManager::RemoveLineFromTextFileContainingText(std::string& content,
 	}
 }
 
-void GraphicsManager::ParseShaderForUniformBuffers(std::string& shaderCode, Shader& shader)
-{
-	std::vector<size_t> startPositions;
-	std::vector<size_t> endPositions;
-	std::vector<size_t> indexes;
-	std::vector<size_t> sizes;
-	std::vector<std::string> layouts;
-	std::vector<std::string> names;
-	size_t uniformBufferPos = 0;
-	size_t uniformEndPos = 0;
-	size_t uniformStartPos = 0;
-
-	while (uniformBufferPos != std::string::npos)
-	{
-		size_t tempPos = shaderCode.find("std140", uniformBufferPos);
-		if (tempPos == std::string::npos)
-		{
-			tempPos = shaderCode.find("std430", uniformBufferPos);
-			if (tempPos == std::string::npos) break;
-			else {
-				layouts.push_back("std430");
-				uniformBufferPos = tempPos;
-			}
-		}
-		else
-		{
-			layouts.push_back("std140");
-			uniformBufferPos = tempPos;
-		}
-		
-		uniformStartPos = shaderCode.find("{", uniformBufferPos);
-		startPositions.push_back(uniformStartPos);
-		uniformEndPos = shaderCode.find("}", uniformStartPos);
-		endPositions.push_back(uniformEndPos);
-
-		if ((uniformBufferPos = shaderCode.find("binding", uniformBufferPos)) != std::string::npos)
-		{
-			uniformBufferPos = shaderCode.find("=", uniformBufferPos);
-			std::string uniformBufferCode = shaderCode.substr(uniformBufferPos + 1, uniformStartPos - (uniformBufferPos + 1));
-			std::stringstream ss(uniformBufferCode);
-			ss.seekg(0, ss.beg);
-			/* Running loop till the end of the stream */
-			std::string temp;
-			int found = -1;
-			while (!ss.eof()) {
-
-				/* extracting word by word from stream */
-				ss >> temp;
-
-				/* Checking the given word is integer or not */
-				if (std::stringstream(temp) >> found)
-				{
-					indexes.push_back(found);
-					break;
-				}
-			}
-			int foundUniform = false;
-			while (ss.cur != uniformStartPos) {
-
-				/* extracting word by word from stream */
-				ss >> temp;
-				if (temp == "uniform")
-				{
-					//store uniform name
-					ss >> temp;
-					names.push_back(temp);
-					break;
-				}
-			}
-		}
-	}
-
-	if (indexes.size() == 0) return;
-
-	for (int i = 0; i < indexes.size(); i++)
-	{
-		printf("uniform buffer index: %d\n", (int)indexes[i]);
-	}
-
-	if (startPositions.size() > 0)
-	{
-		std::stringstream ss(shaderCode);
-		std::string token;
-		for (size_t i = 0; i < startPositions.size(); i++)
-		{
-			if (!layouts[i].compare("std140")) {
-				if (shader.HasUniformBuffer(indexes[i])) continue;
-			}
-			else if (!layouts[i].compare("std430")) {
-				if (shader.HasShaderStorageBuffer(indexes[i])) continue;
-			}
-
-			std::vector<std::string> uniforms;
-			ss.seekg(startPositions[i], ss.beg);
-			std::string uniformBufferCode = shaderCode.substr(startPositions[i], endPositions[i] - startPositions[i]);
-			replaceAllCharacters(uniformBufferCode, "\n\r\t{}", "");
-			splitLine(uniformBufferCode, uniforms, std::string(";"));
-
-			std::regex ws_re("\\s+");
-			int bufferSize = 0; //will be used also as location
-			std::unordered_map<std::string, unsigned int> locations;
-			for (auto& uniform : uniforms)
-			{
-				std::vector<std::string> uniformPair{
-					std::sregex_token_iterator(uniform.begin(), uniform.end(), ws_re, -1), {}
-				};
-				int typeIndex = 0;
-
-				if (uniformPair.size() > 2)
-				{
-					typeIndex = 1;
-				}
-				int numberOfArrayElements = 0;
-				std::string cleanName = uniformPair[typeIndex + 1];
-				size_t arrayStart = uniformPair[typeIndex + 1].find("[");
-				if (arrayStart != std::string::npos)
-				{
-					size_t arrayEnd = uniformPair[typeIndex + 1].find("]");
-					std::string num = uniformPair[typeIndex + 1].substr(arrayStart + 1, arrayEnd - (arrayStart + 1));
-					replaceAllCharacters(num, " \n\r\t[]", "");
-					std::stringstream(num) >> numberOfArrayElements;
-					cleanName = uniformPair[typeIndex + 1].substr(0, arrayStart);
-					replaceAllCharacters(cleanName, " \n\r\t[]", "");
-				}
-				
-				if (!uniformPair[typeIndex].compare("mat4"))
-				{
-					int offset = (16 - (bufferSize % 16)) % 16;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 64;
-					else bufferSize += numberOfArrayElements * 64;
-				}
-				else if (!uniformPair[typeIndex].find("mat3"))
-				{
-					int offset = (16 - (bufferSize % 16)) % 16;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 64;
-					else bufferSize += numberOfArrayElements * 64;
-				}
-				else if (!uniformPair[typeIndex].find("mat2"))
-				{
-					int offset = (16 - (bufferSize % 16)) % 16;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 64;
-					else bufferSize += numberOfArrayElements * 64;
-				}
-				else if (!uniformPair[typeIndex].find("vec4"))
-				{
-					int offset = (16 - (bufferSize % 16)) % 16;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 16;
-					else bufferSize += numberOfArrayElements * 16;
-				}
-				else if (!uniformPair[typeIndex].find("vec3"))
-				{
-					int offset = (16 - (bufferSize % 16)) % 16;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 12;
-					else bufferSize += (numberOfArrayElements * 16);
-				}
-				else if (!uniformPair[typeIndex].find("vec2"))
-				{
-					int offset = (8 - (bufferSize % 8)) % 8;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 8;
-					else bufferSize += (numberOfArrayElements * 16);
-				}
-				else if (!uniformPair[typeIndex].find("float"))
-				{
-					int offset = (4 - (bufferSize % 4)) % 4;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 4;
-					else {
-						if (!layouts[i].compare("std140")) {
-							bufferSize += (numberOfArrayElements * 16);
-						}
-						else if (!layouts[i].compare("std430")) {
-							bufferSize += (numberOfArrayElements * 4);
-						}
-					}
-				}
-				else if (!uniformPair[typeIndex].find("int"))
-				{
-					int offset = (4 - (bufferSize % 4)) % 4;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 4;
-					else {
-						if (!layouts[i].compare("std140")) {
-							bufferSize += (numberOfArrayElements * 16);
-						}
-						else if (!layouts[i].compare("std430")) {
-							bufferSize += (numberOfArrayElements * 4);
-						}
-					}
-				}
-				else if (!uniformPair[typeIndex].find("uint"))
-				{
-					int offset = (4 - (bufferSize % 4)) % 4;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 4;
-					else {
-						if (!layouts[i].compare("std140")) {
-							bufferSize += (numberOfArrayElements * 16);
-						}
-						else if (!layouts[i].compare("std430")) {
-							bufferSize += (numberOfArrayElements * 4);
-						}
-					}
-				}
-				else if (!uniformPair[typeIndex].find("bool"))
-				{
-					int offset = (4 - (bufferSize % 4)) % 4;
-					bufferSize += offset;
-					locations[uniformPair[typeIndex + 1]] = bufferSize;
-					if (numberOfArrayElements == 0) bufferSize += 4;
-					else {
-						if (!layouts[i].compare("std140")) {
-							bufferSize += (numberOfArrayElements * 16);
-						}
-						else if (!layouts[i].compare("std430")) {
-							bufferSize += (numberOfArrayElements * 4);
-						}
-					}
-				}
-			}
-			std::string uniformBufferType = names[i].substr(0, 2);
-			if (!layouts[i].compare("std140")) {
-				ShaderBlock* uniformBuffer = GraphicsStorage::GetUniformBuffer(indexes[i]);
-				if (uniformBuffer == nullptr)
-				{
-					uniformBuffer = new ShaderBlock(bufferSize, indexes[i], BlockType::Uniform);
-					uniformBuffer->name = names[i];
-					for (auto& uniformLocation : locations)
-					{
-						uniformBuffer->AddVariableOffset(uniformLocation.first, uniformLocation.second);
-					}
-					GraphicsStorage::uniformBuffers.push_back(uniformBuffer);
-				}
-				
-				if (uniformBufferType == "O_") { shader.objectUniformBuffers.push_back(uniformBuffer); }
-				else if (uniformBufferType == "M_") { shader.materialUniformBuffers.push_back(uniformBuffer); }
-				else if (uniformBufferType == "G_") { shader.globalUniformBuffers.push_back(uniformBuffer); }
-				else printf("\nwrong uniform buffer name: %s\nuniform buffer name must start with O_ M_ or G_", names[i].c_str());
-			}
-			else if (!layouts[i].compare("std430")) {
-				ShaderBlock* shaderStorageBuffer = GraphicsStorage::GetShaderStorageBuffer(indexes[i]);
-				if (shaderStorageBuffer == nullptr)
-				{
-					shaderStorageBuffer = new ShaderBlock(bufferSize, indexes[i], BlockType::Storage);
-					shaderStorageBuffer->name = names[i];
-					for (auto& uniformLocation : locations)
-					{
-						shaderStorageBuffer->AddVariableOffset(uniformLocation.first, uniformLocation.second);
-					}
-					GraphicsStorage::shaderStorageBuffers.push_back(shaderStorageBuffer);
-				}
-				if (uniformBufferType == "O_") shader.objectShaderStorageBuffers.push_back(shaderStorageBuffer);
-				else if (uniformBufferType == "M_") shader.materialShaderStorageBuffers.push_back(shaderStorageBuffer);
-				else if (uniformBufferType == "G_") shader.globalShaderStorageBuffers.push_back(shaderStorageBuffer);
-				else printf("\nwrong shader storage name: %s\nshader storage name must start with O_ M_ or G_", names[i].c_str());
-			}
-		}
-	}
-}
-
-void GraphicsManager::ParseShaderForOutputs(std::string& shaderCode, Shader& shader)
-{
-	size_t outPos = 0;
-	std::vector<size_t> indexes;
-	std::vector<std::string> types;
-	std::vector<std::string> names;
-	int defaultIndex = 0;
-	while (outPos != std::string::npos)
-	{
-		size_t tempPos = shaderCode.find("out ", outPos);
-		if (tempPos == std::string::npos) break;
-		else
-		{
-			if (tempPos != 0)
-			{
-				if (shaderCode[tempPos - 1] == '\n' || shaderCode[tempPos - 1] == '\t' || shaderCode[tempPos - 1] == '\r' || shaderCode[tempPos - 1] == ' ')
-				{
-					outPos = tempPos;
-				}
-				else
-				{
-					break;
-				}
-			}
-			else
-			{
-				outPos = tempPos;
-			}
-		}
-		size_t previousLineEnd = shaderCode.rfind(";", outPos);
-		if (previousLineEnd == std::string::npos) previousLineEnd = 0;
-		size_t outLineEnd = shaderCode.find(";", outPos);
-		std::string outCode = shaderCode.substr(previousLineEnd, outLineEnd - previousLineEnd);
-		std::vector<std::string> codeWords;
-		size_t layoutIndex = outCode.find("layout", 0);
-		if (layoutIndex != std::string::npos)
-		{
-			size_t locationIndex = layoutIndex;
-			if ((locationIndex = outCode.find("location", locationIndex)) != std::string::npos)
-			{
-				locationIndex = outCode.find("=", locationIndex);
-				std::stringstream ss(outCode);
-				ss.seekg(locationIndex + 1, ss.beg);
-				/* Running loop till the end of the stream */
-				std::string temp;
-				int found = -1;
-				while (!ss.eof()) {
-
-					/* extracting word by word from stream */
-					ss >> temp;
-
-					/* Checking the given word is integer or not */
-					if (std::stringstream(temp) >> found)
-					{
-						indexes.push_back(found);
-						break;
-					}
-				}
-			}
-		}
-		else
-		{
-			indexes.push_back(defaultIndex);
-			defaultIndex++;
-		}
-
-		size_t spaceAfterOut = shaderCode.find(" ", outPos);
-		std::string typeAndNameCode = shaderCode.substr(spaceAfterOut + 1, outLineEnd - (spaceAfterOut + 1));
-		replaceAllCharacters(typeAndNameCode, "\n\r\t{};", "");
-		std::vector<std::string> typeAndName;
-		splitLine(typeAndNameCode, typeAndName);
-		types.push_back(typeAndName[0]);
-		names.push_back(typeAndName[1]);
-		outPos = outLineEnd;
-	}
-	shader.outputs.resize(indexes.size());
-	for (size_t i = 0; i < indexes.size(); i++)
-	{
-		ShaderOutput& output = shader.outputs[i];
-		output.index = (int)indexes[i];
-		output.type = types[i];
-		output.name = names[i];
-		printf("\033[1;32mout %d %s %s\033[0m\n", (int)indexes[i], types[i].c_str(), names[i].c_str());
-	}
-}
-
-GLuint GraphicsManager::LoadProgram(std::string& VertexShaderCode, std::string& FragmentShaderCode, std::string& GeometryShaderCode) {
+GLuint GraphicsManager::LoadProgram(const std::string& VertexShaderCode, const std::string& FragmentShaderCode, const std::string& GeometryShaderCode) {
 
 	// Create the shaders
 	GLuint VertexShaderID = glCreateShader(GL_VERTEX_SHADER);
@@ -1493,153 +1332,36 @@ GLuint GraphicsManager::LoadProgram(std::string& VertexShaderCode, std::string& 
 	return ProgramID;
 }
 
-Vao* GraphicsManager::LoadOBJToVAO(OBJ* object, Vao* vao)
-{
-	//vao->Bind();
-	//attribute index - attribute index location in the shader
-	//binding index - index of the vbo, is it one and the same or multiple, decide where inside the vao you want to place it
-	//outcommented is the old way of using state machine in opengl with glGen
-	//current code is uses DSA - Direct State Access where we are not required to bind buffers in order to change them
-	vao->vertexBuffers.reserve(4);
-	///GLuint vertexBuffer;
-	///GLuint bindingIndex = 0;
-	///GLuint attributeIndex = 0;
-	// 1rst attribute buffer : vertices
-	///BufferLayout layout = { 
-	///	LayoutLocation(ShaderDataType::Float3, "position"),
-	///	{ ShaderDataType::Float2, "uv" }
-	///};
-	vao->AddVertexBuffer(&object->indexed_vertices[0], object->indexed_vertices.size() * sizeof(Vector3F), { {ShaderDataType::Float3, "position"} });
-	///glCreateBuffers(1, &vertexBuffer);
-	///glNamedBufferStorage(vertexBuffer, object->indexed_vertices.size() * sizeof(Vector3F), &object->indexed_vertices[0], GL_DYNAMIC_STORAGE_BIT);
-	///glEnableVertexArrayAttrib(vao->handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
-	///glVertexArrayVertexBuffer(vao->handle, bindingIndex, vertexBuffer, 0, sizeof(Vector3F)); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
-	///glVertexArrayAttribFormat(vao->handle, attributeIndex, 3, GL_FLOAT, GL_FALSE, 0); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
-	///glVertexArrayAttribBinding(vao->handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
-	///glVertexArrayBindingDivisor(vao->handle, bindingIndex, 0);
-	//glGenBuffers(1, &vertexBuffer);
-	//glBindBuffer(GL_ARRAY_BUFFER, vertexBuffer);
-	//glBufferData(GL_ARRAY_BUFFER, object->indexed_vertices.size() * sizeof(Vector3F), &object->indexed_vertices[0], GL_STATIC_DRAW);
-	//glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-	//glEnableVertexAttribArray(0);
-	///vao->vertexBuffers.push_back(vertexBuffer);
-
-	///GLuint uvbuffer;
-	///bindingIndex += 1;
-	///attributeIndex += 1;
-	// 2nd attribute buffer : UVs
-	vao->AddVertexBuffer(&object->indexed_uvs[0], object->indexed_uvs.size() * sizeof(Vector2F), { {ShaderDataType::Float2, "uv"} });
-	///glCreateBuffers(1, &uvbuffer);
-	///glNamedBufferStorage(uvbuffer, object->indexed_uvs.size() * sizeof(Vector2F), &object->indexed_uvs[0], GL_DYNAMIC_STORAGE_BIT);
-	///glEnableVertexArrayAttrib(vao->handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
-	///glVertexArrayVertexBuffer(vao->handle, bindingIndex, uvbuffer, 0, sizeof(Vector2F)); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
-	///glVertexArrayAttribFormat(vao->handle, attributeIndex, 2, GL_FLOAT, GL_FALSE, 0); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
-	///glVertexArrayAttribBinding(vao->handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
-	///glVertexArrayBindingDivisor(vao->handle, bindingIndex, 0);
-	//glGenBuffers(1, &uvbuffer);
-	//glBindBuffer(GL_ARRAY_BUFFER, uvbuffer);
-	//glBufferData(GL_ARRAY_BUFFER, object->indexed_uvs.size() * sizeof(Vector2F), &object->indexed_uvs[0], GL_STATIC_DRAW);
-	//glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-	//glEnableVertexAttribArray(1);
-	///vao->vertexBuffers.push_back(uvbuffer);
-
-	///GLuint normalbuffer;
-	///bindingIndex += 1;
-	///attributeIndex += 1;
-	// 3rd attribute buffer : normals
-	vao->AddVertexBuffer(&object->indexed_normals[0], object->indexed_normals.size() * sizeof(Vector3F), { {ShaderDataType::Float3, "normal"} });
-	///glCreateBuffers(1, &normalbuffer);
-	///glNamedBufferStorage(normalbuffer, object->indexed_normals.size() * sizeof(Vector3F), &object->indexed_normals[0], GL_DYNAMIC_STORAGE_BIT);
-	///glEnableVertexArrayAttrib(vao->handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
-	///glVertexArrayVertexBuffer(vao->handle, bindingIndex, normalbuffer, 0, sizeof(Vector3F)); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
-	///glVertexArrayAttribFormat(vao->handle, attributeIndex, 3, GL_FLOAT, GL_FALSE, 0); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
-	///glVertexArrayAttribBinding(vao->handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
-	///glVertexArrayBindingDivisor(vao->handle, bindingIndex, 0);
-	//glGenBuffers(1, &normalbuffer);
-	//glBindBuffer(GL_ARRAY_BUFFER, normalbuffer);
-	//glBufferData(GL_ARRAY_BUFFER, object->indexed_normals.size() * sizeof(Vector3F), &object->indexed_normals[0], GL_STATIC_DRAW);
-	//glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-	//glEnableVertexAttribArray(2);
-	///vao->vertexBuffers.push_back(normalbuffer);
-
-	if (object->indexed_tangents.size() > 0)
-	{
-		///GLuint tangentbuffer;
-		///bindingIndex += 1;
-		///attributeIndex += 1;
-		vao->AddVertexBuffer(&object->indexed_tangents[0], object->indexed_tangents.size() * sizeof(Vector3F), { {ShaderDataType::Float3, "tangent"} });
-		///glCreateBuffers(1, &tangentbuffer);
-		///glNamedBufferStorage(tangentbuffer, object->indexed_tangents.size() * sizeof(Vector3F), &object->indexed_tangents[0], GL_DYNAMIC_STORAGE_BIT);
-		///glEnableVertexArrayAttrib(vao->handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
-		///glVertexArrayVertexBuffer(vao->handle, bindingIndex, tangentbuffer, 0, sizeof(Vector3F)); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
-		///glVertexArrayAttribFormat(vao->handle, attributeIndex, 3, GL_FLOAT, GL_FALSE, 0); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
-		///glVertexArrayAttribBinding(vao->handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
-		///glVertexArrayBindingDivisor(vao->handle, bindingIndex, 0);
-		//glGenBuffers(1, &tangentbuffer);
-		//glBindBuffer(GL_ARRAY_BUFFER, tangentbuffer);
-		//glBufferData(GL_ARRAY_BUFFER, object->indexed_tangents.size() * sizeof(Vector3F), &object->indexed_tangents[0], GL_STATIC_DRAW);
-		//glVertexAttribPointer(3, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-		//glEnableVertexAttribArray(3);
-		///vao->vertexBuffers.push_back(tangentbuffer);
-
-		///GLuint bitangentbuffer;
-		///bindingIndex += 1;
-		///attributeIndex += 1;
-		vao->AddVertexBuffer(&object->indexed_bitangents[0], object->indexed_bitangents.size() * sizeof(Vector3F), { {ShaderDataType::Float3, "bitangent"} });
-		///glCreateBuffers(1, &bitangentbuffer);
-		///glNamedBufferStorage(bitangentbuffer, object->indexed_bitangents.size() * sizeof(Vector3F), &object->indexed_bitangents[0], GL_DYNAMIC_STORAGE_BIT);
-		///glEnableVertexArrayAttrib(vao->handle, attributeIndex); //vao handle, attribute index, which attrib index to enable on this vao
-		///glVertexArrayVertexBuffer(vao->handle, bindingIndex, bitangentbuffer, 0, sizeof(Vector3F)); //vao handle, binding index, vbo handle, offset to first element, stride (distance between elements)
-		///glVertexArrayAttribFormat(vao->handle, attributeIndex, 3, GL_FLOAT, GL_FALSE, 0); //vao handle, attribute index, values per element, type of data, normalized, relativeoffset - The distance between elements within the buffer.
-		///glVertexArrayAttribBinding(vao->handle, attributeIndex, bindingIndex); //vao handle, attribute index, binding index
-		///glVertexArrayBindingDivisor(vao->handle, bindingIndex, 0);
-		//glGenBuffers(1, &bitangentbuffer);
-		//glBindBuffer(GL_ARRAY_BUFFER, bitangentbuffer);
-		//glBufferData(GL_ARRAY_BUFFER, object->indexed_bitangents.size() * sizeof(Vector3F), &object->indexed_bitangents[0], GL_STATIC_DRAW);
-		//glVertexAttribPointer(4, 3, GL_FLOAT, GL_FALSE, 0, (void*)0); // attribute, size, type, normalized?, stride, array buffer offset
-		//glEnableVertexAttribArray(4);
-		///vao->vertexBuffers.push_back(bitangentbuffer);
-	}
-
-	///GLuint elementbuffer;
-	// 4th element buffer Generate a buffer for the indices as well
-	vao->AddIndexBuffer(&object->indices[0], object->indices.size(), IndicesType::UNSIGNED_INT);
-	///glCreateBuffers(1, &elementbuffer);
-	///glNamedBufferStorage(elementbuffer, object->indices.size() * sizeof(unsigned int), &object->indices[0], GL_DYNAMIC_STORAGE_BIT);
-	///glVertexArrayElementBuffer(vao->handle, elementbuffer);
-	//glGenBuffers(1, &elementbuffer);
-	//glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, elementbuffer);
-	//glBufferData(GL_ELEMENT_ARRAY_BUFFER, object->indices.size() * sizeof(unsigned int), &object->indices[0], GL_STATIC_DRAW);
-	///vao->indicesCount = (unsigned int)object->indices.size();
-	///vao->vertexBuffers.push_back(elementbuffer);
-	///vao->indexBuffer = elementbuffer;
-
-	//Unbind the VAO now that the VBOs have been set up
-	//vao->Unbind();
-	
-	vao->center = object->center_of_mesh;
-	vao->dimensions = object->dimensions;
-
-	return vao;
-}
-
-void GraphicsManager::LoadAllOBJsToVAOs()
-{
-	for (auto& obj : GraphicsStorage::objs)
-	{
-		Vao* newVao = new Vao();
-		newVao->name = obj.second->name;
-		LoadOBJToVAO(obj.second, newVao);
-		GraphicsStorage::vaos[obj.second->name] = newVao;
-		//delete obj.second;
-	}
-	//GraphicsStorage::objs.clear();
-}
-
 void GraphicsManager::LoadAllAssets()
 {
 	std::chrono::time_point<std::chrono::high_resolution_clock> start, end;
 	std::chrono::duration<double> elapsed_seconds;
+
+	printf("\nALLOCATING MEMORY\n");
+	start = std::chrono::high_resolution_clock::now();
+	
+	GraphicsStorage::assetRegistry.RegisterType<Texture>();
+	GraphicsStorage::assetRegistry.RegisterType<RenderBuffer>();
+	GraphicsStorage::assetRegistry.RegisterType<VertexArray>();
+	GraphicsStorage::assetRegistry.RegisterType<VertexBuffer>();
+	GraphicsStorage::assetRegistry.RegisterType<ElementBuffer>();
+	GraphicsStorage::assetRegistry.RegisterType<BufferLayout>();
+	GraphicsStorage::assetRegistry.RegisterType<LocationLayout>();
+	GraphicsStorage::assetRegistry.RegisterType<VertexBufferDynamic>();
+	GraphicsStorage::assetRegistry.RegisterType<Shader>();
+	GraphicsStorage::assetRegistry.RegisterType<ShaderBlock>();
+	GraphicsStorage::assetRegistry.RegisterType<CPUBlockData>();
+	GraphicsStorage::assetRegistry.RegisterType<OBJ>();
+
+	GraphicsStorage::assetRegistry.RegisterType<RenderPass>();
+	GraphicsStorage::assetRegistry.RegisterType<RenderProfile>();
+	GraphicsStorage::assetRegistry.RegisterType<TextureProfile>();
+	GraphicsStorage::assetRegistry.RegisterType<MaterialProfile>();
+
+	end = std::chrono::high_resolution_clock::now();
+	elapsed_seconds = end - start;
+	printf("\nDONE Took %fs\n", elapsed_seconds.count());
+
 
 	printf("\nLOADING PATHS\n");
 	start = std::chrono::high_resolution_clock::now();
@@ -1657,14 +1379,15 @@ void GraphicsManager::LoadAllAssets()
 
 	printf("\nLOADING OBJs\n");
 	start = std::chrono::high_resolution_clock::now();
-	LoadOBJs("config/models.txt");
+	std::vector<OBJ*> parsedOBJs;
+	LoadOBJs("config/models.txt", parsedOBJs);
 	end = std::chrono::high_resolution_clock::now();
 	elapsed_seconds = end - start;
 	printf("\nDONE Took %fs\n", elapsed_seconds.count());
-
+	
 	printf("\nLOADING OBJs TO VAOs\n");
 	start = std::chrono::high_resolution_clock::now();
-	LoadAllOBJsToVAOs();
+	LoadOBJsToVAOs(parsedOBJs);
 	end = std::chrono::high_resolution_clock::now();
 	elapsed_seconds = end - start;
 	printf("\nDONE Took %fs\n", elapsed_seconds.count());
@@ -1689,110 +1412,24 @@ TextureInfo* GraphicsManager::LoadImage(const char* path, int forcedNumOfEle)
 	return SOIL_load_image(path, forcedNumOfEle);
 }
 
-Texture* GraphicsManager::LoadTexture(char* path)
+Texture* GraphicsManager::LoadTexture(const char* guid, const char* path)
 {
 	std::string fullName = path;
-	size_t pos = fullName.find_last_of(".");
-	std::string ext = fullName.substr(pos + 1, fullName.length() - pos);
-	size_t fileNameStart = fullName.find_last_of("/\\");
-	std::string fileName = fullName.substr(fileNameStart + 1, pos - fileNameStart - 1);
-	bool stored = false;
-	int x = 0, y = 0, numOfElements = 0;
+	std::filesystem::path fullPath(fullName);
+	std::string fileName = fullPath.stem().string();
 	TextureInfo* ti = nullptr;
 	Texture* tex = nullptr;
 	
+	// we have to pass guid to these functions
 	ti = GraphicsManager::LoadImage(path, 0);
-	if (ti != nullptr)
-	{
-		DDSExtraInfo* ei = NULL;
-		int internalFormat;
-		unsigned int format;
-		switch (ti->type)
-		{
-		case HDR:
-			tex = new Texture(GL_TEXTURE_2D, 0, GL_RGB16F, ti->width, ti->height, GL_RGB, GL_FLOAT, ti->data, GL_COLOR_ATTACHMENT0);
-			tex->GenerateBindSpecify();
-			tex->name = fileName;
-			GraphicsStorage::textures[tex->name] = tex;
-			break;
-		case DDS:
-			ei = (DDSExtraInfo*)ti->extraInfo;
-			for (int i = 0; i < ei->nrOfCubeMapFaces; i++)
-			{
-				if (ei->compressed)
-				{
-					tex = new Texture(GL_TEXTURE_2D, 0, GL_RGB, ti->width, ti->height, GL_RGB, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
-					LoadCompressedDDS(tex, ti, i);
-					std::string name = fileName;
-					if (i > 0) name = fileName + std::to_string(i);
-					tex->name = name;
-					GraphicsStorage::textures[tex->name] = tex;
-				}
-				else
-				{
-					switch (ti->numOfElements)
-					{
-					case 1:
-						internalFormat = GL_R8; format = GL_RED;
-						break;
-					case 2:
-						internalFormat = GL_RG8; format = GL_RG;
-						break;
-					case 3:
-						internalFormat = GL_RGB; format = GL_RGB;
-						break;
-					case 4:
-						internalFormat = GL_RGBA; format = GL_RGBA;
-						break;
-					default:
-						internalFormat = GL_RGB; format = GL_RGB;
-						break;
-					}
-					tex = new Texture(GL_TEXTURE_2D, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
-					tex->pixels = &((unsigned char*)ti->data)[i * ti->height * ti->width * ti->numOfElements];
-					tex->GenerateBindSpecify();
-					std::string name = fileName;
-					if (i > 0) name = fileName + std::to_string(i);
-					tex->name = name;
-					GraphicsStorage::textures[tex->name] = tex;
-				}
-				if (!tex->hasMipMaps) tex->GenerateMipMaps();
-			}
-			break;
-		default:
-			switch (ti->numOfElements)
-			{
-			case 1:
-				internalFormat = GL_R8; format = GL_RED;
-				break;
-			case 2:
-				internalFormat = GL_RG8; format = GL_RG;
-				break;
-			case 3:
-				internalFormat = GL_RGB; format = GL_RGB;
-				break;
-			case 4:
-				internalFormat = GL_RGBA; format = GL_RGBA;
-				break;
-			default:
-				internalFormat = GL_RGB; format = GL_RGB;
-				break;
-			}
-			tex = new Texture(GL_TEXTURE_2D, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
-			tex->GenerateBindSpecify();
-			tex->GenerateMipMaps();
-			tex->name = fileName;
-			GraphicsStorage::textures[tex->name] = tex;
-			break;
-		}
-		SOIL_free_texture_info(ti);
-		tex->SetDefaultParameters();
-	}
-	else
-	{
-		printf("%s could not be opened.\n", path);
-	}
-	return tex;
+	return LoadTextureIntoGPU(guid, path, ti);
+
+	// next steps:
+	// we might want to create and generate texture return that to lua
+	// that will give valid texture handle non threaded
+	// load multi threaded the image
+	// and lastly load it's settings non threaded, we will call that from c++ when ready
+	// then again we also want to be able to load this stuff entirely non threaded 
 }
 
 Texture* GraphicsManager::LoadCompressedDDS(Texture* tex, TextureInfo* ti, int index)
@@ -1950,19 +1587,38 @@ Texture* GraphicsManager::LoadCompressedDDSCubeMapFace(Texture* tex, TextureInfo
 	return tex;
 }
 
-Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
+Texture* GraphicsManager::LoadCubeMap(const char* guid, const char* path)
 {
-	int x = 0, y = 0, numOfElements = 0;
+	FILE* texturesFile = NULL;
+	texturesFile = fopen(path, "r");
+	if (texturesFile == NULL) {
+		printf("%s could not be opened.\n", path);
+		return nullptr;
+	}
+	printf("Loading cubemap: %s\n", path);
+	std::vector<std::string> texturesPaths;
+	while (1)
+	{
+		char cubeMapTexturePath[128];
+		int res = fscanf(texturesFile, "%s", cubeMapTexturePath);
+		if (res == EOF)
+		{
+			break; // EOF = End Of File. Quit the loop.
+		}
+		texturesPaths.push_back(GraphicsStorage::paths["resources"] + cubeMapTexturePath);
+	}
+	fclose(texturesFile);
+
 	Texture* tex = nullptr;
 	
-	if (textures.size() == 1)
+	if (texturesPaths.size() == 1)
 	{
-		TextureInfo* ti = GraphicsManager::LoadImage(textures.at(0).c_str(), 0);
+		TextureInfo* ti = GraphicsManager::LoadImage(texturesPaths.at(0).c_str(), 0);
 		if (ti != nullptr)
 		{
 			DDSExtraInfo* ei = NULL;
 			int internalFormat;
-			unsigned int format;
+			int format;
 			switch (ti->type)
 			{
 			case DDS:
@@ -1987,7 +1643,7 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 				}
 				if (ei->nrOfCubeMapFaces == 6)
 				{
-					tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					tex = GraphicsStorage::assetRegistry.AllocAsset<Texture>(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
 					if (ei->compressed)
 					{
 						LoadCompressedDDSCubeMap(tex, ti);
@@ -2024,7 +1680,7 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 					break;
 				}
 
-				tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+				tex = GraphicsStorage::assetRegistry.AllocAsset<Texture>(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
 				if (ei->nrOfCubeMapFaces == 6)
 				{
 					tex->Generate();
@@ -2039,32 +1695,29 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 			}
 			if (tex != nullptr)
 			{
-				std::string fullName = textures.at(0);
-				size_t pos = fullName.find_last_of("/\\");
-				std::string fileName = fullName.substr(0, pos);
-				pos = fileName.find_last_of("/\\");
-				fileName = fileName.substr(pos + 1);
-				tex->name = fileName;
+				std::string fullName = texturesPaths.at(0);
+				std::filesystem::path fullPath(fullName);
+				tex->name = fullPath.parent_path().stem().string();
+				tex->texturePath = path;
 				tex->SetDefaultParameters();
-				GraphicsStorage::cubemaps[tex->name] = tex;
 				SOIL_free_texture_info(ti);
 			}
 		}
 		else
 		{
-			printf("%s could not be opened.\n", textures.at(0).c_str());
+			printf("%s could not be opened.\n", texturesPaths.at(0).c_str());
 		}
 	}
 	else
 	{
-		if (textures.size() == 6)
+		if (texturesPaths.size() == 6)
 		{
-			TextureInfo* ti = GraphicsManager::LoadImage(textures.at(0).c_str(), 0);
+			TextureInfo* ti = GraphicsManager::LoadImage(texturesPaths.at(0).c_str(), 0);
 			if (ti != nullptr)
 			{
 				DDSExtraInfo* ei = nullptr;
 				int internalFormat;
-				unsigned int format;
+				int format;
 				switch (ti->type)
 				{
 				case DDS:
@@ -2087,8 +1740,14 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 						internalFormat = GL_RGB; format = GL_RGB;
 						break;
 					}
-
-					tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					if (guid != nullptr)
+					{
+						tex = GraphicsStorage::assetRegistry.AllocAssetWithStrUUID<Texture>(guid, GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					}
+					else
+					{
+						tex = GraphicsStorage::assetRegistry.AllocAsset<Texture>(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					}
 					tex->Generate();
 					tex->Bind();
 					if (ei->compressed)
@@ -2097,7 +1756,7 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 						SOIL_free_texture_info(ti);
 						for (size_t i = 1; i < 6; i++) //face 1-5
 						{
-							ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
+							ti = GraphicsManager::LoadImage(texturesPaths.at(i).c_str(), 0);
 							if (ti != nullptr)
 							{
 								LoadCompressedDDSCubeMapFace(tex, ti, (int)i);
@@ -2105,7 +1764,7 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 							}
 							else
 							{
-								printf("%s could not be opened.\n", textures.at(i).c_str());
+								printf("%s could not be opened.\n", texturesPaths.at(i).c_str());
 							}
 						}
 					}
@@ -2115,7 +1774,7 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 						SOIL_free_texture_info(ti);
 						for (int i = 1; i < 6; i++) //face 1-5
 						{
-							ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
+							ti = GraphicsManager::LoadImage(texturesPaths.at(i).c_str(), 0);
 							if (ti != nullptr)
 							{
 								tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, ti->data);
@@ -2123,7 +1782,7 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 							}
 							else
 							{
-								printf("%s could not be opened.\n", textures.at(i).c_str());
+								printf("%s could not be opened.\n", texturesPaths.at(i).c_str());
 							}
 						}
 					}
@@ -2147,7 +1806,14 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 						internalFormat = GL_RGB; format = GL_RGB;
 						break;
 					}
-					tex = new Texture(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					if (guid != nullptr)
+					{
+						tex = GraphicsStorage::assetRegistry.AllocAssetWithStrUUID<Texture>(guid, GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					}
+					else
+					{
+						tex = GraphicsStorage::assetRegistry.AllocAsset<Texture>(GL_TEXTURE_CUBE_MAP, 0, internalFormat, ti->width, ti->height, format, GL_UNSIGNED_BYTE, ti->data, GL_COLOR_ATTACHMENT0);
+					}
 					tex->Generate();
 					tex->Bind();
 
@@ -2155,7 +1821,7 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 					SOIL_free_texture_info(ti);
 					for (int i = 1; i < 6; i++)
 					{
-						ti = GraphicsManager::LoadImage(textures.at(i).c_str(), 0);
+						ti = GraphicsManager::LoadImage(texturesPaths.at(i).c_str(), 0);
 						tex->SpecifyTexture(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i, ti->width, ti->height, ti->data);
 						SOIL_free_texture_info(ti);
 					}
@@ -2164,19 +1830,16 @@ Texture* GraphicsManager::LoadCubeMap(const std::vector<std::string>& textures)
 			}
 			else
 			{
-				printf("%s could not be opened.\n", textures.at(0).c_str());
+				printf("%s could not be opened.\n", texturesPaths.at(0).c_str());
 			}
 		}
 		if (tex != nullptr)
 		{
-			std::string fullName = textures.at(0);
-			size_t pos = fullName.find_last_of("/\\");
-			std::string fileName = fullName.substr(0, pos);
-			pos = fileName.find_last_of("/\\");
-			fileName = fileName.substr(pos + 1);
-			tex->name = fileName;
+			std::string fullName = texturesPaths.at(0);
+			std::filesystem::path fullPath(fullName);
+			tex->name = fullPath.parent_path().stem().string();
+			tex->texturePath = path;
 			tex->SetDefaultParameters();
-			GraphicsStorage::cubemaps[tex->name] = tex;
 		}
 	}
 	

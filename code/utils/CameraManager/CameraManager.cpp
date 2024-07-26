@@ -37,7 +37,7 @@ void CameraManager::SetCurrentCamera(const char* name)
 void CameraManager::Update(double deltaTime)
 {
 	currentCamera->Update(deltaTime);
-	ViewProjection = currentCamera->ViewMatrix*currentCamera->ProjectionMatrix;
+	ViewProjection = currentCamera->ProjectionMatrix * currentCamera->ViewMatrix;
 	ViewProjectionF = ViewProjection;
 	ViewF = currentCamera->ViewMatrix;
 	ProjectionF = currentCamera->ProjectionMatrix;

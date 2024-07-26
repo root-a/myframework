@@ -12,15 +12,15 @@ public:
 	Camera* GetCurrentCamera();
 	void SetCurrentCamera(const char* name);
 	void Update(double deltaTime);
-	Matrix4 ViewProjection;
-	Matrix4F ViewProjectionF;
-	Matrix4F ViewF;
-	Matrix4F ProjectionF;
-	Vector2F screenSize;
-	Vector3F cameraPos;
-	Vector3F cameraUp;
-	Vector3F cameraRight;
-	Vector3F cameraForward;
+	glm::mat4 ViewProjection;
+	glm::mat4 ViewProjectionF;
+	glm::mat4 ViewF;
+	glm::mat4 ProjectionF;
+	glm::vec2 screenSize;
+	glm::vec3 cameraPos;
+	glm::vec3 cameraUp;
+	glm::vec3 cameraRight;
+	glm::vec3 cameraForward;
 	float far;
 	float near;
 private:

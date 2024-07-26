@@ -13,7 +13,7 @@ SET(files_render
 SOURCE_GROUP("render" FILES ${files_render})
 
 ADD_LIBRARY(render STATIC ${files_render})
-TARGET_LINK_LIBRARIES(render frustum fbo_manager camera_manager scene_graph shader)
+TARGET_LINK_LIBRARIES(render gl_windowd frustum fbo_manager camera_manager scene_graph shader render_profile imgui_wrapper render_pass particle)
 SET_TARGET_PROPERTIES(render PROPERTIES LINKER_LANGUAGE CXX)
 SET_TARGET_PROPERTIES(render PROPERTIES FOLDER "MyUtils")
 TARGET_INCLUDE_DIRECTORIES(render PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

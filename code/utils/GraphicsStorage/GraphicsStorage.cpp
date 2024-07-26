@@ -6,6 +6,9 @@
 #include "OBJ.h"
 #include "Vao.h"
 #include <GL/glew.h>
+#include "TextureProfile.h"
+#include "MaterialProfile.h"
+#include "ObjectProfile.h"
 #include "DataRegistry.h"
 #include "ShaderBlockData.h"
 
@@ -15,33 +18,6 @@ GraphicsStorage::GraphicsStorage()
 
 GraphicsStorage::~GraphicsStorage()
 {
-}
-
-void GraphicsStorage::ClearMaterials()
-{
-	for (auto material : materials)
-	{
-		delete material;
-	}
-	materials.clear();
-}
-
-void GraphicsStorage::ClearVaos()
-{
-	for (auto& vao : vaos)
-	{
-		delete vao.second;
-	}
-	vaos.clear();
-}
-
-void GraphicsStorage::ClearTextures()
-{
-	for (auto& texture : textures)
-	{
-		delete texture.second;
-	}
-	textures.clear();
 }
 
 void GraphicsStorage::ClearUniformBuffers()
@@ -54,43 +30,19 @@ void GraphicsStorage::ClearUniformBuffersDatas()
 	uniformBuffersDatas.clear();
 }
 
-void GraphicsStorage::ClearCubemaps()
-{
-	for (auto& cubemap : cubemaps)
-	{
-		delete cubemap.second;
-	}
-	cubemaps.clear();
-}
-
-void GraphicsStorage::ClearOBJs()
-{
-	for (auto& obj : objs)
-	{
-		delete obj.second;
-	}
-	objs.clear();
-}
-
 void GraphicsStorage::ClearShaders()
 {
-	for (auto& shader : shaders)
-	{
-		delete shader.second;
-	}
 	shaderIDs.clear();
-	shaderPaths.clear();
-	shaders.clear();
+	shaderPathsAndGuids.clear();
 }
 
 void GraphicsStorage::Clear()
 {
-	ClearVaos();
-	ClearTextures();
-	ClearCubemaps();
 	ClearShaders();
-	ClearOBJs();
-	ClearMaterials();
+}
+
+void GraphicsStorage::ClearRuntimeAssets()
+{
 }
 
 ShaderBlock* GraphicsStorage::GetUniformBuffer(int index)
@@ -189,18 +141,19 @@ ShaderBlock* GraphicsStorage::GetShaderStorageBuffer(const char * name)
 	return nullptr;
 }
 
-std::unordered_map<std::string, Vao*> GraphicsStorage::vaos;
-std::unordered_map<std::string, Texture*> GraphicsStorage::textures;
 std::unordered_map<std::string, TextureInfo*> GraphicsStorage::texturesToLoad;
 std::unordered_map<std::string, TextureInfo*> GraphicsStorage::cubeMapsToLoad;
-std::vector<Material*> GraphicsStorage::materials;
-std::unordered_map<std::string, OBJ*> GraphicsStorage::objs;
-std::unordered_map<std::string, Texture*> GraphicsStorage::cubemaps;
+std::vector<RenderElement*> GraphicsStorage::renderingQueue;
 std::unordered_map<std::string, GLuint> GraphicsStorage::shaderIDs;
-std::unordered_map<std::string, ShaderPaths> GraphicsStorage::shaderPaths;
-std::unordered_map<std::string, Shader*> GraphicsStorage::shaders;
+std::unordered_map<std::string, std::string> GraphicsStorage::shaderPathsAndGuids;
 std::vector<ShaderBlock*> GraphicsStorage::uniformBuffers;
 std::vector<ShaderBlockData*> GraphicsStorage::uniformBuffersDatas;
 std::vector<ShaderBlock*> GraphicsStorage::shaderStorageBuffers;
 std::vector<ShaderBlockData*> GraphicsStorage::shaderStoragesDatas;
+std::unordered_map<std::string, std::string> GraphicsStorage::shaderBlockTypes;
+std::unordered_map<std::string, std::unordered_map<std::string, uniform_info_t>> GraphicsStorage::shaderBlockUniforms;
 std::map<std::string, std::string> GraphicsStorage::paths;
+std::unordered_map<DataRegistry*, std::unordered_map<std::string, std::unordered_set<std::string>>> GraphicsStorage::luaProperties;
+std::unordered_map<DataRegistry*, std::unordered_map<std::string, std::unordered_map<std::string,std::string>>> GraphicsStorage::objectProperties;
+std::unordered_map<std::string, std::vector<BufferLayout>> GraphicsStorage::bufferDefinitions;
+AssetRegistry GraphicsStorage::assetRegistry;

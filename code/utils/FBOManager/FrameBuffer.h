@@ -12,6 +12,7 @@ class FrameBuffer
 	typedef int GLint;
 	typedef int GLsizei;
 public:
+	FrameBuffer(GLuint handle, GLenum target, int scaleX = 1, int scaleY = 1);
 	FrameBuffer(GLenum target, int scaleX = 1, int scaleY = 1);
 	~FrameBuffer();
 
@@ -22,7 +23,9 @@ public:
 	std::vector<Texture*> textures;
 	std::vector<GLenum> attachments;
 	RenderBuffer* RegisterRenderBuffer(RenderBuffer* buffer);
+	void UnregisterRenderBuffer(RenderBuffer* buffer);
 	void RegisterTexture(Texture* texture);
+	void UnregisterTexture(Texture* texture);
 	void SpecifyTexture(Texture* texture);
 	void SpecifyRenderBuffer(RenderBuffer* texture);
 	void SpecifyTextureAndMip(Texture* texture, GLenum target, GLint level = 0);
@@ -31,12 +34,14 @@ public:
 	void CheckAndCleanup();
 	void ReadPixelData(GLuint x, GLuint y, GLuint width, GLuint height, GLenum sendDataType, void * data, Texture* texture);
 	void DeleteAllTextures();
+	void SetTextureAndMip(Texture* texture, int mip);
 	std::vector<FrameBuffer*> children;
 	double scaleXFactor;
 	double scaleYFactor;
 	void DeactivateDrawBuffers();
 	void ActivateDrawBuffers();
 	std::string name;
+	std::string path;
 private:
 	FrameBuffer() {};
 };
