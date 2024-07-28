@@ -147,6 +147,15 @@ bool GraphicsManager::LoadOBJs(const char* path, std::vector<OBJ*>& parsedOBJs)
 		{
 			break; // EOF = End Of File. Quit the loop.
 		}
+
+		// Skip lines that start with ;, #, or /
+		if (lineHeader[0] == ';' || lineHeader[0] == '#' || lineHeader[0] == '/')
+		{
+			// Consume the rest of the line and continue to the next iteration
+			fscanf(file, "%*[^\n]");
+			continue;
+		}
+
 		meshPaths.push_back(GraphicsStorage::paths["resources"] + lineHeader);
 	}
 	fclose(file);

@@ -1058,7 +1058,7 @@ void Editor::ObjectInspector(Object* selectedObject, bool newSelection)
 			}
 
 			std::string popUpLabel = "addMaterialToNewSequencePopup";
-			if (ImGui::Button("Add Marterial To New Sequence"))
+			if (ImGui::Button("Add Material To New Sequence"))
 			{
 				ImGui::OpenPopup(popUpLabel.c_str());
 			}

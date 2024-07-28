@@ -53,13 +53,13 @@ ParticleSystem::ParticleSystem(int maxParticles, int emissionRate)
 	LifeTime = 0.2;
 	Direction = glm::vec3(0.0f, 10.0f, 0.0f);
 	Spread = 1.5f;
-	SetUp();
+	vao = nullptr;
 	additive = true;
 	Force = glm::vec3(0.0, -9.81, 0.0);
 	paused = false;
 	timeSinceLastEmission = 0.0;
 	EmissionRate = emissionRate;
-	vao = nullptr;
+	SetUp();
 }
 
 ParticleSystem::~ParticleSystem()
@@ -154,6 +154,7 @@ void ParticleSystem::SetUp()
 		{
 			vao = &asset;
 			particles_data_buffer = vao->dynamicVBOs[0];
+			break;
 		}
 	}
 }
