@@ -4,7 +4,7 @@
 #include <vector>
 #include <typeindex>
 #include <string>
-
+#include <gl/glew.h>
 class DataRegistry;
 class Object;
 class Texture;
@@ -35,6 +35,17 @@ enum ImGuiKey;
 
 class Editor
 {
+private:
+	struct CubemapPreview {
+		GLuint cubemapTexture;
+		GLuint fbo;
+		GLuint previewTexture;
+		GLuint depthBuffer;
+		int faceSize;
+		int previewWidth;
+		int previewHeight;
+		bool needsUpdate;
+	};
 public:
 	Editor();
 	~Editor();
@@ -93,16 +104,19 @@ public:
 	void BuffersDefinitionsInspector();
 	void MaterialProfilesInspector();
 	void TextureProfilesInspector();
+	void ClearThumbnailResources();
+	GLuint CreateCubemapPreview(GLuint cubemapTexture, const ImVec2& size);
+	std::unordered_map<unsigned int, CubemapPreview> cubemapPreviews;
 	template<typename T>
-	bool DrawTexturesThumbnailsWithLabel(ImGuiTextFilter& filterAddSlots, T** selectedTexture, std::unordered_map<std::string, T*>& textures, float visibleWindowWidth);
+	bool DrawTexturesThumbnailsWithLabel(ImGuiTextFilter& filterAddSlots, T** selectedTexture, std::vector<T*>& textures, float visibleWindowWidth);
 	template<typename T>
 	bool DrawSelectableTextureThumbnail(T* texture, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, int frame_padding, const ImVec4& bg_col, const ImVec4& tint_col);
 	void RenderProfilesInspector();
 	void ObjectProfilesInspector();
 	bool DataRegistryInspector(DataRegistry* registry, const char* pathToLuas, void* ownerPtr);
 	void TextureParameterComboIV(Texture* texture, int propertyName, const char* comboLabel, std::unordered_map<unsigned int, const char*> options, int currentValue);
-	void TextureThumbnails(std::unordered_map<std::string, Texture*>& textures, std::string& selectedName, bool flip = false);
-	void TexturesInspector(std::unordered_map<std::string, Texture*>& textures, std::string& selectedName, bool flip = false);
+	void TextureThumbnails(std::vector<Texture*>& textures, Texture** selectedTexture, bool flip = false);
+	void TexturesInspector(std::vector<Texture*>& textures, Texture** selectedTexture, bool flip = false);
 	void RenderBufferInspector(RenderBuffer* rb);
 	void TextureThumbnailsBasic(std::vector<Texture*>& textures, Texture* selected);
 	void TextureThumbnailsBasicRB(std::vector<RenderBuffer*>& textures, RenderBuffer* selected);
@@ -208,15 +222,13 @@ public:
 	std::unordered_map<unsigned int, const char*> indicesTypes;
 	std::unordered_map<unsigned int, const char*> glShaderDataTypes;
 	std::unordered_map<std::string, std::string> pathsAndConfigurations;
-	std::unordered_map<std::string, Texture*> textures;
-	std::unordered_map<std::string, Texture*> cubemaps;
-	std::unordered_map<std::string, Texture*> renderTargets;
-	std::unordered_map<std::string, RenderBuffer*> renderBuffers;
 
 	template<typename UIPropertiesFunction, typename UIMenuItemsFunction>
 	inline void DrawComponentBasic(Component* component, const std::string& name, bool dynamic, Object* object, const UIPropertiesFunction& uiFunction, const UIMenuItemsFunction& menuItems);
 	std::vector<OBJ*> importedObjs;
 private:
+	
+
 	class KeyToggle {
 	public:
 		KeyToggle() : isToggled(false), wasPressed(false), key((ImGuiKey)0) {}

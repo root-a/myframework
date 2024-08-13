@@ -58,9 +58,6 @@ public:
 	void Update();
 	Component* Clone();
 
-	static const unsigned char elements[24];
-	static const glm::vec3 vertices[8];
-
 	int LastUsed;
 	unsigned int MaxCount;
 	FastBoundingBox* boundingBoxesContainer;

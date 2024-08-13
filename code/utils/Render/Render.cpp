@@ -50,7 +50,7 @@ Render::Render()
 	previousVao = nullptr;
 	currentVao = nullptr;
 	captureVPs.resize(6);
-	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 10.0f);
+	glm::mat4 captureProjection = glm::perspective(glm::radians(90.0f), 1.0f, 0.1f, 100.0f);
 	captureVPs[0] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)); //GL_TEXTURE_CUBE_MAP_POSITIVE_X
 	captureVPs[1] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(-1.0, 0.0, 0.0), glm::vec3(0.0, -1.0, 0.0)); //GL_TEXTURE_CUBE_MAP_NEGATIVE_X
 	captureVPs[2] = captureProjection * glm::lookAt(glm::vec3(), glm::vec3(0.0, 1.0, 0.0), glm::vec3(0.0, 0.0, 1.0)); //GL_TEXTURE_CUBE_MAP_POSITIVE_Y
@@ -356,6 +356,52 @@ void Render::GenerateGraph()
 		}
 		ImGui::End();
 	}
+}
+
+void Render::RenderCubemapFacesToTexture(GLuint shaderID, GLuint captureFBO, GLuint cubemapTexture, GLuint textureToDrawTo, const glm::vec2& size) {
+
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, captureFBO);
+	GLint currentBoundTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, &currentBoundTexture);
+
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+
+	int faceWidth = size.x / 3; // Width of one face in the compact layout
+	int faceHeight = size.y / 2; // Height of one face in the compact layout
+
+	std::vector<glm::ivec2> faceOffsets = {
+		{0, faceHeight},         // Positive X
+		{faceWidth, faceHeight}, // Negative X
+		{2 * faceWidth, faceHeight}, // Positive Y
+		{0, 0},                  // Negative Y
+		{faceWidth, 0},         // Positive Z
+		{2 * faceWidth, 0}      // Negative Z
+	};
+
+	// Attach the 2D preview texture to the framebuffer
+	//glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textureToDrawTo, 0);
+	ShaderManager::Instance()->SetCurrentShader(shaderID);
+	Box::Instance()->vao.Bind();
+
+	// Set the cubemap texture uniform
+	GLuint CubeMapHandle = glGetUniformLocation(shaderID, "cubemap");
+	glBindTextureUnit(0, cubemapTexture);
+
+	GLuint MatrixHandle = glGetUniformLocation(shaderID, "MVP");
+
+	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+	for (int i = 0; i < 6; ++i) {
+		glViewport(faceOffsets[i].x, faceOffsets[i].y, faceWidth, faceHeight);
+		glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &captureVPs.at(i)[0][0]);
+		Box::Instance()->vao.Draw();
+	}
+
+	glViewport(0, 0, CameraManager::Instance()->GetCurrentCamera()->windowWidth, CameraManager::Instance()->GetCurrentCamera()->windowHeight);
+	FBOManager::Instance()->BindFrameBuffer(GL_DRAW_FRAMEBUFFER, 0);
+	glBindTextureUnit(0, currentBoundTexture);
+
 }
 
 void Render::captureToTexture2D(const GLuint shaderID, FrameBuffer * captureFBO, Texture* textureToDrawTo)

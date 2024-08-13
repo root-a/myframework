@@ -75,29 +75,6 @@ Editor::Editor()
 			break;
 		}
 	}
-	for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
-	{
-		if (tex.texturePath.empty())
-		{
-			renderTargets.emplace(tex.name, &tex);
-		}
-		else
-		{
-			if (tex.target == GL_TEXTURE_CUBE_MAP)
-			{
-				cubemaps.emplace(tex.name, &tex);
-			}
-			else
-			{
-				textures.emplace(tex.name, &tex);
-			}
-		}
-	}
-	for (auto& rb : *GraphicsStorage::assetRegistry.GetPool<RenderBuffer>())
-	{
-		renderBuffers.emplace(rb.name, &rb);
-	}
-
 	keyToggles.emplace(ImGuiKey_LeftAlt, KeyToggle(ImGuiKey_LeftAlt));
 
 }
@@ -286,9 +263,6 @@ Object* Editor::CreateDefaultObject(char * name)
 //it might be good if I can just do this with dependency injection and simple interface
 //i might want to turn all systems into one, maybe fast instance system is all we need
 //probably it would be best to create ui for these systems especially fast instance system
-//i have to add ui for bounds
-//logic for toggling passes, maybe funcitonality of render pass?
-//ohh but we do have render queue we can add and remove passes from it
 Object* Editor::DuplicateObject(Object* object)
 {
 	Object* newObject = GraphicsStorage::assetRegistry.AllocAsset<Object>();
@@ -387,10 +361,6 @@ Object* Editor::DuplicateObject(Object* object)
 			newObject->AddComponent(newComp, found);
 		}
 	}
-
-	//copy properties
-	//ObjectProfile* prevOp = object->GetComponent<ObjectProfile>();
-	//DataRegistry* prevRegistry = prevOp != nullptr ? &prevOp->registry : nullptr;
 	
 	DataRegistry* prevRegistry = &object->registry;
 	if (prevRegistry != nullptr)
@@ -530,12 +500,22 @@ bool Editor::CreateNewRenderTargetUI(char* nameBuffer)
 
 void Editor::CreateNewRenderTarget(char* nameBuffer)
 {
-	if (renderTargets.find(nameBuffer) == renderTargets.end())
+	std::vector<Texture*> renderTargets;
+	bool alreadyExists = false;
+	for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
+	{
+		if (tex.texturePath.empty() && tex.name.compare(nameBuffer) == 0)
+		{
+			alreadyExists = true;
+			break;
+		}
+	}
+
+	if (!alreadyExists)
 	{
 		Texture* texture = GraphicsStorage::assetRegistry.AllocAsset<Texture>(currentTarget, currentLevel, (int)currentInternalFormat, currentWidthHeight[0], currentWidthHeight[1], currentFormat, currentType, nullptr, currentAttachment);
 		texture->GenerateBindSpecify();
 		texture->name = nameBuffer;
-		renderTargets[texture->name] = texture;
 	}
 }
 
@@ -770,7 +750,6 @@ void Editor::ObjectInspector(Object* selectedObject, bool newSelection)
 		ImGui::PushID("new_template_buttons");
 
 		float buttonWidth = 128;
-		int buttons_count = 20000;
 		float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
 		float borderWidth = 2;
 		float groupSize = buttonWidth + borderWidth;
@@ -842,56 +821,110 @@ void Editor::ObjectInspector(Object* selectedObject, bool newSelection)
 		ImGui::PopID();
 	}
 	ImGui::Separator();
-	if (selectedObject != nullptr) {
+	if (selectedObject != nullptr)
+	{
+		ImGui::AlignTextToFramePadding();
+		ImGui::Text("Selection:");
+		ImGui::SameLine();
+		{
+			std::string popUpLabel = "newnamepop";
+			if (ImGui::Button("Save"))
+			{
+				if (selectedObject->path.empty())
+				{
+					ImGui::OpenPopup(popUpLabel.c_str());
+				}
+				else
+				{
+					lua_State* L = luaL_newstate();
+					luaL_openlibs(L);
+					LuaTools::dofile(L, "resources/serialization/object_saver.lua");
+					lua_getglobal(L, "SaveObject");
+					if (lua_isfunction(L, -1))
+					{
+						lua_pushlightuserdata(L, selectedObject);
+						int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
+						lua_pop(L, 1);
+					}
+					lua_close(L);
+				}
+			}
+			float calculatedWidth = ImGui::CalcItemWidth();
 
+			ImGuiWindowFlags flags =
+				ImGuiWindowFlags_NoMove |
+				ImGuiWindowFlags_NoDecoration |
+				ImGuiWindowFlags_HorizontalScrollbar |
+				ImGuiWindowFlags_NoSavedSettings;
+			ImVec2 addComponentMin = ImGui::GetItemRectMin();
+			ImVec2 addComponentMax = ImGui::GetItemRectMax();
+
+			ImVec2 componentPopupPosition;
+			componentPopupPosition.x = addComponentMin.x;
+			componentPopupPosition.y = addComponentMin.y;
+
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
+			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
+			ImGui::SetNextWindowPos(componentPopupPosition, ImGuiCond_Appearing);
+			if (ImGui::BeginPopup(popUpLabel.c_str(), flags))
+			{
+				ImGui::PushItemWidth(calculatedWidth);
+				std::string path = "resources/objects";
+				bool fileAlreadyExists = false;
+				static char propertyName[128] = "";
+				for (const auto& entry : std::filesystem::directory_iterator(path))
+				{
+					if (strcmp(entry.path().stem().string().c_str(), propertyName) == 0)
+					{
+						fileAlreadyExists = true;
+					}
+				}
+				if (fileAlreadyExists)
+				{
+					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
+				}
+				ImGui::InputTextWithHint("##New Property", "New Object File Name", propertyName, IM_ARRAYSIZE(propertyName));
+				if (fileAlreadyExists)
+				{
+					ImGui::PopStyleColor();
+				}
+				else
+				{
+					if (ImGui::Button("Save##saveObject"))
+					{
+						selectedObject->path = std::format("{}/{}.json", path, propertyName);
+						lua_State* L = luaL_newstate();
+						luaL_openlibs(L);
+						LuaTools::dofile(L, "resources/serialization/object_saver.lua");
+						lua_getglobal(L, "SaveObject");
+						if (lua_isfunction(L, -1))
+						{
+							lua_pushlightuserdata(L, selectedObject);
+							int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
+							lua_pop(L, 1);
+						}
+						lua_close(L);
+					}
+				}
+				ImGui::PopItemWidth();
+				ImGui::EndPopup();
+			}
+			ImGui::PopStyleVar(2);
+
+			ImGui::PushItemWidth(-1);
+		}
+		ImGui::SameLine();
+		ImGui::Text("%s", selectedObject->name.c_str());
+	}
+	else
+	{
+		ImGui::Text("Selection: None");
+	}
+	if (selectedObject != nullptr) {
 		static char dupname[128];
 		ImGui::PushID("copy");
 		if (ImGui::Button("Duplicate"))
 		{
-			// copy object is a bit complex but that's how it has to be done
-			// 
-			// we could do something like load from prefab which would instantiate a new copy of same object via lua
-			// 
-			// for that we need path of the object
-			// 
-			// we need to call it by new name
-			// 
-			// at the moment we load the objects and store their names etc, it's like they are level instances but stored in file
-			// if we try to load same object again it will return the same object
-			// I should probably change the constructor functionality and use explicit names
-			// like create or get
-			// we need another object loader that will load the object as new instance
-			// or we make sure that we always create copy and not return existing?
-			// the object json contains all info for the object to be created
-			// ok it looks like we can easily use the object loader script we just have to make sure we return new object with new name
-			// next are the materials, we get material and assign, this is ok but the problem is that the material contains object profile
-			// that profile must be unique to the object, I think object profile should be owned by object and assigned to material when we add material to object?
-			// can the material contain multiple object profiles?
-			// what we would do then is add object profile to material for any object that uses this material
-			// create material from the material prefab that will return always new material we just have to add new name for it
-			// it should be the material name + number? with UUIDs we won't have to worry about name
-			// I would like to reduce number of unnecesairly created objects
-			// atm I am thinking that object profile should be a pointer
-			// but who should own it?
-			// it's nice in a way that we can easily swap which object profile the material is using, this is good
-			// when we swap material profile we have it stored somewhere in memory, something else is using it or it is kept away for someone else to use
-			// object profiles are not really meant to be reused by anyone else as they contain the object id
-			// transforms are ok because we can use different transform for another object
-			// id not so much
-			// object profiles are just data containers and their contents change depending on shader and registry provided
-			// object profiles are not always necessary elements of material
-			// so they should stay pointers
-			// I think all we really need is to create material instead of get material
-			// We can't get because they are all unique, all unique because of object profile
-			// can we do something to remove the object profile from material?
-			// 
-			// 
-			// currently I don't like using names as keys as the identifiers for assets, we really need UUID
-			// next how do we find assets if we use guids and not names
-			// I think we still need paths to locate the files
-			// we could go through all the files and store UUID and path info for lookups
-			// 
-			// it would be easier to create instance of same object
 			Object* prevObject = selectedObject;
 			Object* newObject = DuplicateObject(prevObject);
 			selectedObject = newObject;
@@ -908,7 +941,6 @@ void Editor::ObjectInspector(Object* selectedObject, bool newSelection)
 		ImGui::PopID();
 		Object* object = selectedObject;
 		float calculatedWidth = ImGui::CalcItemWidth();
-		ImGui::Text("Selection: %s", object->name.c_str());
 		ImGui::Text("Picking ID %d", object->ID);
 		ImGui::Text("Path: %s", object->path.c_str());
 
@@ -1088,15 +1120,6 @@ void Editor::ObjectInspector(Object* selectedObject, bool newSelection)
 							std::string selectableName = std::format("{}##{}", material.name, i);
 							if (ImGui::Selectable(selectableName.c_str()))
 							{
-								/*
-								Material* newMaterial = new Material();
-								*newMaterial = *material.second;
-								//const void * address = static_cast<const void*>(newMaterial);
-								std::stringstream ss;
-								ss << newMaterial;
-								newMaterial->name = material.first + "_" + ss.str();
-								GraphicsStorage::materials[newMaterial->name] = newMaterial;
-								*/
 								object->AddMaterial(&material);
 							}
 							i++;
@@ -1161,15 +1184,6 @@ void Editor::ObjectInspector(Object* selectedObject, bool newSelection)
 									std::string selectableName = std::format("{}##{}", material.name, i);
 									if (ImGui::Selectable(selectableName.c_str()))
 									{
-										/*
-										Material* newMaterial = new Material();
-										*newMaterial = *material.second;
-										//const void * address = static_cast<const void*>(newMaterial);
-										std::stringstream ss;
-										ss << newMaterial;
-										newMaterial->name = material.first + "_" + ss.str();
-										GraphicsStorage::materials[newMaterial->name] = newMaterial;
-										*/
 										object->AddMaterial(&material, sequenceIndex);
 									}
 									i++;
@@ -1187,7 +1201,6 @@ void Editor::ObjectInspector(Object* selectedObject, bool newSelection)
 					{
 						ImGui::Separator();
 						std::string materialButtonLabel = mat->name + "##MaterialButton";
-						//float buttonWidth = ImGui::GetWindowWidth()*0.5-13.f;
 						float buttonWidth = ImGui::GetContentRegionAvail().x * 0.5f - 4.5f;
 
 						if (ImGui::Button(materialButtonLabel.c_str(), ImVec2(buttonWidth, 0)))
@@ -1217,168 +1230,24 @@ void Editor::ObjectInspector(Object* selectedObject, bool newSelection)
 			}
 		}
 		ImGui::Separator();
-		//ObjectProfile* matOp = object->GetComponent<ObjectProfile>();
-		//DataRegistry* opRegistry = matOp != nullptr ? &matOp->registry : nullptr;
-		DataRegistry* opRegistry = &object->registry;
 
-		//if (opRegistry == nullptr)
-		//{
-		//	if (ImGui::Button("Add ObjectProfile"))
-		//	{
-		//		std::string oname = object->name + "_op##" + std::to_string(GraphicsStorage::objectProfiles.size());
-		//		ObjectProfile* newOp = GraphicsStorage::objectProfiles[oname] = GraphicsStorage::assetRegistry.AllocAsset<ObjectProfile>();
-		//		newOp->name = oname;
-		//		for (auto& matSq : object->materials)
-		//		{
-		//			for (auto mat : matSq)
-		//			{
-		//				mat->AssignObjectProfile(newOp);
-		//			}
-		//		}
-		//		object->AddComponent(newOp);
-		//	}
-		//}
-		//else
+		DataRegistry* opRegistry = &object->registry;
 		{
 			if (LuaProperties(opRegistry, "obj", "resources/objects/properties/", object))
 			{
-				//for (auto& matSq : object->materials)
-				//{
-				//	for (auto mat : matSq)
-				//	{
-				//		if (mat->op != nullptr)
-				//		{
-				//			mat->op->UpdateProfileFromDataRegistry(*opRegistry);
-				//		}
-				//	}
-				//}
 			}
 			ImGui::Separator();
 
 			if (ObjectProperties(opRegistry, "Object"))
 			{
-				//for (auto& matSq : object->materials)
-				//{
-				//	for (auto mat : matSq)
-				//	{
-				//		if (mat->op != nullptr)
-				//		{
-				//			mat->op->UpdateProfileFromDataRegistry(*opRegistry);
-				//		}
-				//	}
-				//}
 			}
 			ImGui::Separator();
 
 			if (DataRegistryEditor(opRegistry))
 			{
-				//for (auto& matSq : object->materials)
-				//{
-				//	for (auto mat : matSq)
-				//	{
-				//		if (mat->op != nullptr)
-				//		{
-				//			mat->op->UpdateProfileFromDataRegistry(*opRegistry);
-				//		}
-				//	}
-				//}
 			}
 		}
-
-		if (ImGui::Button("Revert"))
-		{
-		}
-		ImGui::SameLine();
-		{
-			std::string popUpLabel = "newnamepop";
-			if (ImGui::Button("Save"))
-			{
-				if (object->path.empty())
-				{
-					ImGui::OpenPopup(popUpLabel.c_str());
-				}
-				else
-				{
-					lua_State* L = luaL_newstate();
-					luaL_openlibs(L);
-					LuaTools::dofile(L, "resources/serialization/object_saver.lua");
-					lua_getglobal(L, "SaveObject");
-					if (lua_isfunction(L, -1))
-					{
-						lua_pushlightuserdata(L, object);
-						int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
-						lua_pop(L, 1);
-					}
-					lua_close(L);
-				}
-			}
-			float calculatedWidth = ImGui::CalcItemWidth();
-
-			ImGuiWindowFlags flags =
-				ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_NoDecoration |
-				ImGuiWindowFlags_HorizontalScrollbar |
-				ImGuiWindowFlags_NoSavedSettings;
-			ImVec2 addComponentMin = ImGui::GetItemRectMin();
-			ImVec2 addComponentMax = ImGui::GetItemRectMax();
-
-			ImVec2 componentPopupPosition;
-			componentPopupPosition.x = addComponentMin.x;
-			componentPopupPosition.y = addComponentMin.y;
-
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.f);
-			ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
-			ImGui::SetNextWindowPos(componentPopupPosition, ImGuiCond_Appearing);
-			if (ImGui::BeginPopup(popUpLabel.c_str(), flags))
-			{
-				ImGui::PushItemWidth(calculatedWidth);
-				std::string path = "resources/objects";
-				bool fileAlreadyExists = false;
-				static char propertyName[128] = "";
-				for (const auto& entry : std::filesystem::directory_iterator(path))
-				{
-					if (strcmp(entry.path().stem().string().c_str(), propertyName) == 0)
-					{
-						fileAlreadyExists = true;
-					}
-				}
-				if (fileAlreadyExists)
-				{
-					ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 0.0f, 0.0f, 1.0f));
-				}
-				ImGui::InputTextWithHint("##New Property", "New Object File Name", propertyName, IM_ARRAYSIZE(propertyName));
-				if (fileAlreadyExists)
-				{
-					ImGui::PopStyleColor();
-				}
-				else
-				{
-					if (ImGui::Button("Save##saveObject"))
-					{
-						object->path = std::format("{}/{}.json", path, propertyName);
-						lua_State* L = luaL_newstate();
-						luaL_openlibs(L);
-						LuaTools::dofile(L, "resources/serialization/object_saver.lua");
-						lua_getglobal(L, "SaveObject");
-						if (lua_isfunction(L, -1))
-						{
-							lua_pushlightuserdata(L, object);
-							int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
-							lua_pop(L, 1);
-						}
-						lua_close(L);
-					}
-				}
-				ImGui::PopItemWidth();
-				ImGui::EndPopup();
-			}
-			ImGui::PopStyleVar(2);
-
-			ImGui::PushItemWidth(-1);
-		}
-	}
-	else {
-		ImGui::Text("Selection: none");
+		
 	}
 }
 
@@ -1659,7 +1528,7 @@ void Editor::DrawComponentUI(ImGuiTextFilter& filter, Object* object, Component*
 				int perFrameEmissionRate = (int)(newParticlesPerFrame / Times::Instance()->deltaTime);
 				ImGui::PushItemWidth(ImGui::GetFontSize() * -10.f);
 				
-				static std::pair<std::string, Texture*> texturePair(*renderTargets.begin());
+				static Texture* selectedTexture = nullptr;
 
 				ImVec2 uv_min = ImVec2(1.0f, 0.0f);                 // Top-left
 				ImVec2 uv_max = ImVec2(0.0f, 1.0f);                 // Lower-right
@@ -1667,36 +1536,49 @@ void Editor::DrawComponentUI(ImGuiTextFilter& filter, Object* object, Component*
 				ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
 				ImVec2 comboImageSize = ImVec2(10.0f, 10.0f);
 
-				if (texturePair.second != nullptr)
+				if (selectedTexture != nullptr)
 				{
-					if (ImGui::BeginCombo("Textures", texturePair.first.c_str()))
+					if (ImGui::BeginCombo("Textures", selectedTexture->name.c_str()))
 					{
 						int i = 0;
-						for (auto& v_texture : renderTargets)
+						std::vector<Texture*> textures;
+						std::vector<Texture*> renderTargets;
+						for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
 						{
-							DrawSelectableTextureThumbnail(v_texture.second, comboImageSize, uv_min, uv_max, 0, border_col, tint_col);
+							if (tex.texturePath.empty())
+							{
+								renderTargets.emplace_back(&tex);
+							}
+							else if (tex.target != GL_TEXTURE_CUBE_MAP)
+							{
+								textures.emplace_back(&tex);
+							}
+						}
+						for (auto v_texture : renderTargets)
+						{
+							DrawSelectableTextureThumbnail(v_texture, comboImageSize, uv_min, uv_max, 0, border_col, tint_col);
 							ImGui::SameLine();
-							const bool is_selected = (texturePair.first == v_texture.first);
-							std::string selectableName = std::format("{}##{}", v_texture.first, i);
+							const bool is_selected = (selectedTexture->name == v_texture->name);
+							std::string selectableName = std::format("{}##{}", v_texture->name, i);
 							if (ImGui::Selectable(selectableName.c_str(), is_selected))
 							{
-								texturePair = v_texture;
-								pc->SetTexture(v_texture.second->handle);
+								selectedTexture = v_texture;
+								pc->SetTexture(v_texture->handle);
 							}
 							if (is_selected)
 								ImGui::SetItemDefaultFocus();
 							i++;
 						}
-						for (auto& texture : textures)
+						for (auto texture : textures)
 						{
-							DrawSelectableTextureThumbnail(texture.second, comboImageSize, uv_min, uv_max, 0, border_col, tint_col);
+							DrawSelectableTextureThumbnail(texture, comboImageSize, uv_min, uv_max, 0, border_col, tint_col);
 							ImGui::SameLine();
-							const bool is_selected = (texturePair.first == texture.first);
-							std::string selectableName = std::format("{}##{}", texture.first, i);
-							if (ImGui::Selectable(texture.first.c_str(), is_selected))
+							const bool is_selected = (selectedTexture->name == texture->name);
+							std::string selectableName = std::format("{}##{}", texture->name, i);
+							if (ImGui::Selectable(selectableName.c_str(), is_selected))
 							{
-								texturePair = texture;
-								pc->SetTexture(texture.second->handle);
+								selectedTexture = texture;
+								pc->SetTexture(texture->handle);
 							}
 							if (is_selected)
 								ImGui::SetItemDefaultFocus();
@@ -1707,7 +1589,7 @@ void Editor::DrawComponentUI(ImGuiTextFilter& filter, Object* object, Component*
 
 					float imageSize = 30;
 					ImVec2 size = ImVec2(imageSize, imageSize);
-					DrawSelectableTextureThumbnail(texturePair.second, size, uv_min, uv_max, 0, border_col, tint_col);
+					DrawSelectableTextureThumbnail(selectedTexture, size, uv_min, uv_max, 0, border_col, tint_col);
 				}
 				ImGui::Checkbox("Additive Blending", &pc->additive);
 				ImGui::ColorEdit4("Particle Color Tint", &pc->Color.x);
@@ -3015,14 +2897,9 @@ void Editor::ObjectsInspector()
 			selectedObject = CreateNewObject(name);
 			newSelection = true;
 		}
-		if (selectedObject != nullptr)
-		{
-			ImGui::Text(selectedObject->name.c_str());
-			ImGui::Separator();
-			ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
-			ObjectInspector(selectedObject, newSelection);
-			ImGui::EndChild();
-		}
+		ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
+		ObjectInspector(selectedObject, newSelection);
+		ImGui::EndChild();
 		ImGui::EndGroup();
 	}
 }
@@ -3086,113 +2963,134 @@ void Editor::MaterialsInspector()
 		{
 			ImGui::OpenPopup("ListOfMaterials");
 		}
+		ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
+		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+		if (ImGui::BeginPopupModal("ListOfMaterials", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::Text("Select Material To Load");
+			static ImGuiTextFilter filterAvailableMaterialsOnDisk;
+			filterAvailableMaterialsOnDisk.Draw("##filterAvailableMaterialsOnDiskFilter", -1.0f);
+			std::vector<std::string> assetNames;
+			GraphicsManager::GetFileNames(assetNames, "resources/materials/", ".json");
+			static std::string selectedMaterialToLoad = "";
+			if (ImGui::BeginListBox("##filterable_materialsOnDisk", ImVec2(-1, 0)))
+			{
+				for (auto& sname : assetNames)
+				{
+					if (filterAvailableMaterialsOnDisk.PassFilter(sname.c_str()))
+					{
+						if (ImGui::Selectable(sname.c_str(), selectedMaterialToLoad == sname))
+						{
+							selectedMaterialToLoad = sname;
+						}
+					}
+				}
+				ImGui::EndListBox();
+			}
+			ImGui::Separator();
+			if (ImGui::Button("Load", ImVec2(120, 0)))
+			{
+				if (!selectedMaterialToLoad.empty())
+				{
+					std::string assetPath = std::format("resources/materials/{}.json", selectedMaterialToLoad);
+					lua_State* L = luaL_newstate();
+					luaL_openlibs(L);
+					LuaTools::dofile(L, "resources/luaexts/load_and_unload_asset_from_list.lua");
+					lua_getglobal(L, "LoadIntoList");
+					if (lua_isfunction(L, -1))
+					{
+						lua_pushstring(L, assetPath.c_str());
+						lua_pushstring(L, "resources/materials_setup/materials.json");
+						int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
+						lua_pop(L, 1);
+					}
+					lua_close(L);
+
+					L = luaL_newstate();
+					luaL_openlibs(L);
+					LuaTools::dofile(L, "resources/serialization/material_loader.lua");
+					lua_getglobal(L, "LoadMaterial");
+					if (lua_isfunction(L, -1))
+					{
+						lua_pushstring(L, assetPath.c_str());
+						int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
+						lua_pop(L, 1);
+					}
+					lua_close(L);
+
+					newSelection = true;
+					//would be nice to select newly loaded material
+				}
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::SetItemDefaultFocus();
+			ImGui::SameLine();
+			if (ImGui::Button("Close", ImVec2(120, 0)))
+			{
+				ImGui::CloseCurrentPopup();
+			}
+			ImGui::EndPopup();
+		}
 		ImGui::Separator();
+		std::vector<Material*> materialsToUnload;
 		if (selectedMaterial != nullptr)
 		{
-			std::vector<Material*> materialsToUnload;
-			ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
-			ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-			if (ImGui::BeginPopupModal("ListOfMaterials", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Selection:");
+			ImGui::SameLine();
+			if (ImGui::Button("Save"))
 			{
-				ImGui::Text("Select Material To Load");
-				static ImGuiTextFilter filterAvailableMaterialsOnDisk;
-				filterAvailableMaterialsOnDisk.Draw("##filterAvailableMaterialsOnDiskFilter", -1.0f);
-				std::vector<std::string> assetNames;
-				GraphicsManager::GetFileNames(assetNames, "resources/materials/", ".json");
-				static std::string selectedMaterialToLoad = "";
-				if (ImGui::BeginListBox("##filterable_materialsOnDisk", ImVec2(-1, 0)))
+				if (selectedMaterial != nullptr)
 				{
-					for (auto& sname : assetNames)
+					selectedMaterial->path = std::format("resources/materials/{}.json", selectedMaterial->name);
+					lua_State* L = luaL_newstate();
+					luaL_openlibs(L);
+					LuaTools::dofile(L, "resources/serialization/material_saver.lua");
+					lua_getglobal(L, "SaveMaterial");
+					if (lua_isfunction(L, -1))
 					{
-						if (filterAvailableMaterialsOnDisk.PassFilter(sname.c_str()))
-						{
-							if (ImGui::Selectable(sname.c_str(), selectedMaterialToLoad == sname))
-							{
-								selectedMaterialToLoad = sname;
-							}
-						}
+						lua_pushlightuserdata(L, selectedMaterial);
+						int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
+						lua_pop(L, 1);
 					}
-					ImGui::EndListBox();
+					lua_close(L);
 				}
-				ImGui::Separator();
-				if (ImGui::Button("Load", ImVec2(120, 0)))
-				{
-					if (!selectedMaterialToLoad.empty())
-					{
-						std::string assetPath = std::format("resources/materials/{}.json", selectedMaterialToLoad);
-						lua_State* L = luaL_newstate();
-						luaL_openlibs(L);
-						LuaTools::dofile(L, "resources/luaexts/loadAndUnloadAssetFromList.lua");
-						lua_getglobal(L, "LoadIntoList");
-						if (lua_isfunction(L, -1))
-						{
-							lua_pushstring(L, assetPath.c_str());
-							lua_pushstring(L, "resources/materials_setup/materials.json");
-							int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
-							lua_pop(L, 1);
-						}
-						lua_close(L);
-
-						L = luaL_newstate();
-						luaL_openlibs(L);
-						LuaTools::dofile(L, "resources/serialization/material_loader.lua");
-						lua_getglobal(L, "LoadMaterial");
-						if (lua_isfunction(L, -1))
-						{
-							lua_pushstring(L, assetPath.c_str());
-							int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
-							lua_pop(L, 1);
-						}
-						lua_close(L);
-
-						newSelection = true;
-						//would be nice to select newly loaded material
-					}
-					ImGui::CloseCurrentPopup();
-				}
-				ImGui::SetItemDefaultFocus();
-				ImGui::SameLine();
-				if (ImGui::Button("Close", ImVec2(120, 0)))
-				{
-					ImGui::CloseCurrentPopup();
-				}
-				ImGui::EndPopup();
 			}
-			if (selectedMaterial != nullptr)
+			ImGui::SameLine();
+			ImGui::Text(selectedMaterial->name.c_str());
+			if (ImGui::Button("Unload Material"))
 			{
-				ImGui::AlignTextToFramePadding();
-				ImGui::Text(selectedMaterial->name.c_str());
-				if (ImGui::Button("Unload Material"))
-				{
-					materialsToUnload.push_back(selectedMaterial);
-				}
-				ImGui::Separator();
+				materialsToUnload.push_back(selectedMaterial);
 			}
-
-			for (auto mat : materialsToUnload)
+		}
+		else
+		{
+			ImGui::Text("Selection: None");
+		}
+		ImGui::Separator();
+		for (auto mat : materialsToUnload)
+		{
+			for (auto& object : *GraphicsStorage::assetRegistry.GetPool<Object>())
 			{
-				std::string materialName = mat->name;
-				for (auto& object : *GraphicsStorage::assetRegistry.GetPool<Object>())
-				{
-					object.RemoveMaterial(mat);
-				}
-
-				std::string assetPath = std::format("resources/materials/{}.json", materialName);
-
-				lua_State* L = luaL_newstate();
-				luaL_openlibs(L);
-				LuaTools::dofile(L, "resources/luaexts/loadAndUnloadAssetFromList.lua");
-				lua_getglobal(L, "UnloadFromList");
-				if (lua_isfunction(L, -1))
-				{
-					lua_pushstring(L, assetPath.c_str());
-					lua_pushstring(L, "resources/materials_setup/materials.json");
-					int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
-					lua_pop(L, 1);
-				}
-				lua_close(L);
-				selectedMaterial = nullptr;
+				object.RemoveMaterial(mat);
 			}
+
+			lua_State* L = luaL_newstate();
+			luaL_openlibs(L);
+			LuaTools::dofile(L, "resources/luaexts/load_and_unload_asset_from_list.lua");
+			lua_getglobal(L, "UnloadFromList");
+			if (lua_isfunction(L, -1))
+			{
+				lua_pushstring(L, mat->path.c_str());
+				lua_pushstring(L, "resources/materials_setup/materials.json");
+				int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
+				lua_pop(L, 1);
+			}
+			lua_close(L);
+			selectedMaterial = nullptr;
+		}
+		if (selectedMaterial != nullptr)
+		{
 			static char dupname[128];
 			ImGui::PushID("copy");
 			if (CreateNewAssetUI(dupname, true))
@@ -3212,27 +3110,6 @@ void Editor::MaterialsInspector()
 			}
 		}
 		ImGui::EndGroup();
-		
-		if (ImGui::Button("Revert")) {}
-		ImGui::SameLine();
-		if (ImGui::Button("Save"))
-		{
-			if (selectedMaterial != nullptr)
-			{
-				selectedMaterial->path = std::format("resources/materials/{}.json", selectedMaterial->name);
-				lua_State* L = luaL_newstate();
-				luaL_openlibs(L);
-				LuaTools::dofile(L, "resources/serialization/material_saver.lua");
-				lua_getglobal(L, "SaveMaterial");
-				if (lua_isfunction(L, -1))
-				{
-					lua_pushlightuserdata(L, selectedMaterial);
-					int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
-					lua_pop(L, 1);
-				}
-				lua_close(L);
-			}
-		}
 	}
 }
 
@@ -3273,33 +3150,37 @@ void Editor::OBJsInspector()
 	// Right
 	{
 		ImGui::BeginGroup();
+		ImGui::Separator();
 		if (selectedOBJ != nullptr)
 		{
-			ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
-			ImGui::Text(selectedOBJ->name.c_str());
-			ImGui::Separator();
-			ImGui::EndChild();
-		}
-		ImGui::EndGroup();
-		
-		if (ImGui::Button("Revert")) {}
-		ImGui::SameLine();
-		if (ImGui::Button("Save")) {
-			if (selectedOBJ != nullptr)
-			{
-				lua_State* L = luaL_newstate();
-				luaL_openlibs(L);
-				LuaTools::dofile(L, "resources/serialization/mesh_data_saver.lua");
-				lua_getglobal(L, "SaveMeshData");
-				if (lua_isfunction(L, -1))
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Selection:");
+			ImGui::SameLine();
+			if (ImGui::Button("Save")) {
+				if (selectedOBJ != nullptr)
 				{
-					lua_pushlightuserdata(L, selectedOBJ);
-					int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
-					lua_pop(L, 1);
+					lua_State* L = luaL_newstate();
+					luaL_openlibs(L);
+					LuaTools::dofile(L, "resources/serialization/mesh_data_saver.lua");
+					lua_getglobal(L, "SaveMeshData");
+					if (lua_isfunction(L, -1))
+					{
+						lua_pushlightuserdata(L, selectedOBJ);
+						int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
+						lua_pop(L, 1);
+					}
+					lua_close(L);
 				}
-				lua_close(L);
 			}
+			ImGui::SameLine();
+			ImGui::Text(selectedOBJ->name.c_str());
 		}
+		else
+		{
+			ImGui::Text("Selection: None");
+		}
+		ImGui::Separator();
+		ImGui::EndGroup();
 	}
 }
 
@@ -3358,6 +3239,44 @@ void Editor::VAOsInspector()
 			ImGui::OpenPopup("ListOfVaos");
 		}
 		ImGui::Separator();
+
+		if (selectedVao != nullptr)
+		{
+			ImGui::AlignTextToFramePadding();
+			if (selectedVao->configPath.empty())
+			{
+				ImGui::Text("Configuration not selected!");
+			}
+			else
+			{
+				ImGui::Text("Selection:");
+				ImGui::SameLine();
+				if (ImGui::Button("Save"))
+				{
+					std::string nameconfig = selectedVao->name;
+					std::replace(nameconfig.begin(), nameconfig.end(), '.', '/');
+					selectedVao->path = std::format("resources/vaos/{}.json", nameconfig);
+					lua_State* L = luaL_newstate();
+					luaL_openlibs(L);
+					LuaTools::dofile(L, "resources/serialization/vao_saver.lua");
+					lua_getglobal(L, "SaveVertexArray");
+					if (lua_isfunction(L, -1))
+					{
+						lua_pushlightuserdata(L, selectedVao);
+						int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
+						lua_pop(L, 1);
+					}
+					lua_close(L);
+				}
+				ImGui::SameLine();
+				ImGui::Text(selectedVao->name.c_str());
+			}
+		}
+		else
+		{
+			ImGui::Text("Selection: None");
+		}
+
 		ImVec2 center(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f);
 		ImGui::SetNextWindowPos(center, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
 		if (ImGui::BeginPopupModal("ListOfVaos", NULL, ImGuiWindowFlags_AlwaysAutoResize))
@@ -3393,6 +3312,20 @@ void Editor::VAOsInspector()
 
 					lua_State* L = luaL_newstate();
 					luaL_openlibs(L);
+					LuaTools::dofile(L, "resources/luaexts/load_and_unload_asset_from_list.lua");
+					lua_getglobal(L, "LoadIntoList");
+					if (lua_isfunction(L, -1))
+					{
+						lua_pushstring(L, modelPath.c_str());
+						lua_pushstring(L, "resources/vaos_setup/vaos.json");
+						int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
+						lua_pop(L, 1);
+					}
+					lua_close(L);
+
+
+					L = luaL_newstate();
+					luaL_openlibs(L);
 					LuaTools::dofile(L, "resources/serialization/vao_loader.lua");
 					lua_getglobal(L, "LoadVertexArray"); 
 					if (lua_isfunction(L, -1))
@@ -3404,20 +3337,6 @@ void Editor::VAOsInspector()
 					lua_close(L);
 
 					newSelection = true;
-					//this was cool after selecting asset to load it would make that one the new selection just based on the name
-					//for that we really need the name to be the new selection but name is not going to work unless it's 100% unique
-					//selectedVao = selectedVaoToLoad;
-
-					//i will have the path once we do the proper open file dialog then selected file will have the path
-					//now having path I will have to push it into the loadintolist, saving path instead of name is better, path is always going to be unique
-					//std::string modelPath = std::string("resources/models/") + selectedVaoToLoad + ".obj";
-					//GraphicsManager::AddPairToJson(selectedVaoToLoad, modelPath, std::string("resources/models.json"));
-
-
-					//GraphicsManager::LoadOBJ(&GraphicsStorage::objs, modelPath);
-					//GraphicsManager::LoadAllOBJsToVAOs();
-					//newSelection = true;
-					//selectedName = selectedVaoToLoad;
 				}
 				ImGui::CloseCurrentPopup();
 			}
@@ -3430,39 +3349,6 @@ void Editor::VAOsInspector()
 			}
 			ImGui::EndPopup();
 		}
-		for (auto model : modelsToUnload)
-		{
-			std::string modelName = model->name;
-			for (auto& mat : *GraphicsStorage::assetRegistry.GetPool<Material>())
-			{
-				if (mat.vao == model)
-				{
-					mat.AssignMesh(nullptr);
-				}
-			}
-			//remove from the pool
-			//delete GraphicsStorage::vaos[modelName];
-			//GraphicsStorage::vaos.erase(modelName);
-
-			std::string assetPath = std::string("resources/models/") + modelName + ".json";
-
-			lua_State* L = luaL_newstate();
-			luaL_openlibs(L);
-			LuaTools::dofile(L, "resources/luaexts/loadAndUnloadAssetFromList.lua");
-			lua_getglobal(L, "UnloadFromList");
-			if (lua_isfunction(L, -1))
-			{
-				lua_pushstring(L, assetPath.c_str());
-				lua_pushstring(L, "resources/models.json");
-				int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
-				lua_pop(L, 1);
-			}
-			lua_close(L);
-			selectedVao = nullptr;
-
-			//GraphicsManager::RemoveItemFromJson(modelName, std::string("resources/models.json"));
-			//selectedName = "";
-		}
 
 		if (selectedVao != nullptr)
 		{
@@ -3470,9 +3356,10 @@ void Editor::VAOsInspector()
 			{
 				modelsToUnload.push_back(selectedVao);
 			}
+			ImGui::Separator();
 			ImGui::AlignTextToFramePadding();
 			ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
-			ImGui::Text(selectedVao->name.c_str());
+			
 			ImGui::Text(std::format("Handle: {}", selectedVao->handle).c_str());
 			ImGui::Text(std::format("Mesh: {}", selectedVao->meshPath).c_str());
 
@@ -3528,37 +3415,38 @@ void Editor::VAOsInspector()
 			}
 			ImGui::EndChild();
 		}
-		ImGui::EndGroup();
-		
-		if (selectedVao != nullptr)
+		// TODO!!!
+		// LOAD VAO TO A LIST
+		// UNLOAD VAO FROM A LIST
+		// We can import obj from list but it does not create correct config for it
+		// We can keep import from config text file but it should be really not in config but in the resources a json list file!
+		// forced assets are ok but we need to get rid of config folder
+		for (auto model : modelsToUnload)
 		{
-			if (selectedVao->configPath.empty())
+			std::string modelName = model->name;
+			for (auto& mat : *GraphicsStorage::assetRegistry.GetPool<Material>())
 			{
-				ImGui::Text("Configuration not selected!");
-			}
-			else
-			{
-				if (ImGui::Button("Revert")) {}
-				ImGui::SameLine();
-				if (ImGui::Button("Save"))
+				if (mat.vao == model)
 				{
-					std::string nameconfig = selectedVao->name;
-					std::replace(nameconfig.begin(), nameconfig.end(), '.', '/');
-					selectedVao->path = std::format("resources/vaos/{}.json", nameconfig);
-					lua_State* L = luaL_newstate();
-					luaL_openlibs(L);
-					LuaTools::dofile(L, "resources/serialization/vao_saver.lua");
-					lua_getglobal(L, "SaveVertexArray");
-					if (lua_isfunction(L, -1))
-					{
-						lua_pushlightuserdata(L, selectedVao);
-						int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
-						lua_pop(L, 1);
-					}
-					lua_close(L);
+					mat.AssignMesh(nullptr);
 				}
 			}
+
+			lua_State* L = luaL_newstate();
+			luaL_openlibs(L);
+			LuaTools::dofile(L, "resources/luaexts/load_and_unload_asset_from_list.lua");
+			lua_getglobal(L, "UnloadFromList");
+			if (lua_isfunction(L, -1))
+			{
+				lua_pushstring(L, model->path.c_str());
+				lua_pushstring(L, "resources/vaos_setup/vaos.json");
+				int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
+				lua_pop(L, 1);
+			}
+			lua_close(L);
+			selectedVao = nullptr;
 		}
+		ImGui::EndGroup();
 	}
 }
 
@@ -3595,15 +3483,22 @@ void Editor::VBOsInspector()
 		ImGui::EndChild();
 	}
 	ImGui::SameLine();
-
 	// Right
 	{
 		ImGui::BeginGroup();
-
 		if (selectedVbo != nullptr)
 		{
 			ImGui::AlignTextToFramePadding();
+			ImGui::Text("Selection:");
+			ImGui::SameLine();
 			ImGui::Text(selectedVbo->name.c_str());
+		}
+		else
+		{
+			ImGui::Text("Selection: None");
+		}
+		if (selectedVbo != nullptr)
+		{
 			ImGui::Separator();
 			ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
 			ImGui::Text(std::format("Handle: {}", selectedVbo->handle).c_str());
@@ -3614,15 +3509,12 @@ void Editor::VBOsInspector()
 			ImGui::EndChild();
 		}
 		ImGui::EndGroup();
-		if (ImGui::Button("Revert")) {}
-		ImGui::SameLine();
-		if (ImGui::Button("Save")) {}
 	}
 }
 
 void Editor::TexturesInspector()
 {
-	static std::string selectedName = "";
+	static Texture* selectedTexture = nullptr;
 	bool newSelection = false;
 	if (ImGui::Button("Load Texture"))
 	{
@@ -3637,9 +3529,8 @@ void Editor::TexturesInspector()
 		static ImGuiTextFilter filterAvailableTexturesOnDisk;
 		filterAvailableTexturesOnDisk.Draw("##filterAvailableTexturesOnDiskFilter", -1.0f);
 		std::vector<std::string> textureNames;
-		std::sort(textureNames.begin(), textureNames.end());
-
 		GraphicsManager::GetFileNames(textureNames, "resources/texture_settings/");
+		std::sort(textureNames.begin(), textureNames.end());
 		static std::filesystem::directory_entry selectedTextureToLoad;
 		if (ImGui::BeginListBox("##filterable_texturesOnDisk", ImVec2(-1, 0)))
 		{
@@ -3665,16 +3556,35 @@ void Editor::TexturesInspector()
 			{
 				std::string texturePath = selectedTextureToLoad.path().string();
 				std::replace(texturePath.begin(), texturePath.end(), '\\', '/');
-				//while we can load texture with c++ just fine we should do this via lua
-				//here we should use lua script to load texture
-				//it would be great if we also added the texture to the editor textures container
-				//std::string texturePath = std::format("resources/textures/{}.dds", selectedTextureToLoad);
-				//GraphicsManager::AddPairToJson(selectedTextureToLoad, texturePath, std::string("resources/textures.json"));
-				//this is for importing, not loading!
-				//GraphicsManager::LoadTextureInfo(&GraphicsStorage::texturesToLoad, texturePath, 0);
-				//GraphicsManager::LoadTexturesIntoGPU(GraphicsStorage::texturesToLoad);
+
+				lua_State* L = luaL_newstate();
+				luaL_openlibs(L);
+				LuaTools::dofile(L, "resources/luaexts/load_and_unload_asset_from_list.lua");
+				lua_getglobal(L, "LoadIntoList");
+				if (lua_isfunction(L, -1))
+				{
+					lua_pushstring(L, texturePath.c_str());
+					lua_pushstring(L, "resources/texture_settings_setup/texture_settings.json");
+					int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
+					lua_pop(L, 1);
+				}
+				lua_close(L);
+
+
+				L = luaL_newstate();
+				luaL_openlibs(L);
+				LuaTools::dofile(L, "resources/serialization/texture_loader.lua");
+				lua_getglobal(L, "LoadTexture");
+				if (lua_isfunction(L, -1))
+				{
+					lua_pushstring(L, texturePath.c_str());
+					int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
+					lua_pop(L, 1);
+				}
+				lua_close(L);
+
 				newSelection = true;
-				//selectedName = selectedTextureToLoad;
+				//selectedName = selectedTextureToLoad.path().stem().string();
 			}
 			ImGui::CloseCurrentPopup();
 		}
@@ -3686,27 +3596,51 @@ void Editor::TexturesInspector()
 		}
 		ImGui::EndPopup();
 	}
-	TexturesInspector(textures, selectedName);
+	std::vector<Texture*> textures;
+	for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
+	{
+		if (!tex.texturePath.empty() && tex.target != GL_TEXTURE_CUBE_MAP)
+		{
+			textures.emplace_back(&tex);
+		}
+	}
+	TexturesInspector(textures, &selectedTexture);
 }
 
 void Editor::RenderTargetsInspector()
 {
 	{
-		static std::string selectedName = "";
+		static Texture* selectedTexture = nullptr;
 		static char name[128];
 		if (CreateNewRenderTargetUI(name))
 		{
 			CreateNewRenderTarget(name);
-			selectedName = name;
+			//selectedName = name;
 		}
-		TexturesInspector(renderTargets, selectedName, true);
+		std::vector<Texture*> renderTargets;
+		for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
+		{
+			if (tex.texturePath.empty())
+			{
+				renderTargets.emplace_back(&tex);
+			}
+		}
+		TexturesInspector(renderTargets, &selectedTexture, true);
 	}
 }
 
 void Editor::CubeMapsInspector()
 {
-	static std::string selectedName = "";
-	TexturesInspector(cubemaps, selectedName);
+	static Texture* selectedTexture = nullptr; 
+	std::vector<Texture*> cubemaps;
+	for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
+	{
+		if (!tex.texturePath.empty() && tex.target == GL_TEXTURE_CUBE_MAP)
+		{
+			cubemaps.emplace_back(&tex);
+		}
+	}
+	TexturesInspector(cubemaps, &selectedTexture);
 }
 
 void Editor::RenderBuffersInspector()
@@ -4010,7 +3944,14 @@ void Editor::FrameBufferInspector(FrameBuffer* fbo, bool resetInspectors)
 		texturesfilter.Draw("##textureSearchFilter");
 		ImGui::PopItemWidth();
 		//bool isFilterInFocus = ImGui::IsItemActive();
-
+		std::vector<Texture*> renderTargets;
+		for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
+		{
+			if (tex.texturePath.empty())
+			{
+				renderTargets.emplace_back(&tex);
+			}
+		}
 		DrawTexturesThumbnailsWithLabel(texturesfilter, &textureToAdd, renderTargets, visibleWindowWidth);
 
 		ImGui::EndPopup();
@@ -4064,7 +4005,11 @@ void Editor::FrameBufferInspector(FrameBuffer* fbo, bool resetInspectors)
 		renderBuffersfilter.Draw("##renderBuffersSearchFilter");
 		ImGui::PopItemWidth();
 		//bool isFilterInFocus = ImGui::IsItemActive();
-
+		std::vector<RenderBuffer*> renderBuffers;
+		for (auto& rb : *GraphicsStorage::assetRegistry.GetPool<RenderBuffer>())
+		{
+			renderBuffers.emplace_back(&rb);
+		}
 		DrawTexturesThumbnailsWithLabel(renderBuffersfilter, &rbufferToAdd, renderBuffers, visibleWindowWidth);
 
 		ImGui::EndPopup();
@@ -4126,6 +4071,14 @@ void Editor::FrameBufferInspector(FrameBuffer* fbo, bool resetInspectors)
 				ImGui::PopItemWidth();
 				bool isFilterInFocus = ImGui::IsItemActive();
 				Texture* textureToRegister = nullptr;
+				std::vector<Texture*> renderTargets;
+				for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
+				{
+					if (tex.texturePath.empty())
+					{
+						renderTargets.emplace_back(&tex);
+					}
+				}
 				if (DrawTexturesThumbnailsWithLabel(filter, &textureToRegister, renderTargets, visibleWindowWidth))
 				{
 					texturesToUnregister.push_back(texture);
@@ -4223,6 +4176,11 @@ void Editor::FrameBufferInspector(FrameBuffer* fbo, bool resetInspectors)
 				ImGui::PopItemWidth();
 				bool isFilterInFocus = ImGui::IsItemActive();
 				static RenderBuffer* bufferToRegister = nullptr;
+				std::vector<RenderBuffer*> renderBuffers;
+				for (auto& rb : *GraphicsStorage::assetRegistry.GetPool<RenderBuffer>())
+				{
+					renderBuffers.emplace_back(&rb);
+				}
 				if (DrawTexturesThumbnailsWithLabel(filter, &bufferToRegister, renderBuffers, visibleWindowWidth))
 				{
 					buffersToUnregister.push_back(texture);
@@ -4267,9 +4225,6 @@ void Editor::FrameBufferInspector(FrameBuffer* fbo, bool resetInspectors)
 		ImGui::EndChild();
 		ImGui::EndGroup();
 	}
-
-	if (ImGui::Button("Revert")) {}
-	ImGui::SameLine();
 	if (ImGui::Button("Save"))
 	{
 		fbo->path = std::format("resources/frame_buffers/{}.json", fbo->name);
@@ -4868,8 +4823,7 @@ void Editor::ShaderBlockInspector()
 				ShaderBlocksInspector(selectedBuffer);
 			}
 			ImGui::EndChild();
-			if (ImGui::Button("Revert")) {}
-			ImGui::SameLine();
+
 			if (ImGui::Button("Save"))
 			{
 				std::string configPath = std::format("resources/shader_blocks/{}.json", selectedBuffer->name);
@@ -4940,9 +4894,6 @@ void Editor::ShaderBlockInspector()
 			}
 			ImGui::EndChild();
 			ImGui::EndGroup();
-			if (ImGui::Button("Revert")) {}
-			ImGui::SameLine();
-			if (ImGui::Button("Save")) {}
 		}
 		ImGui::EndTabItem();
 	}
@@ -4997,9 +4948,6 @@ void Editor::ShaderBlockInspector()
 			}
 			ImGui::EndChild();
 			ImGui::EndGroup();
-			if (ImGui::Button("Revert")) {}
-			ImGui::SameLine();
-			if (ImGui::Button("Save")) {}
 		}
 		ImGui::EndTabItem();
 	}
@@ -5054,9 +5002,6 @@ void Editor::ShaderBlockInspector()
 			}
 			ImGui::EndChild();
 			ImGui::EndGroup();
-			if (ImGui::Button("Revert")) {}
-			ImGui::SameLine();
-			if (ImGui::Button("Save")) {}
 		}
 		ImGui::EndTabItem();
 	}
@@ -5271,9 +5216,6 @@ void Editor::BuffersDefinitionsInspector()
 			ImGui::EndChild();
 		}
 		ImGui::EndGroup();
-		if (ImGui::Button("Revert")) {}
-		ImGui::SameLine();
-		if (ImGui::Button("Save")) {}
 	}
 }
 
@@ -5350,8 +5292,6 @@ void Editor::MaterialProfilesInspector()
 				}
 			}
 			ImGui::EndChild();
-			if (ImGui::Button("Revert")) {}
-			ImGui::SameLine();
 			if (!selectedMaterialProfile->path.empty())
 			{
 				if (ImGui::Button("Save"))
@@ -5538,6 +5478,27 @@ void Editor::TextureProfilesInspector()
 				filterAddSlots.Draw(filterAddSlotsLabel.c_str());
 				ImGui::PopItemWidth();
 				//bool isFilterInFocus = ImGui::IsItemActive();
+				std::vector<Texture*> textures;
+				std::vector<Texture*> cubemaps;
+				std::vector<Texture*> renderTargets;
+				for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
+				{
+					if (tex.texturePath.empty())
+					{
+						renderTargets.emplace_back(&tex);
+					}
+					else
+					{
+						if (tex.target == GL_TEXTURE_CUBE_MAP)
+						{
+							cubemaps.emplace_back(&tex);
+						}
+						else
+						{
+							textures.emplace_back( &tex);
+						}
+					}
+				}
 				DrawTexturesThumbnailsWithLabel(filterAddSlots, &textureToAdd, textures, visibleWindowWidth);
 				DrawTexturesThumbnailsWithLabel(filterAddSlots, &textureToAdd, cubemaps, visibleWindowWidth);
 				DrawTexturesThumbnailsWithLabel(filterAddSlots, &textureToAdd, renderTargets, visibleWindowWidth);
@@ -5612,6 +5573,27 @@ void Editor::TextureProfilesInspector()
 						ImGui::PopItemWidth();
 						bool isFilterInFocus = ImGui::IsItemActive();
 						static Texture* selectedTexture = nullptr;
+						std::vector<Texture*> textures;
+						std::vector<Texture*> cubemaps;
+						std::vector<Texture*> renderTargets;
+						for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
+						{
+							if (tex.texturePath.empty())
+							{
+								renderTargets.emplace_back(&tex);
+							}
+							else
+							{
+								if (tex.target == GL_TEXTURE_CUBE_MAP)
+								{
+									cubemaps.emplace_back(&tex);
+								}
+								else
+								{
+									textures.emplace_back(&tex);
+								}
+							}
+						}
 						bool textureSelected1 = DrawTexturesThumbnailsWithLabel(filter, &selectedTexture, renderTargets, visibleWindowWidth);
 						bool textureSelected2 = DrawTexturesThumbnailsWithLabel(filter, &selectedTexture, textures, visibleWindowWidth);
 						bool textureSelected3 = DrawTexturesThumbnailsWithLabel(filter, &selectedTexture, cubemaps, visibleWindowWidth);
@@ -5637,9 +5619,6 @@ void Editor::TextureProfilesInspector()
 				i++;
 			}
 			ImGui::EndChild();
-
-			if (ImGui::Button("Revert")) {}
-			ImGui::SameLine();
 			if (selectedTextureProfile != nullptr)
 			{
 				if (!selectedTextureProfile->path.empty())
@@ -5701,8 +5680,82 @@ void Editor::TextureProfilesInspector()
 	}
 }
 
+void Editor::ClearThumbnailResources()
+{
+	for (auto& [handle, preview] : cubemapPreviews) {
+		if (preview.previewTexture != 0) {
+			glDeleteTextures(1, &preview.previewTexture);
+			preview.previewTexture = 0;
+		}
+		if (preview.depthBuffer != 0) {
+			glDeleteRenderbuffers(1, &preview.depthBuffer);
+			preview.depthBuffer = 0;
+		}
+		if (preview.fbo != 0) {
+			glDeleteFramebuffers(1, &preview.fbo);
+			preview.fbo = 0;
+		}
+	}
+	cubemapPreviews.clear();
+}
+
+GLuint Editor::CreateCubemapPreview(GLuint cubemapTexture, const ImVec2& size) {
+
+	CubemapPreview preview;
+	preview.cubemapTexture = cubemapTexture;
+	GLint currentBoundTexture;
+	glGetIntegerv(GL_TEXTURE_BINDING_2D, &currentBoundTexture);
+
+	int cubemapPreviewMultiplier = 2;
+	int faceSize = size.x * cubemapPreviewMultiplier;
+	preview.previewWidth = faceSize;
+	preview.previewHeight = faceSize * (2 / 3.f);
+	glGenTextures(1, &preview.previewTexture);
+	glBindTexture(GL_TEXTURE_2D, preview.previewTexture);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB8, preview.previewWidth, preview.previewHeight, 0, GL_RGB, GL_UNSIGNED_BYTE, nullptr);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glBindTexture(GL_TEXTURE_2D, currentBoundTexture);
+
+	glGenFramebuffers(1, &preview.fbo);
+
+	// Create the depth buffer
+	glGenRenderbuffers(1, &preview.depthBuffer);
+	glBindRenderbuffer(GL_RENDERBUFFER, preview.depthBuffer);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, preview.previewWidth, preview.previewHeight);
+	glBindRenderbuffer(GL_RENDERBUFFER, 0);
+
+	// Attach the textures to the framebuffer
+	glBindFramebuffer(GL_FRAMEBUFFER, preview.fbo);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, preview.previewTexture, 0);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, preview.depthBuffer);
+	glDrawBuffer(GL_COLOR_ATTACHMENT0);
+	GLenum Status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+
+	if (Status != GL_FRAMEBUFFER_COMPLETE) {
+		printf("FB error, status: 0x%x\n", Status);
+	}
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+	Shader* shaderToUse;
+	for (auto& shader : *GraphicsStorage::assetRegistry.GetPool<Shader>())
+	{
+		if (shader.name.compare("FullScreenQuadFromCubeMap") == 0)
+		{
+			shaderToUse = &shader;
+			break;
+		}
+	}
+	shaderToUse->Execute();
+	Render::Instance()->RenderCubemapFacesToTexture(shaderToUse->shaderID, preview.fbo, preview.cubemapTexture, preview.previewTexture, glm::vec2(preview.previewWidth, preview.previewHeight));
+	cubemapPreviews[cubemapTexture] = preview;
+	return preview.previewTexture;
+}
+
+
 template<typename T>
-bool Editor::DrawTexturesThumbnailsWithLabel(ImGuiTextFilter& filter, T** selectedTexture, std::unordered_map<std::string, T*>& textures, float visibleWindowWidth)
+bool Editor::DrawTexturesThumbnailsWithLabel(ImGuiTextFilter& filter, T** selectedTexture, std::vector<T*>& textures, float visibleWindowWidth)
 {
 	float comboImageWidth = 50;
 	ImVec2 comboImageSize = ImVec2(comboImageWidth, comboImageWidth);
@@ -5719,19 +5772,19 @@ bool Editor::DrawTexturesThumbnailsWithLabel(ImGuiTextFilter& filter, T** select
 	ImGuiStyle& style = ImGui::GetStyle();
 	bool dirty = false;
 	int i = 0;
-	for (auto& texture : textures)
+	for (auto texture : textures)
 	{
-		if (filter.PassFilter(texture.first.c_str())) {
+		if (filter.PassFilter(texture->name.c_str())) {
 			ImGui::BeginGroup();
-			const bool is_selected = (*selectedTexture == texture.second);
+			const bool is_selected = (*selectedTexture == texture);
 			borderWidth = is_selected ? 2 : 0;
-			if (DrawSelectableTextureThumbnail(texture.second, comboImageSize, uv_min, uv_max, borderWidth, border_col, tint_col))
+			if (DrawSelectableTextureThumbnail(texture, comboImageSize, uv_min, uv_max, borderWidth, border_col, tint_col))
 			{
-				*selectedTexture = texture.second;
+				*selectedTexture = texture;
 				filter.Clear();
 				dirty = true;
 			}
-			ImGui::Button(std::format("{}##slotbtn{}", texture.first, i).c_str(), ImVec2(comboImageSize.x + 2, 0));
+			ImGui::Button(std::format("{}##slotbtn{}", texture->name, i).c_str(), ImVec2(comboImageSize.x + 2, 0));
 
 			if (is_selected)
 				ImGui::SetItemDefaultFocus();
@@ -5760,7 +5813,23 @@ bool Editor::DrawSelectableTextureThumbnail(T* texture, const ImVec2& size, cons
 		}
 		else
 		{
-			dirty = ImGui::ImageButton((void*)-1, size, uv0, uv1, frame_padding, bg_col, tint_col);
+			if (cubemapPreviews.find(texture->handle) != cubemapPreviews.end())
+			{
+				float previewWidth = size.x * 3;
+				float previewHeight = size.y * 2;
+				float aspectRatio = previewWidth / previewHeight;
+				ImVec2 adjustedSize = ImVec2(size.x, size.y / aspectRatio);
+				dirty = ImGui::ImageButton((void*)cubemapPreviews[texture->handle].previewTexture, adjustedSize, uv0, uv1, frame_padding, bg_col, tint_col);
+			}
+			else
+			{
+				auto cubemapPreviewTexture = CreateCubemapPreview(texture->handle, size);
+				float previewWidth = size.x * 3;
+				float previewHeight = size.y * 2;
+				float aspectRatio = previewWidth / previewHeight;
+				ImVec2 adjustedSize = ImVec2(size.x, size.y / aspectRatio);
+				dirty = ImGui::ImageButton((void*)cubemapPreviewTexture, adjustedSize, uv0, uv1, frame_padding, bg_col, tint_col);
+			}
 		}
 	}
 	else
@@ -5776,7 +5845,6 @@ void Editor::RenderProfilesInspector()
 	static RenderProfile* selectedRenderProfile = nullptr;
 	{
 		ImGui::BeginChild("left pane", ImVec2(150, 0), true);
-
 		static ImGuiTextFilter filterAvailableRenderProfiles;
 		filterAvailableRenderProfiles.Draw("##filterAvailableRenderProfilesFilter", -1.0f);
 		std::map<std::string, RenderProfile*> rpsSorted;
@@ -5828,11 +5896,6 @@ void Editor::RenderProfilesInspector()
 			ImGui::BeginChild("item view", ImVec2(0, -ImGui::GetFrameHeightWithSpacing()));
 			ScriptSelector(selectedRenderProfile->script, "resources/render_profiles/lua");
 			ImGui::EndChild();
-			if (ImGui::Button("Revert")) {}
-			ImGui::SameLine();
-
-			ImGui::SameLine();
-		
 			if (!selectedRenderProfile->path.empty())
 			{
 				if (ImGui::Button("Save"))
@@ -5951,12 +6014,6 @@ void Editor::ObjectProfilesInspector()
 				}
 			}
 			ImGui::EndChild();
-			if (selectedProfile != nullptr)
-			{
-				if (ImGui::Button("Revert")) {}
-				ImGui::SameLine();
-				if (ImGui::Button("Save")) {}
-			}
 		}
 		ImGui::EndGroup();
 	}
@@ -6002,7 +6059,7 @@ void Editor::TextureParameterComboIV(Texture* texture, int propertyName, const c
 	}
 }
 
-void Editor::TextureThumbnails(std::unordered_map<std::string, Texture*>& textures, std::string& selectedName, bool flip)
+void Editor::TextureThumbnails(std::vector<Texture*>& textures, Texture** selectedTexture, bool flip)
 {
 	float flipCoords = 0.0f;
 	if (flip)
@@ -6025,23 +6082,23 @@ void Editor::TextureThumbnails(std::unordered_map<std::string, Texture*>& textur
 		float borderWidth = 2;
 		int buttons_count = textures.size();
 		float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
-		std::vector<std::string> names;
+		std::map<std::string, Texture*> texturesMap;
 		for (auto& asset : textures)
 		{
-			names.push_back(asset.first);
+			texturesMap[asset->name] = asset;
 		}
-		std::sort(names.begin(), names.end());
-		for (auto& texture : names)
+		//std::sort(names.begin(), names.end());
+		for (auto& texture : texturesMap)
 		{
-			if (filterAvailableTextures.PassFilter(texture.c_str()))
+			if (filterAvailableTextures.PassFilter(texture.first.c_str()))
 			{
 				ImGui::BeginGroup();
-				if (DrawSelectableTextureThumbnail(textures[texture], size, uv_min, uv_max, borderWidth, border_col, tint_col))
+				if (DrawSelectableTextureThumbnail(texture.second, size, uv_min, uv_max, borderWidth, border_col, tint_col))
 				{
-					selectedName = texture;
+					*selectedTexture = texture.second;
 				}
 				ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + thumbnailSize);
-				ImGui::TextWrapped(texture.c_str());
+				ImGui::TextWrapped(texture.first.c_str());
 				ImGui::PopTextWrapPos();
 				ImGui::EndGroup();
 				float last_button_x2 = ImGui::GetItemRectMax().x;
@@ -6056,7 +6113,7 @@ void Editor::TextureThumbnails(std::unordered_map<std::string, Texture*>& textur
 	ImGui::EndChild();
 }
 
-void Editor::TexturesInspector(std::unordered_map<std::string, Texture*>& textures, std::string& selectedName, bool flip)
+void Editor::TexturesInspector(std::vector<Texture*>& textures, Texture** selectedTexture, bool flip)
 {
 	// Left
 	float flipCoords = 0.0f;
@@ -6073,7 +6130,7 @@ void Editor::TexturesInspector(std::unordered_map<std::string, Texture*>& textur
 	{
 		ImGui::BeginChild("item view", ImVec2(windowWidth * 0.6f, 0), true);
 		
-		TextureThumbnails(textures, selectedName, flip);
+		TextureThumbnails(textures, selectedTexture, flip);
 		
 		ImGui::EndChild();
 	}
@@ -6085,40 +6142,40 @@ void Editor::TexturesInspector(std::unordered_map<std::string, Texture*>& textur
 	{
 		ImGui::BeginChild("left details");
 		
-		if (!selectedName.empty())
+		if (*selectedTexture != nullptr)
 		{
 			ImGui::AlignTextToFramePadding();
-			ImGui::Text(selectedName.c_str());
-			if (ImGui::Button("Unload Texture"))
-			{
-				texturesToUnload.push_back(textures[selectedName]);
-			}
-			ImGui::SameLine();
-			if (ImGui::Button("Revert")) {}
+			ImGui::Text("Selection:");
 			ImGui::SameLine();
 			if (ImGui::Button("Save"))
 			{
-				if (!selectedName.empty())
+				//check defaults
+				//save texture information
+				Texture* texture = *selectedTexture;
+				lua_State* L = luaL_newstate();
+				luaL_openlibs(L);
+				LuaTools::dofile(L, "resources/serialization/texture_settings_saver.lua");
+				lua_getglobal(L, "SaveTextureSettings");
+				if (lua_isfunction(L, -1))
 				{
-					//check defaults
-					//save texture information
-					Texture* texture = textures[selectedName];
-					lua_State* L = luaL_newstate();
-					luaL_openlibs(L);
-					LuaTools::dofile(L, "resources/serialization/texture_settings_saver.lua");
-					lua_getglobal(L, "SaveTextureSettings");
-					if (lua_isfunction(L, -1))
-					{
-						lua_pushlightuserdata(L, texture);
-						int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
-						lua_pop(L, 1);
-					}
-					lua_close(L);
+					lua_pushlightuserdata(L, texture);
+					int result = LuaTools::report(L, LuaTools::docall(L, 1, 1));
+					lua_pop(L, 1);
 				}
+				lua_close(L);
 			}
-
-			ImGui::Separator();
+			ImGui::SameLine();
+			ImGui::Text((*selectedTexture)->name.c_str());
+			if (ImGui::Button("Unload Texture"))
+			{
+				texturesToUnload.push_back(*selectedTexture);
+			}
 		}
+		else
+		{
+			ImGui::Text("Selection: None");
+		}
+		ImGui::Separator();
 		for (auto texture : texturesToUnload)
 		{
 			std::string textureName = texture->name;
@@ -6126,37 +6183,35 @@ void Editor::TexturesInspector(std::unordered_map<std::string, Texture*>& textur
 			{
 				tp.RemoveTexture(texture);
 			}
-			textures.erase(textureName);
 
-			std::string assetPath = std::format("resources/texture_settings/{}.json", textureName);
 			lua_State* L = luaL_newstate();
 			luaL_openlibs(L);
-			LuaTools::dofile(L, "resources/luaexts/loadAndUnloadAssetFromList.lua");
+			LuaTools::dofile(L, "resources/luaexts/load_and_unload_asset_from_list.lua");
 			lua_getglobal(L, "UnloadFromList");
 			if (lua_isfunction(L, -1))
 			{
-				lua_pushstring(L, assetPath.c_str());
+				lua_pushstring(L, texture->path.c_str());
 				lua_pushstring(L, "resources/texture_settings_setup/texture_settings.json");
 				int result = LuaTools::report(L, LuaTools::docall(L, 2, 1));
 				lua_pop(L, 1);
 			}
 			lua_close(L);
 
-			selectedName = "";
+			*selectedTexture = nullptr;
 		}
 
 		ImGui::BeginChild("texture details");
 
-		if (!selectedName.empty())
+		if (*selectedTexture != nullptr)
 		{
 			ImGui::PushItemWidth(-1);
 			float imageSize = ImGui::CalcItemWidth() - style.ItemSpacing.x;
 			ImVec2 size = ImVec2(imageSize, imageSize);
 			int borderWidth = 2;
 
-			Texture* texture = textures[selectedName];
+			Texture* texture = *selectedTexture;
 
-			ImGui::Text(selectedName.c_str());
+			ImGui::Text((*selectedTexture)->name.c_str());
 			ImGui::Text(std::format("Path: {}", texture->path).c_str());
 			ImGui::Text(std::format("TexturePath: {}", texture->texturePath).c_str());
 			ImGui::Separator();
@@ -6415,8 +6470,6 @@ void Editor::RenderBufferInspector(RenderBuffer* rbuffer)
 		ImGui::PopItemWidth();
 	}
 	ImGui::Separator();
-	if (ImGui::Button("Revert")) {}
-	ImGui::SameLine();
 	if (ImGui::Button("Save"))
 	{
 		if (rbuffer != nullptr)
@@ -6693,32 +6746,26 @@ void Editor::AllTexturesInMemoryInspector()
 			for (auto id : textureIds)
 			{
 				std::string textureName = std::to_string(id);
-				for (auto& tex : textures)
+				bool found = false;
+				for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
 				{
-					if (tex.second->handle == id)
+					if (tex.handle == id)
 					{
-						textureName = tex.first;
+						textureName = tex.name;
+						found = true;
+						break;
 					}
 				}
-				for (auto& tex : renderTargets)
+				if (!found)
 				{
-					if (tex.second->handle == id)
+					for (auto& rb : *GraphicsStorage::assetRegistry.GetPool<RenderBuffer>())
 					{
-						textureName = tex.first;
-					}
-				}
-				for (auto& tex : cubemaps)
-				{
-					if (tex.second->handle == id)
-					{
-						textureName = tex.first;
-					}
-				}
-				for (auto& tex : renderBuffers)
-				{
-					if (tex.second->handle == id)
-					{
-						textureName = tex.first;
+						if (rb.handle == id)
+						{
+							textureName = rb.name;
+							found = true;
+							break;
+						}
 					}
 				}
 				ImGui::BeginGroup();
@@ -7124,7 +7171,8 @@ void Editor::OverlayStats()
 	{
 		ImGui::Text("Stats");
 
-		static std::pair<std::string, Texture*> texturePair(*renderTargets.begin());
+		static Texture* selectedTexture = nullptr;
+		static std::string selectedTextureName;
 
 		ImVec2 uv_min = ImVec2(1.0f, 0.0f);                 // Top-left
 		ImVec2 uv_max = ImVec2(0.0f, 1.0f);                 // Lower-right
@@ -7132,40 +7180,45 @@ void Editor::OverlayStats()
 		ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f); // 50% opaque white
 		ImVec2 comboImageSize = ImVec2(10, 10);
 
-		if (texturePair.second != nullptr)
+		if (ImGui::BeginCombo("Textures", selectedTextureName.c_str()))
 		{
-			if (ImGui::BeginCombo("Textures", texturePair.first.c_str()))
+			for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
 			{
-				for (auto& v_texture : renderTargets)
+				if (tex.texturePath.empty())
 				{
-					DrawSelectableTextureThumbnail(v_texture.second, comboImageSize, uv_min, uv_max, 0, border_col, tint_col);
+					DrawSelectableTextureThumbnail(&tex, comboImageSize, uv_min, uv_max, 0, border_col, tint_col);
 					ImGui::SameLine();
-					const bool is_selected = (texturePair.first == v_texture.first);
-					if (ImGui::Selectable(v_texture.first.c_str(), is_selected))
+					const bool is_selected = (selectedTexture == &tex);
+					if (ImGui::Selectable(tex.name.c_str(), is_selected))
 					{
-						texturePair = v_texture;
+						selectedTexture = &tex;
+						selectedTextureName = tex.name;
 					}
 					if (is_selected)
 						ImGui::SetItemDefaultFocus();
 				}
-				for (auto& texture : textures)
+				else if (tex.target != GL_TEXTURE_CUBE_MAP)
 				{
-					DrawSelectableTextureThumbnail(texture.second, comboImageSize, uv_min, uv_max, 0, border_col, tint_col);
+					DrawSelectableTextureThumbnail(&tex, comboImageSize, uv_min, uv_max, 0, border_col, tint_col);
 					ImGui::SameLine();
-					const bool is_selected = (texturePair.first == texture.first);
-					if (ImGui::Selectable(texture.first.c_str(), is_selected))
+					const bool is_selected = (selectedTexture == &tex);
+					if (ImGui::Selectable(tex.name.c_str(), is_selected))
 					{
-						texturePair = texture;
+						selectedTexture = &tex;
+						selectedTextureName = tex.name;
 					}
 					if (is_selected)
 						ImGui::SetItemDefaultFocus();
 				}
-				ImGui::EndCombo();
 			}
+			ImGui::EndCombo();
+		}
 
+		if (selectedTexture != nullptr)
+		{
 			float imageSize = 30;
 			ImVec2 size = ImVec2(imageSize, imageSize);
-			DrawSelectableTextureThumbnail(texturePair.second, size, uv_min, uv_max, 0, border_col, tint_col);
+			DrawSelectableTextureThumbnail(selectedTexture, size, uv_min, uv_max, 0, border_col, tint_col);
 		}
 
 		ImGui::Text("FPS %.3f", 1.0 / Times::Instance()->deltaTime);
@@ -7439,12 +7492,16 @@ void Editor::ShaderOutputsToFrameBufferRenderTargetsUI(Material* mat)
 				}
 			}
 			std::string currentTextureName = "";
-			for (auto& vtex : renderTargets)
+			std::vector<Texture*> renderTargets;
+			for (auto& tex : *GraphicsStorage::assetRegistry.GetPool<Texture>())
 			{
-				if (vtex.second == currentTextureAtt)
+				if (tex.texturePath.empty())
 				{
-					currentTextureName = vtex.first;
-					break;
+					if (&tex == currentTextureAtt)
+					{
+						currentTextureName = tex.name;
+						break;
+					}
 				}
 			}
 			std::string selectedAttachment = "UNKNOWN_ATTACHMENT";
@@ -7499,11 +7556,11 @@ void Editor::ShaderOutputsToFrameBufferRenderTargetsUI(Material* mat)
 						std::string selAttachmentName = std::format("{}##Sel{}", attachments[mat->rps->fbo->attachments[i]], i);
 						Texture* texture = mat->rps->fbo->textures[i];
 						std::string textureName = "";
-						for (auto& tex : renderTargets)
+						for (auto tex : renderTargets)
 						{
-							if (tex.second == texture)
+							if (tex == texture)
 							{
-								textureName = tex.first;
+								textureName = tex->name;
 								break;
 							}
 						}
@@ -7738,8 +7795,6 @@ void Editor::RenderPassInspector(RenderPass * pass)
 
 	ShaderBlocks(pass);
 
-	if (ImGui::Button("Revert")) {}
-	ImGui::SameLine();
 	if (ImGui::Button("Save"))
 	{
 		pass->path = std::format("resources/passes/{}.json", pass->name);

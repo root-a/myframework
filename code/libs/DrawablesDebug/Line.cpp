@@ -27,7 +27,11 @@ Line::~Line()
 
 void Line::SetUpBuffers()
 {
-	glm::vec3 vertices[] = { glm::vec3(0.f, 0.f, 0.f), glm::vec3(0.f, 0.f, 1.f) };
+	glm::vec3 vertices[] = {
+		glm::vec3(0.f, 0.f, 0.f),
+		glm::vec3(0.f, 0.f, 1.f)
+	};
+
 	BufferLayout vbVertex = { {ShaderDataType::Type::Float3, "position"} };
 	vao.AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>(vertices, (unsigned int)2, vbVertex));
 	vao.activeCount = 2;
@@ -42,8 +46,6 @@ void Line::Draw(const glm::mat4& Model, const glm::mat4& View, const glm::mat4& 
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 	glUniform3fv(MaterialColorValueHandle, 1, &color.x);
 
-	//bind vao before drawing
 	vao.Bind();
-	//draw the lines!
 	vao.Draw();
 }

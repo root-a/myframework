@@ -26,55 +26,28 @@ Box::~Box()
 
 void Box::SetUpBuffers()
 {
-	Vector3F verts[] = {
-	Vector3F(-1.f, -1.f, 1.f),
-	Vector3F(-1.f, 1.f, 1.f),
-	Vector3F(1.f, -1.f, 1.f),
-	Vector3F(1.f, 1.f, 1.f),
-
-	Vector3F(-1.f, 1.f, 1.f),
-	Vector3F(-1.f, 1.f, -1.f),
-	Vector3F(1.f, 1.f, 1.f),
-	Vector3F(1.f, 1.f, -1.f),
-
-	Vector3F(-1.f, 1.f, -1.f),
-	Vector3F(-1.f, -1.f, -1.f),
-	Vector3F(1.f, 1.f, -1.f),
-	Vector3F(1.f, -1.f, -1.f),
-
-	Vector3F(-1.f, -1.f, -1.f),
-	Vector3F(-1.f, -1.f, 1.f),
-	Vector3F(1.f, -1.f, -1.f),
-	Vector3F(1.f, -1.f, 1.f),
-
-	Vector3F(1.f, -1.f, 1.f),
-	Vector3F(1.f, 1.f, 1.f),
-	Vector3F(1.f, -1.f, -1.f),
-	Vector3F(1.f, 1.f, -1.f),
-
-	Vector3F(-1.f, -1.f, -1.f),
-	Vector3F(-1.f, 1.f, -1.f),
-	Vector3F(-1.f, -1.f, 1.f),
-	Vector3F(-1.f, 1.f, 1.f)
+	glm::vec3 vertices[] = {
+		glm::vec3(-1.0f, -1.0f,  1.0f),
+		glm::vec3(-1.0f,  1.0f,  1.0f),
+		glm::vec3(1.0f, -1.0f,  1.0f),
+		glm::vec3(1.0f,  1.0f,  1.0f),
+		glm::vec3(-1.0f, -1.0f, -1.0f),
+		glm::vec3(-1.0f,  1.0f, -1.0f),
+		glm::vec3(1.0f, -1.0f, -1.0f),
+		glm::vec3(1.0f,  1.0f, -1.0f)
 	};
-
+	
 	GLubyte elements[] = {
-		0, 1, 2,
-		1, 3, 2,
-		4, 5, 6,
-		5, 7, 6,
-		8, 9, 10,
-		9, 11, 10,
-		12, 13, 14,
-		13, 15, 14,
-		16, 17, 18,
-		17, 19, 18,
-		20, 21, 22,
-		21, 23, 22
+		0, 1, 2, 1, 3, 2,
+		1, 5, 3, 5, 7, 3,
+		5, 4, 7, 4, 6, 7,
+		4, 0, 6, 0, 2, 6,
+		2, 3, 6, 3, 7, 6,
+		4, 5, 0, 5, 1, 0
 	};
 
 	BufferLayout vbVertex({ {ShaderDataType::Type::Float3, "position"} });
-	vao.AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>(verts, (unsigned int)24, vbVertex));
+	vao.AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>(vertices, (unsigned int)24, vbVertex));
 	vao.AddElementBuffer(GraphicsStorage::assetRegistry.AllocAsset<ElementBuffer>(elements, (unsigned int)36));
 }
 

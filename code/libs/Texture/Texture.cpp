@@ -170,8 +170,6 @@ void Texture::SpecifyTexture(GLenum Target, GLsizei Width, GLsizei Height, void*
 
 void Texture::ActivateAndBind(int textureSlot) const
 {
-	//glActiveTexture(GL_TEXTURE0 + textureSlot);
-	//glBindTexture(target, handle);
 	glBindTextureUnit(textureSlot, handle);
 }
 

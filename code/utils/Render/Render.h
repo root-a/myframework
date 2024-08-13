@@ -31,6 +31,7 @@ class Render
 public:
 
 	static Render* Instance();
+	void RenderCubemapFacesToTexture(GLuint shaderID, GLuint captureFBO, GLuint cubemapTexture, GLuint textureToDrawTo, const glm::vec2& size);
 	void captureToTexture2D(const GLuint shaderID, FrameBuffer * captureFBO, Texture* textureToDrawTo);
 	void captureTextureToCubeMapWithMips(const GLuint shaderID, FrameBuffer* captureFBO, Texture* textureToCapture, Texture* textureToDrawTo);
 	void captureTextureToCubeMap(const GLuint shaderID, FrameBuffer* captureFBO, Texture* textureToCapture, Texture* textureToDrawTo);

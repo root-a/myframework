@@ -1908,31 +1908,27 @@ int
 	}
 	if( image_type == SOIL_SAVE_TYPE_BMP )
 	{
-		save_result = stbi_write_bmp( filename,
-				width, height, channels, (const void*)data );
+		save_result = stbi_write_bmp(filename, width, height, channels, (const void*)data);
 	} else
 	if( image_type == SOIL_SAVE_TYPE_TGA )
 	{
-		save_result = stbi_write_tga( filename,
-				width, height, channels, (const void*)data );
+		save_result = stbi_write_tga(filename, width, height, channels, (const void*)data);
 	} else
 	if( image_type == SOIL_SAVE_TYPE_DDS )
 	{
-		save_result = save_image_as_DDS( filename,
-				width, height, channels, (const unsigned char *const)data );
+		save_result = save_image_as_DDS(filename, width, height, channels, (const unsigned char* const)data);
 	} else
 	if( image_type == SOIL_SAVE_TYPE_PNG )
 	{
-		save_result = stbi_write_png( filename,
-				width, height, channels, (const void*)data, 0 );
+		save_result = stbi_write_png(filename, width, height, channels, (const void*)data, 0);
 	} else
 	if ( image_type == SOIL_SAVE_TYPE_JPG )
 	{
-		save_result = stbi_write_jpg( filename, width, height, channels, (const void*)data, quality );
+		save_result = stbi_write_jpg(filename, width, height, channels, (const void*)data, quality);
 	} else
 	if ( image_type == SOIL_SAVE_TYPE_QOI )
 	{
-		save_result = stbi_write_qoi( filename, width, height, channels, (const void*)data );
+		save_result = stbi_write_qoi(filename, width, height, channels, (const void*)data);
 	}
 	else
 	{

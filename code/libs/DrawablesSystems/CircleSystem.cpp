@@ -6,23 +6,6 @@
 #include <GraphicsStorage.h>
 #include "Ebo.h"
 
-// goal is to remove any OBJ and VAO code from here
-//OBJ
-//vertices are mathematically clockwise
-const glm::vec3 CircleSystem::g_vertex_buffer_data[4] = {
-	glm::vec3(-1.0f, -1.0f, 0.0f),
-	glm::vec3(-1.0f, 1.0f, 0.0f),
-	glm::vec3(1.0f, 1.0f, 0.0f),
-	glm::vec3(1.0f, -1.0f, 0.0f),
-};
-
-//OBJ
-//indices are mathematically counter-clockwise
-const GLubyte CircleSystem::elements[] = {
-	0, 3, 2,
-	2, 1, 0
-};
-
 CircleSystem::CircleSystem(int maxCount){
 
 	MaxCount = maxCount;
@@ -85,6 +68,21 @@ void CircleSystem::UpdateContainer()
 
 void CircleSystem::SetUpBuffers()
 {
+	glm::vec3 g_vertex_buffer_data[4] = {
+		glm::vec3(-1.0f, -1.0f, 0.0f),
+		glm::vec3(-1.0f, 1.0f, 0.0f),
+		glm::vec3(1.0f, 1.0f, 0.0f),
+		glm::vec3(1.0f, -1.0f, 0.0f),
+	};
+
+	//OBJ
+	//indices are mathematically counter-clockwise
+	GLubyte elements[] = {
+		0, 3, 2,
+		2, 1, 0
+	};
+
+
 	BufferLayout vbVertex({ {ShaderDataType::Type::Float3, "Position"} });
 	BufferLayout vbCenterRadiusColorSoftnessThickness({ {ShaderDataType::Type::Float3, "CenterPosition", 1}, {ShaderDataType::Type::Float, "Radius", 1}, {ShaderDataType::Type::Float4, "Color", 1}, {ShaderDataType::Type::Float, "Softness", 1}, {ShaderDataType::Type::Float, "Thickness", 1} });
 	positionsSizesColorsSoftnessThicknessBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbCenterRadiusColorSoftnessThickness);

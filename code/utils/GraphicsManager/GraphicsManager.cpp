@@ -114,17 +114,19 @@ void GraphicsManager::LoadPaths(const char* path)
 	}
 	char line[128];
 	while (fgets(line, sizeof(line), file)) {
-		if (line[0] == '/' || line[0] == ';' || line[0] == '#') continue; // ignore comment line
+		// Skip lines that start with ;, #, or /
+		if (line[0] == '/' || line[0] == ';' || line[0] == '#') {
+			continue;
+		}
+
 		char folder[128];
 		char folderPath[128];
 		int matches = sscanf(line, "%s %s", folder, folderPath);
-		if (matches != 2)
-		{
+		if (matches != 2) {
 			printf("Wrong folder - path information!\n");
+			continue;
 		}
-		else {
-			GraphicsStorage::paths[folder] = folderPath;
-		}
+		GraphicsStorage::paths[folder] = folderPath;
 	}
 	fclose(file);
 }
@@ -138,21 +140,17 @@ bool GraphicsManager::LoadOBJs(const char* path, std::vector<OBJ*>& parsedOBJs)
 		return false;
 	}
 	std::vector<std::string> meshPaths;
-	while (1)
-	{
-		char lineHeader[128];
-		// read the first word of the line
-		int res = fscanf(file, "%s", lineHeader);
-		if (res == EOF)
-		{
-			break; // EOF = End Of File. Quit the loop.
+	char line[128];
+	while (fgets(line, sizeof(line), file)) {
+		// Skip lines that start with ;, #, or /
+		if (line[0] == ';' || line[0] == '#' || line[0] == '/') {
+			continue;
 		}
 
-		// Skip lines that start with ;, #, or /
-		if (lineHeader[0] == ';' || lineHeader[0] == '#' || lineHeader[0] == '/')
-		{
-			// Consume the rest of the line and continue to the next iteration
-			fscanf(file, "%*[^\n]");
+		char lineHeader[128];
+		int res = sscanf(line, "%s", lineHeader);
+		if (res != 1) {
+			printf("Error reading line: %s\n", line);
 			continue;
 		}
 
@@ -292,17 +290,20 @@ bool GraphicsManager::LoadTextures(const char* path)
 	}
 	//stbi_set_flip_vertically_on_load(true);
 	std::vector<std::thread> threadPool;
-	while (1) {
+	char line[128];
+	while (fgets(line, sizeof(line), file)) {
+		// Skip lines that start with ;, #, or /
+		if (line[0] == ';' || line[0] == '#' || line[0] == '/') {
+			continue;
+		}
 
 		char texturePath[128];
-		//meshID not in use currently
-		// read the first word of the line
-		int res = fscanf(file, "%s", texturePath);
-		if (res == EOF)
-		{
-			break; // EOF = End Of File. Quit the loop.
+		int res = sscanf(line, "%s", texturePath);
+		if (res != 1) {
+			printf("Error reading line: %s\n", line);
+			continue;
 		}
-		
+
 		printf("Loading texture: %s\n", texturePath);
 		//threadPool.push_back(std::thread(LoadTextureInfo, &GraphicsStorage::texturesToLoad, GraphicsStorage::paths["resources"] + texturePath, 0));
 		LoadTextureInfo(&GraphicsStorage::texturesToLoad, GraphicsStorage::paths["resources"] + texturePath, 0);
@@ -465,13 +466,18 @@ bool GraphicsManager::LoadCubeMaps(const char* path)
 		printf("%s could not be opened.\n", path);
 		return false;
 	}
-	while (1) {
+	char line[128];
+	while (fgets(line, sizeof(line), file)) {
+		// Skip lines that start with ;, #, or /
+		if (line[0] == ';' || line[0] == '#' || line[0] == '/') {
+			continue;
+		}
+
 		char cubemapDirectory[128];
-		// read the first line
-		int res = fscanf(file, "%s", cubemapDirectory);
-		if (res == EOF)
-		{
-			break; // EOF = End Of File. Quit the loop.
+		int res = sscanf(line, "%s", cubemapDirectory);
+		if (res != 1) {
+			printf("Error reading line: %s\n", line);
+			continue;
 		}
 		
 		std::string texturesFilePath = GraphicsStorage::paths["resources"] + cubemapDirectory;
@@ -555,18 +561,21 @@ std::vector<std::string> GraphicsManager::LoadShadersFiles(const char* path)
 	char line[128];
 	std::vector<std::string> shaders;
 	while (fgets(line, sizeof(line), file)) {
-		if (line[0] == '/' || line[0] == ';' || line[0] == '#') continue; // ignore comment line
+		// Skip lines that start with ;, #, or /
+		if (line[0] == ';' || line[0] == '#' || line[0] == '/') {
+			continue;
+		}
 		//programName, the first word, we should remove them and clean up all configs
 		char programName[128];
 		char filePath[128];
 		int matches = sscanf(line, "%s %s", programName, filePath);
 		if (matches != 2)
 		{
-			printf("Wrong shader information!\n");
+			printf("Error reading line: %s\n", line);
+			continue;
 		}
-		else {
-			shaders.emplace_back(GraphicsStorage::paths["resources"] + filePath);
-		}
+
+		shaders.emplace_back(GraphicsStorage::paths["resources"] + filePath);
 	}
 	fclose(file);
 	return shaders;

@@ -81,6 +81,4 @@ public:
 
 	bool dirty = false;
 	bool paused = true;
-	static const glm::vec3 g_vertex_buffer_data[4];
-	static const unsigned char elements[6];
 };

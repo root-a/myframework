@@ -40,7 +40,17 @@
 struct SimpleString
 {
 	char* text;
-	int length;
+	size_t length;
+
+	SimpleString(const std::string& str) {
+		length = str.size();
+        text = new char[length + 1];
+        memcpy(text, str.c_str(), length + 1);
+	}
+
+	~SimpleString() {
+		delete[] text;
+	}
 };
 
 struct DirectoryIterator {};
@@ -60,6 +70,13 @@ extern "C" {
 
 #pragma endregion
 #pragma region texture
+
+#pragma region SimpleString
+	_declspec(dllexport) void SimpleString_gc(SimpleString* self)
+	{
+		delete self;
+	}
+#pragma endregion
 
 	__declspec(dllexport) Texture* Texture_new(const char* guid, GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, void * pixels, GLenum attachment) {
 		return GraphicsStorage::assetRegistry.AllocAssetWithStrUUID<Texture>(guid, target, level, internalFormat, width, height, format, type, pixels, attachment);
@@ -554,24 +571,14 @@ extern "C" {
 	}
 #pragma endregion
 #pragma region resources
-	__declspec(dllexport) void GetGUID(void* asset, char outGuid[36]) {
+	__declspec(dllexport) SimpleString* GetGUID(void* asset) {
 		std::string strGUID = GraphicsStorage::assetRegistry.GetAssetIDAsString(asset);
-		//int size = strlen(strGUID.c_str());
-		memcpy(outGuid, strGUID.c_str(), 36);
-		//int nrOfFloatsPerElement = self->layout.GetStride() / (sizeof(float));
-		//Vector3F* vertexData = new Vector3F[self->maxElementCount];
-		//glGetNamedBufferSubData(self->handle, 0, self->maxElementCount * nrOfFloatsPerElement, vertexData);
-		//int i = 0;
+		return new SimpleString(strGUID);
 	}
 
-	__declspec(dllexport) void GenerateGUID(char outGuid[36]) {
+	__declspec(dllexport) SimpleString* GenerateGUID() {
 		std::string strGUID = uuids::to_string(gen());
-		//int size = strlen(strGUID.c_str());
-		memcpy(outGuid, strGUID.c_str(), 36);
-		//int nrOfFloatsPerElement = self->layout.GetStride() / (sizeof(float));
-		//Vector3F* vertexData = new Vector3F[self->maxElementCount];
-		//glGetNamedBufferSubData(self->handle, 0, self->maxElementCount * nrOfFloatsPerElement, vertexData);
-		//int i = 0;
+		return new SimpleString(strGUID);
 	}
 	
 
@@ -3008,97 +3015,83 @@ extern "C" {
 		center = (Vector3F&)self->center_of_mesh;
 	}
 #pragma endregion
-#pragma region SimpleString
-	_declspec(dllexport) void SimpleString_gc(SimpleString* self)
-	{
-		delete[] self->text;
-		delete self;
-	}
-#pragma endregion
+
 
 #pragma region FileSystem
-	_declspec(dllexport) bool FileSystem_Exists(const char* path)
-	{
+	__declspec(dllexport) void std_string_gc(std::string* self) {
+		delete self;
+	}
+
+	__declspec(dllexport) bool FileSystem_Exists(const char* path) {
 		return std::filesystem::exists(path);
 	}
 
-	_declspec(dllexport) bool FileSystem_CreateDirectory(const char* path)
-	{
+	__declspec(dllexport) bool FileSystem_CreateDirectory(const char* path) {
 		return std::filesystem::create_directory(path);
 	}
 
-	_declspec(dllexport) bool FileSystem_CreateDirectories(const char* path)
-	{
+	__declspec(dllexport) bool FileSystem_CreateDirectories(const char* path) {
 		return std::filesystem::create_directories(path);
 	}
 
-	_declspec(dllexport) bool FileSystem_IsDirectory(const char* path)
-	{
+	__declspec(dllexport) bool FileSystem_IsDirectory(const char* path) {
 		return std::filesystem::is_directory(path);
 	}
 
-	_declspec(dllexport) bool FileSystem_IsRegularFile(const char* path)
-	{
+	__declspec(dllexport) bool FileSystem_IsRegularFile(const char* path) {
 		return std::filesystem::is_regular_file(path);
 	}
 
-	_declspec(dllexport) SimpleString* FileSystem_ParentPath(const char* path)
-	{
+	__declspec(dllexport) SimpleString* FileSystem_ParentPath(const char* path) {
 		std::filesystem::path fspath(path);
-		std::string parent = fspath.parent_path().string();
-		SimpleString* sPath = new SimpleString();
-		char* text = new char[parent.length()];
-		memcpy(text, parent.c_str(), parent.length());
-		sPath->text = text;
-		sPath->length = parent.length();
-		return sPath;
+		return new SimpleString(fspath.parent_path().string());
 	}
 
-
-	_declspec(dllexport) SimpleString* FileSystem_GetCurrentPath()
-	{
+	__declspec(dllexport) SimpleString* FileSystem_GetCurrentPath() {
 		std::string currentPath = std::filesystem::current_path().string();
-		SimpleString* sPath = new SimpleString();
-		char* path = new char[currentPath.length()];
-		memcpy(path, currentPath.c_str(), currentPath.length());
-		sPath->text = path;
-		sPath->length = currentPath.length();
-		return sPath;
+		return new SimpleString(currentPath);
 	}
 
-	_declspec(dllexport) void FileSystem_SetCurrentPath(const char* path)
-	{
+	__declspec(dllexport) void FileSystem_SetCurrentPath(const char* path) {
 		std::filesystem::current_path(path);
 	}
 
-	_declspec(dllexport) SimpleString* FileSystem_DirectoryIteratorNext(DirectoryIterator* it)
-	{
-		auto current = (std::filesystem::directory_iterator*)(it);
-		if ((*current) != std::filesystem::directory_iterator())
-		{
-			std::string currentPath = (*current)->path().string();
-			SimpleString* sPath = new SimpleString();
-			char* path = new char[currentPath.length()];
-			memcpy(path, currentPath.c_str(), currentPath.length());
-			sPath->text = path;
-			sPath->length = currentPath.length();
-			++(*current);
-			return sPath;
+	__declspec(dllexport) std::filesystem::directory_iterator* FileSystem_DirectoryIterator(const char* path) {
+		return new std::filesystem::directory_iterator(path);
+	}
+
+	__declspec(dllexport) SimpleString* FileSystem_DirectoryIteratorNext(std::filesystem::directory_iterator* it) {
+		if (*it != std::filesystem::directory_iterator{}) {
+			std::string currentPath = (*it)->path().string();
+			++(*it);
+			return new SimpleString(currentPath);
 		}
-		else
-		{
+		else {
 			return nullptr;
 		}
 	}
 
-	_declspec(dllexport) DirectoryIterator* FileSystem_DirectoryIterator(const char* path)
-	{
-		return (DirectoryIterator*) (new std::filesystem::directory_iterator(path));
+	__declspec(dllexport) void FileSystem_DirectoryIterator_gc(std::filesystem::directory_iterator* it) {
+		delete it;
 	}
 
-	_declspec(dllexport) void FileSystem_DirectoryIterator_gc(DirectoryIterator* it)
-	{
-		delete (std::filesystem::directory_iterator*)it;
+	__declspec(dllexport) std::filesystem::recursive_directory_iterator* FileSystem_RecursiveDirectoryIterator(const char* path) {
+		return new std::filesystem::recursive_directory_iterator(path);
+	}
+
+	__declspec(dllexport) SimpleString* FileSystem_RecursiveDirectoryIteratorNext(std::filesystem::recursive_directory_iterator* it) {
+		if (*it != std::filesystem::recursive_directory_iterator{}) {
+			std::string currentPath = (*it)->path().string();
+			++(*it);
+			return new SimpleString(currentPath);
+		}
+		else {
+			return nullptr;
+		}
+	}
+
+	__declspec(dllexport) void FileSystem_RecursiveDirectoryIterator_gc(std::filesystem::recursive_directory_iterator* it) {
+		delete it;
 	}
 #pragma endregion
 }

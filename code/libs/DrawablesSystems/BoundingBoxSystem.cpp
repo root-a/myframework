@@ -20,24 +20,6 @@ BoundingBoxSystem::~BoundingBoxSystem()
 	delete[] boundingBoxesContainer;
 }
 
-const glm::vec3 BoundingBoxSystem::vertices[8] = {
-	glm::vec3(-0.5f, -0.5f, 0.5f),
-	glm::vec3(0.5f, -0.5f, 0.5f),
-	glm::vec3(0.5f, 0.5f, 0.5f),
-	glm::vec3(-0.5f, 0.5f, 0.5f),
-
-	glm::vec3(-0.5f, -0.5f, -0.5f),
-	glm::vec3(0.5f, -0.5f, -0.5f),
-	glm::vec3(0.5f, 0.5f, -0.5f),
-	glm::vec3(-0.5f, 0.5f, -0.5f)
-};
-
-const GLubyte BoundingBoxSystem::elements[] = {
-	0, 1, 1, 2, 2, 3, 3, 0,
-	4, 5, 5, 6, 6, 7, 7, 4,
-	0, 4, 1, 5, 2, 6, 3, 7
-};
-
 int BoundingBoxSystem::FindUnused()
 {
 	for (int i = LastUsed; i < MaxCount; i++){
@@ -75,6 +57,24 @@ void BoundingBoxSystem::UpdateContainer()
 
 void BoundingBoxSystem::SetUpBuffers()
 {
+	glm::vec3 vertices[] = {
+		glm::vec3(-0.5f, -0.5f, 0.5f),
+		glm::vec3(0.5f, -0.5f, 0.5f),
+		glm::vec3(0.5f, 0.5f, 0.5f),
+		glm::vec3(-0.5f, 0.5f, 0.5f),
+
+		glm::vec3(-0.5f, -0.5f, -0.5f),
+		glm::vec3(0.5f, -0.5f, -0.5f),
+		glm::vec3(0.5f, 0.5f, -0.5f),
+		glm::vec3(-0.5f, 0.5f, -0.5f)
+	};
+
+	GLubyte elements[] = {
+		0, 1, 1, 2, 2, 3, 3, 0,
+		4, 5, 5, 6, 6, 7, 7, 4,
+		0, 4, 1, 5, 2, 6, 3, 7
+	};
+
 	BufferLayout vbVertex({ {ShaderDataType::Type::Float3, "Position"} });
 	BufferLayout vbColorModel({ {ShaderDataType::Type::Float3, "Color", 1}, {ShaderDataType::Type::FloatMat4, "M", 1} });
 	colorModelBuffer = GraphicsStorage::assetRegistry.AllocAsset<VertexBufferDynamic>(nullptr, MaxCount, vbColorModel);

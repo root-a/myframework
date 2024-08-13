@@ -27,7 +27,12 @@ Plane::~Plane()
 void Plane::SetUpBuffers()
 {
 	unsigned char elements[] = { 0, 1, 2, 2, 1, 3 };
-	glm::vec3 vertices[] = { glm::vec3(-1.f, -1.f, 0.f),glm::vec3(1.f, -1.f, 0.f),glm::vec3(-1.f, 1.f, 0.f),glm::vec3(1.f, 1.f, 0.f) };
+	glm::vec3 vertices[] = { 
+		glm::vec3(-1.f, -1.f, 0.f),
+		glm::vec3(1.f, -1.f, 0.f),
+		glm::vec3(-1.f, 1.f, 0.f),
+		glm::vec3(1.f, 1.f, 0.f)
+	};
 
 	BufferLayout vbVertex = { {ShaderDataType::Type::Float3, "position"} };
 	vao.AddVertexBuffer(GraphicsStorage::assetRegistry.AllocAsset<VertexBuffer>(vertices, (unsigned int)4, vbVertex));
@@ -44,9 +49,6 @@ void Plane::Draw(const glm::mat4& Model, const glm::mat4& View, const glm::mat4&
 	glUniformMatrix4fv(MatrixHandle, 1, GL_FALSE, &MVP[0][0]);
 	glUniform3fv(MaterialColorValueHandle, 1, &color.x);
 
-	//bind vao before drawing
 	vao.Bind();
-
-	// Draw the triangles !
 	vao.Draw();
 }
